@@ -50,12 +50,17 @@ char *trim_string(char *string, char c);
  * return the string formed by concatenating string 'a' and string 'b' with
  * the 'sep' character between them.  For example,
  *     spacecat("xx", "yy", ";");
+ * returns "xx;yy", and
+ *    spacecat("xx;;", "yy", ";")
+ * returns "xx;;;yy", and
+ *    spacecat("xx;;", "yy", ";", true)
  * returns "xx;yy".
- * 
+ *
  * This function is much faster than the more obvious WvString("%s;%s", a, b),
  * so it's useful when you're producing a *lot* of string data.
  */
-WvString spacecat(WvStringParm a, WvStringParm b, char sep = ' ');
+WvString spacecat(WvStringParm a, WvStringParm b, char sep = ' ',
+		  bool onesep = false);
 
     
 /**
@@ -194,6 +199,11 @@ WvString sizetoa(unsigned long long blocks, unsigned int blocksize=1);
 
 /** Give a size in Kilobyes gives a human readable size */
 WvString sizektoa(unsigned int kbytes);
+
+/** Given a number of seconds, returns a formatted human-readable string
+ * saying how long the period is.
+ */
+WvString secondstoa(unsigned int total_seconds);
 
 /**
  * Finds a string in an array and returns its index.

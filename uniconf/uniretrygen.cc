@@ -163,6 +163,11 @@ WvString UniRetryGen::get(const UniConfKey &key)
     	result = UniFilterGen::get(key);
     	DPRINTF("UniRetryGen::get(%s) returns %s\n", key.cstr(), result.cstr());
     }
+    else if (key == "")
+    {
+        result = "";
+    	DPRINTF("UniRetryGen::get(%s) returns %s because it is root key\n", key.cstr(), result.cstr());        
+    }
     else
     {
     	DPRINTF("UniRetryGen::get(%s): !isok()\n", key.cstr());
@@ -201,7 +206,17 @@ bool UniRetryGen::exists(const UniConfKey &key)
     else
     {
     	DPRINTF("UniRetryGen::exists: !isok()\n");
-    	result = false;
+        if (key == "")
+        {
+            // here we assume that at least the mount point exists
+            // see void UniMountGen::makemount() that create all the keys with
+            // an empty string
+            result = true;
+        }
+        else 
+        {
+            result = false;
+        }
     }
     
     maybe_disconnect();

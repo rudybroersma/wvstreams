@@ -3,7 +3,7 @@ Section: libs
 Priority: optional
 Maintainer: Simon Law <sfllaw@debian.org>
 Uploaders: James Morrison <phython@debian.org>, Patrick Patterson <ppatters@debian.org>
-Build-Depends: debhelper (>> 4.0.0), fftw-dev, libdb4.2-dev, libfam-dev, libpam0g-dev, libqt3-mt-dev, libslp-dev, libspeex-dev, libssl-dev, libvorbis-dev, libxplc0.3.10-dev, zlib1g-dev, doxygen
+Build-Depends: debhelper (>> 4.0.0), fftw-dev, libdb4.2-dev, libfam-dev, libpam0g-dev, libqt3-mt-dev, libslp-dev, libspeex-dev, libssl-dev, libvorbis-dev, libxplc0.3.11-dev, zlib1g-dev, doxygen
 Build-Depends-Indep: doxygen
 Standards-Version: 3.6.1
 
@@ -99,7 +99,7 @@ Description: WvStreams Speex Encoder/Decoder Library
 Package: libwvstreams-dev
 Architecture: any
 Section: libdevel
-Depends: libwvstreams4.0-base, libwvstreams4.0-extras, libuniconf4.0, libwvstreams4.0-fft, libwvstreams4.0-qt, libwvstreams4.0-speex, libwvstreams4.0-vorbis, libxplc0.3.10-dev, ${misc:Depends}
+Depends: libwvstreams4.0-base, libwvstreams4.0-extras, libuniconf4.0, libwvstreams4.0-fft, libwvstreams4.0-qt, libwvstreams4.0-speex, libwvstreams4.0-vorbis, libxplc0.3.11-dev, ${misc:Depends}
 Provides: libwvstreams4.0-dev
 Description: Development libraries and header files for libwvstreams4.0
  Contains the header files and static libraries for use in rapid 

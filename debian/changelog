@@ -1,3 +1,15 @@
+wvstreams (4.0.2-1) unstable; urgency=low
+
+  * New upstream release.  (Closes: #297485)
+  * Moved /etc/uniconf.conf to libuniconf4.0.
+  * Added /etc/default/uniconfd to uniconfd's init script.
+  -- Simon Law
+
+  * Acknowledge NMUs.  (Closes: #292618, #297694, #297554, #286593, #289237)
+  * We now depend on XPLC 0.3.11.
+
+ -- James Morrison <phython@debian.org>  Wed, 23 Mar 2005 22:20:07 -0500
+
 wvstreams (4.0.1-1.4) unstable; urgency=low
 
   * Non-maintainer upload.
@@ -41,6 +53,12 @@ wvstreams (4.0.1-1) unstable; urgency=low
   * We now depend on XPLC 0.3.10.
 
  -- Simon Law <sfllaw@debian.org>  Wed, 17 Nov 2004 15:17:09 -0500
+
+wvstreams (4.0.0-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- Simon Law <sfllaw@debian.org>  Thu,  7 Oct 2004 19:54:24 +0000
 
 wvstreams (4.0+20040924-1) unstable; urgency=low
 
@@ -116,7 +134,7 @@ wvstreams (3.73+20030404-2) unstable; urgency=low
 
   * Added -fPIC -DPIC back into the build.
 
- -- James A. Morrison <jim@debian>  Mon, 14 Apr 2003 11:50:20 -0400
+ -- James A. Morrison <phython@debian.org>  Mon, 14 Apr 2003 11:50:20 -0400
 
 wvstreams (3.73+20030404-1) unstable; urgency=low
 
