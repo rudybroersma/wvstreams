@@ -1,3 +1,9 @@
+wvstreams (4.0.2-4) unstable; urgency=low
+
+  * Export WE_ARE_DIST so that don't rebuild the configure script.
+
+ -- James Morrison <phython@debian.org>  Sun,  3 Apr 2005 13:35:50 -0400
+
 wvstreams (4.0.2-3) unstable; urgency=low
 
   * Depend on libxplc0.3.11 now that it is in the archive. (Closes: #302370)
