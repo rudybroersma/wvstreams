@@ -1,6 +1,13 @@
+wvstreams (4.0.2-3) unstable; urgency=low
+
+  * Depend on libxplc0.3.11 now that it is in the archive. (Closes: #302370)
+  * Use log instead of seterr for messages in wvmodem.cc
+
+ -- James Morrison <phython@debian.org>  Sat,  2 Apr 2005 10:52:21 -0500
+
 wvstreams (4.0.2-2) unstable; urgency=low
 
-  * Depend on libxplc0.3.11. (Closes: #301168)
+  * Depend on libxplc0.3.10. (Closes: #301168)
 
  -- James Morrison <phython@debian.org>  Wed, 24 Mar 2005 07:50:07 -0500
 
