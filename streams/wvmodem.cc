@@ -204,7 +204,7 @@ void WvModem::setup_modem(bool rtscts)
     sinfo.closing_wait = ASYNC_CLOSING_WAIT_NONE;
     sinfo.closing_wait2 = ASYNC_CLOSING_WAIT_NONE;
 
-    if (ioctl(getrfd(), TIOCSSERIAL, &sinfo) < 0) 
+    if (ioctl(getrfd(), TIOCSSERIAL, &sinfo) < 0 && getuid() == 0) 
     {
 	seterr("Cannot set information for serial port.");
 	return;
