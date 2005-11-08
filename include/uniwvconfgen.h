@@ -11,7 +11,9 @@
 #include "uniconfgen.h"
 
 class WvConf;
-
+/**
+ * A UniConf generator for backwards compatibility with WvConf
+ */
 class UniWvConfGen : public UniConfGen
 {
 private:
@@ -34,6 +36,7 @@ public:
     virtual void flush_buffers() { }
     virtual WvString get(const UniConfKey &key);
     virtual void set(const UniConfKey &key, WvStringParm value);
+    virtual void setv(const UniConfPairList &pairs);
     virtual bool haschildren(const UniConfKey &key);
     virtual Iter *iterator(const UniConfKey &key);
 };

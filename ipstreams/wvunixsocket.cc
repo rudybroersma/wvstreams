@@ -56,18 +56,17 @@ static IWvStream *creator(WvStringParm s, IObject *, void *)
 static WvMoniker<IWvStream> reg("unix", creator);
 
 
-WvUnixConn::WvUnixConn(int _fd, const WvUnixAddr &_addr) :
-    WvFDStream(_fd), addr(_addr)
+WvUnixConn::WvUnixConn(int _fd, const WvUnixAddr &_addr)
+    : WvFDStream(_fd), addr(_addr)
 {
-    // all is well and we're connected.  Make it non-blocking 
-    // and close-on-exec.
-    fcntl(getfd(), F_SETFD, FD_CLOEXEC);
-    fcntl(getfd(), F_SETFL, O_RDWR|O_NONBLOCK);
+    // all is well and we're connected.
+    set_nonblock(true);
+    set_close_on_exec(true);
 }
 
 
-WvUnixConn::WvUnixConn(const WvUnixAddr &_addr) :
-    addr(_addr)
+WvUnixConn::WvUnixConn(const WvUnixAddr &_addr)
+    : addr(_addr)
 {
     setfd(socket(PF_UNIX, SOCK_STREAM, 0));
     if (getfd() < 0)
@@ -76,20 +75,18 @@ WvUnixConn::WvUnixConn(const WvUnixAddr &_addr) :
 	return;
     }
     
-    sockaddr *sa = addr.sockaddr();
-    if (connect(getfd(), sa, addr.sockaddr_len()) < 0)
-    {
-	seterr(errno);
-	delete sa;
-	return;
-    }
-    
-    delete sa;
-    
-    // all is well and we're connected.  Make it non-blocking 
-    // and close-on-exec.
+    // Make the socket non-blocking and close-on-exec.
     fcntl(getfd(), F_SETFD, FD_CLOEXEC);
     fcntl(getfd(), F_SETFL, O_RDWR|O_NONBLOCK);
+    
+    sockaddr *sa = addr.sockaddr();
+    if (connect(getfd(), sa, addr.sockaddr_len()) < 0)
+	seterr(errno);
+    delete sa;
+    
+    // all is well and we're connected.
+    set_nonblock(true);
+    set_close_on_exec(true);
 }
 
 

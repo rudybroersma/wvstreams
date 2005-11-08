@@ -1,5 +1,7 @@
 
-CXXFLAGS+=-DWVSTREAMS_RELEASE=\"$(RELEASE)\"
+CXXFLAGS+=-DWVSTREAMS_RELEASE=\"$(PACKAGE_VERSION)\"
+
+DISTCLEAN+=uniconf/daemon/uniconfd.8
 
 libuniconf.so libuniconf.a: \
 	$(filter-out uniconf/daemon/uniconfd.o, \
@@ -10,4 +12,4 @@ endif
 uniconf/daemon/uniconfd: uniconf/daemon/uniconfd.o $(LIBUNICONF)
 
 %: %.in
-	@sed -e "s/#VERSION#/$(RELEASE)/g" < $< > $@
+	@sed -e "s/#VERSION#/$(PACKAGE_VERSION)/g" < $< > $@

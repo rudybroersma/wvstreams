@@ -5,14 +5,20 @@
  * UniClientGen is a UniConfGen for retrieving data from the
  * UniConfDaemon.
  */
-#include "wvfile.h"
 #include "uniclientgen.h"
+#include "unilistiter.h"
+#include "wvaddr.h"
+#include "wvfile.h"
+#include "wvlinkerhack.h"
+#include "wvmoniker.h"
+#include "wvresolver.h"
+#include "wvsslstream.h"
+#include "wvstrutils.h"
+#include "wvstringmask.h"
 #include "wvtclstring.h"
 #include "wvtcp.h"
-#include "wvaddr.h"
-#include "wvresolver.h"
-#include "wvmoniker.h"
-#include "wvsslstream.h"
+
+WV_LINK(UniClientGen);
 
 
 #ifndef _WIN32
@@ -94,7 +100,8 @@ static WvMoniker<IUniConfGen> wvstreamreg("wvstream", wvstreamcreator);
 UniClientGen::UniClientGen(IWvStream *stream, WvStringParm dst) 
     : log(WvString("UniClientGen to %s",
 		   dst.isnull() && stream->src() 
-		   ? *stream->src() : WvString(dst)))
+		   ? *stream->src() : WvString(dst))),
+      version(0)
 {
     cmdinprogress = cmdsuccess = false;
     result_list = NULL;
@@ -102,12 +109,15 @@ UniClientGen::UniClientGen(IWvStream *stream, WvStringParm dst)
     conn = new UniClientConn(stream, dst);
     conn->setcallback(WvStreamCallback(this,
         &UniClientGen::conncallback), NULL);
+    WvIStreamList::globallist.append(conn, false, "uniclientconn-via-gen");
 }
 
 
 UniClientGen::~UniClientGen()
 {
-    conn->writecmd(UniClientConn::REQ_QUIT, "");
+    if (isok())
+	conn->writecmd(UniClientConn::REQ_QUIT, "");
+    WvIStreamList::globallist.unlink(conn);
     WVRELEASE(conn);
 }
 
@@ -120,8 +130,8 @@ bool UniClientGen::isok()
 
 bool UniClientGen::refresh()
 {
-    // FIXME: This should make sure everything in the queue has been flushed
-    return true;
+    conn->writecmd(UniClientConn::REQ_REFRESH);
+    return do_select();
 }
 
 void UniClientGen::flush_buffers()
@@ -133,8 +143,8 @@ void UniClientGen::flush_buffers()
 
 void UniClientGen::commit()
 {
-   UniConfKey tempkey("dummykey");
-   get(tempkey); // NOOP command, to ensure that all requests are flushed
+    conn->writecmd(UniClientConn::REQ_COMMIT);
+    do_select();
 }
 
 WvString UniClientGen::get(const UniConfKey &key)
@@ -159,10 +169,41 @@ void UniClientGen::set(const UniConfKey &key, WvStringParm newvalue)
     hold_delta();
 
     if (newvalue.isnull())
-        conn->writecmd(UniClientConn::REQ_REMOVE, wvtcl_escape(key));
+	conn->writecmd(UniClientConn::REQ_REMOVE, wvtcl_escape(key));
     else
-        conn->writecmd(UniClientConn::REQ_SET,
-            WvString("%s %s", wvtcl_escape(key), wvtcl_escape(newvalue)));
+	conn->writecmd(UniClientConn::REQ_SET,
+		       spacecat(wvtcl_escape(key),
+				wvtcl_escape(newvalue), ' '));
+
+    flush_buffers();
+    unhold_delta();
+}
+
+
+void UniClientGen::setv(const UniConfPairList &pairs)
+{
+    hold_delta();
+
+    UniConfPairList::Iter i(pairs);
+    if (version >= 19)
+    {
+	// Much like how VAL works, SETV continues sending key-value pairs
+	// until it sends a terminating SETV, which has no arguments.
+	for (i.rewind(); i.next(); )
+	{
+	    conn->writecmd(UniClientConn::REQ_SETV,
+			   spacecat(wvtcl_escape(i->key()),
+				    wvtcl_escape(i->value()), ' '));
+	}
+	conn->writecmd(UniClientConn::REQ_SETV);
+    }
+    else
+    {
+	for (i.rewind(); i.next(); )
+	{
+	    set(i->key(), i->value());
+	}
+    }
 
     unhold_delta();
 }
@@ -186,23 +227,15 @@ UniClientGen::Iter *UniClientGen::do_iterator(const UniConfKey &key,
 					      bool recursive)
 {
     assert(!result_list);
-    result_list = new KeyValList;
+    result_list = new UniListIter(this);
     conn->writecmd(UniClientConn::REQ_SUBTREE,
 		   WvString("%s %s", wvtcl_escape(key), WvString(recursive)));
 
     if (do_select())
     {
-	ListIter *it = new ListIter(this);
-	KeyValList::Iter i(*result_list);
-	for (i.rewind(); i.next(); )
-	{
-	    it->keys.append(new WvString(i->key), true);
-	    it->values.append(new WvString(i->val), true);
-	}
-	
-	delete result_list;
+	ListIter *it = result_list;
 	result_list = NULL;
-        return it;
+	return it;
     }
     else
     {
@@ -223,11 +256,20 @@ UniClientGen::Iter *UniClientGen::recursiveiterator(const UniConfKey &key)
 {
     return do_iterator(key, true);
 }
-    
+
+
+time_t uptime()
+{
+    WvFile f("/proc/uptime", O_RDONLY);
+    if (f.isok())
+        return WvString(f.getline(0)).num();
+    return 0;
+}
+
 
 void UniClientGen::conncallback(WvStream &stream, void *userdata)
 {
-    if (conn->alarm_was_ticking)
+    if (conn->alarm_was_ticking && timeout_activity+(TIMEOUT/1000) < uptime())
     {
         // command response took too long!
         log(WvLog::Warning, "Command timeout; connection closed.\n");
@@ -239,6 +281,7 @@ void UniClientGen::conncallback(WvStream &stream, void *userdata)
     }
 
     UniClientConn::Command command = conn->readcmd();
+    static const WvStringMask nasty_space(' ');
     switch (command)
     {
         case UniClientConn::NONE:
@@ -258,8 +301,8 @@ void UniClientGen::conncallback(WvStream &stream, void *userdata)
 
         case UniClientConn::REPLY_CHILD:
             {
-                WvString key(wvtcl_getword(conn->payloadbuf, " "));
-                WvString value(wvtcl_getword(conn->payloadbuf, " "));
+                WvString key(wvtcl_getword(conn->payloadbuf, nasty_space));
+                WvString value(wvtcl_getword(conn->payloadbuf, nasty_space));
 
                 if (!key.isnull() && !value.isnull())
                 {
@@ -274,8 +317,8 @@ void UniClientGen::conncallback(WvStream &stream, void *userdata)
 
         case UniClientConn::REPLY_ONEVAL:
             {
-                WvString key(wvtcl_getword(conn->payloadbuf, " "));
-                WvString value(wvtcl_getword(conn->payloadbuf, " "));
+                WvString key(wvtcl_getword(conn->payloadbuf, nasty_space));
+                WvString value(wvtcl_getword(conn->payloadbuf, nasty_space));
 
                 if (!key.isnull() && !value.isnull())
                 {
@@ -290,37 +333,46 @@ void UniClientGen::conncallback(WvStream &stream, void *userdata)
 
         case UniClientConn::PART_VALUE:
             {
-                WvString key(wvtcl_getword(conn->payloadbuf, " "));
-                WvString value(wvtcl_getword(conn->payloadbuf, " "));
+                WvString key(wvtcl_getword(conn->payloadbuf, nasty_space));
+                WvString value(wvtcl_getword(conn->payloadbuf, nasty_space));
 
                 if (!key.isnull() && !value.isnull())
                 {
                     if (result_list)
-                        result_list->append(new KeyVal(key, value), true);
+			result_list->add(key, value);
                 }
                 break;
             }
 
         case UniClientConn::EVENT_HELLO:
             {
-                WvString server(wvtcl_getword(conn->payloadbuf, " "));
+		WvStringList greeting;
+		wvtcl_decode(greeting, conn->payloadbuf.getstr(), nasty_space);
+		WvString server(greeting.popstr());
+		WvString version_string(greeting.popstr());
 
-                if (server.isnull() || strncmp(server, "UniConf", 7))
-                {
-                    // wrong type of server!
-                    log(WvLog::Error, "Connected to a non-UniConf serer!\n");
+		if (server.isnull() || strncmp(server, "UniConf", 7))
+		{
+		    // wrong type of server!
+		    log(WvLog::Error, "Connected to a non-UniConf serrer!\n");
 
-                    cmdinprogress = false;
-                    cmdsuccess = false;
-                    conn->close();
-                }                    
+		    cmdinprogress = false;
+		    cmdsuccess = false;
+		    conn->close();
+		}
+		else
+		{
+		    version = 0;
+		    sscanf(version_string, "%d", &version);
+		    log(WvLog::Debug3, "UniConf version %s.\n", version);
+		}
                 break;
             }
 
         case UniClientConn::EVENT_NOTICE:
             {
-                WvString key(wvtcl_getword(conn->payloadbuf, " "));
-                WvString value(wvtcl_getword(conn->payloadbuf, " "));
+                WvString key(wvtcl_getword(conn->payloadbuf, nasty_space));
+                WvString value(wvtcl_getword(conn->payloadbuf, nasty_space));
                 delta(key, value);
             }   
 
@@ -339,6 +391,7 @@ bool UniClientGen::do_select()
     cmdinprogress = true;
     cmdsuccess = false;
 
+    timeout_activity = uptime();
     conn->alarm(TIMEOUT);
     while (conn->isok() && cmdinprogress)
     {
@@ -349,6 +402,7 @@ bool UniClientGen::do_select()
         if (conn->select(-1, true, false))
         {
             conn->callback();
+            timeout_activity = uptime();
             conn->alarm(TIMEOUT);
         }
     }

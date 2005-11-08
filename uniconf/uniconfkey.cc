@@ -4,6 +4,7 @@
  *
  * A UniConf hierarchical key path abstraction.
  */
+#include "wvassert.h"
 #include "wvstream.h"
 #include "uniconfkey.h"
 #include <climits>
@@ -105,6 +106,13 @@ bool UniConfKey::iswild() const
 {
     // FIXME: not precise
     return strchr(path, '*') || strstr(path, "...");
+}
+
+
+bool UniConfKey::hastrailingslash() const
+{
+    const char *s = path.cstr();
+    return s[strlen(s) - 1] == '/';
 }
 
 
@@ -262,10 +270,40 @@ bool UniConfKey::matches(const UniConfKey &pattern) const
 
 bool UniConfKey::suborsame(const UniConfKey &key) const
 {
+    int n = numsegments();
+    if (hastrailingslash())
+	n -= 1;
+
     UniConfKey k = key.first(numsegments());
 
-    if (k == *this)
-        return true;
+    if (key.first(n) == first(n))
+	return true;
     return false;
 }
 
+
+bool UniConfKey::suborsame(const UniConfKey &key, WvString &subkey) const
+{
+    int n = numsegments();
+
+    // Compensate for the directory-style naming convention of the
+    // trailing slash.
+    if (hastrailingslash())
+	n -= 1;
+
+    if (key.first(n) == first(n))
+    {
+	subkey = key.removefirst(n);
+	return true;
+    }
+    return false;
+}
+
+
+UniConfKey UniConfKey::subkey(const UniConfKey &key) const
+{
+    WvString answer;
+    wvassert(suborsame(key, answer),
+	     "this = '%s'\nkey = '%s'", printable(), key);
+    return answer;
+}

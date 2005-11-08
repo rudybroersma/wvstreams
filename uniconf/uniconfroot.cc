@@ -6,12 +6,14 @@
  * UniConf tree, you'll need one of these.
  */
 #include "uniconfroot.h"
+#include "wvlinkerhack.h"
 
+WV_LINK_TO(UniGenHack);
 
 UniConfRoot::UniConfRoot() : UniConf(this), watchroot(NULL)
 {
-    mounts.setcallback(UniConfGenCallback(this,
-			  &UniConfRoot::gen_callback), NULL);
+    mounts.add_callback(this, UniConfGenCallback(this,
+			  &UniConfRoot::gen_callback));
 }
 
 
@@ -19,8 +21,8 @@ UniConfRoot::UniConfRoot(WvStringParm moniker, bool refresh)
     : UniConf(this), watchroot(NULL)
 {
     mounts.mount("/", moniker, refresh);
-    mounts.setcallback(UniConfGenCallback(this,
-			  &UniConfRoot::gen_callback), NULL);
+    mounts.add_callback(this, UniConfGenCallback(this,
+			  &UniConfRoot::gen_callback));
 }
 
 
@@ -28,8 +30,8 @@ UniConfRoot::UniConfRoot(UniConfGen *gen, bool refresh)
     : UniConf(this), watchroot(NULL)
 {
     mounts.mountgen("/", gen, refresh);
-    mounts.setcallback(UniConfGenCallback(this,
-			  &UniConfRoot::gen_callback), NULL);
+    mounts.add_callback(this, UniConfGenCallback(this,
+			  &UniConfRoot::gen_callback));
 }
 
 
@@ -73,7 +75,7 @@ UniConfRoot::~UniConfRoot()
     // before they did, so they won't be getting their callback).
     assert(!watchout(&watchroot));
     
-    mounts.setcallback(UniConfGenCallback(), NULL);
+    mounts.del_callback(this);
 }
 
 
@@ -83,6 +85,7 @@ void UniConfRoot::add_callback(void *cookie, const UniConfKey &key,
     UniWatchInfo *w = new UniWatchInfo(cookie, recurse, callback);
 
     UniWatchInfoTree *node = &watchroot;
+    
     UniConfKey::Iter i(key);
     for (i.rewind(); i.next(); )
     {
@@ -172,8 +175,7 @@ void UniConfRoot::prune(UniWatchInfoTree *node)
 }
 
 
-void UniConfRoot::gen_callback(const UniConfKey &key, WvStringParm value,
-                                   void *userdata)
+void UniConfRoot::gen_callback(const UniConfKey &key, WvStringParm value)
 {
     hold_delta();
     UniWatchInfoTree *node = & watchroot;

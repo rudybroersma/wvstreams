@@ -11,8 +11,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 
 #ifndef _WIN32
+//#include <uuid.h>
 #include <errno.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -21,6 +23,10 @@
 #define errno GetLastError()
 #define strcasecmp _stricmp
 #include <winsock2.h>
+#include <direct.h>
+#ifndef EACCES
+#define EACCES 0xfff
+#endif
 #endif
 
 char *terminate_string(char *string, char c)
@@ -120,8 +126,9 @@ WvString spacecat(WvStringParm a, WvStringParm b, char sep, bool onesep)
     // Create the destination string, and give it an appropriate size.
     // Then, fill it with string a.
     WvString s;
-    s.setsize(alen+blen+2);
+    s.setsize(alen + blen + 2);
     char *cptr = s.edit();
+
     memcpy(cptr, a, alen);
 
     // Write the separator in the appropriate spot.
@@ -344,7 +351,7 @@ WvString url_encode(WvStringParm stuff)
         }               
         else            
         {               
-            char buf[3];
+            char buf[4];
             sprintf(buf, "%%%02x", stuff[i] & 0xff);
             retval.put(&buf, 3);
         }
@@ -517,78 +524,212 @@ WvString getdirname(WvStringParm fullname)
     }
 }
 
+// Programmatically determine the units.  In order, these are:
+// bytes, kilobytes, megabytes, gigabytes, terabytes, petabytes,
+// exabytes, zettabytes, yottabytes.  Note that these are SI
+// prefixes, not binary ones.
+
+// This structure allows us to choose between SI-prefixes which are
+// powers of 10, and IEC-prefixes which are powers of 2.
+struct prefix_t
+{
+    const char *name;
+    unsigned long long base;
+};
+
+// SI-prefixes:
+// kilo, mega, giga, tera, peta, and exa.
+static const prefix_t si[] =
+{
+    { "k", 1000ull },
+    { "M", 1000ull * 1000ull },
+    { "G", 1000ull * 1000ull * 1000ull },
+    { "T", 1000ull * 1000ull * 1000ull * 1000ull },
+    { "P", 1000ull * 1000ull * 1000ull * 1000ull * 1000ull},
+    { "E", 1000ull * 1000ull * 1000ull * 1000ull * 1000ull * 1000ull},
+    { "Z", 0 },
+    { "Y", 0 },
+    { NULL, 0 }
+};
+
+// IEC-prefixes:
+// kibi, mebi, gibi, tebi, pebi, and exbi.
+static const prefix_t iec[] =
+{
+    { "Ki", 1024ull },
+    { "Mi", 1024ull * 1024ull},
+    { "Gi", 1024ull * 1024ull * 1024ull },
+    { "Ti", 1024ull * 1024ull * 1024ull * 1024ull },
+    { "Pi", 1024ull * 1024ull * 1024ull * 1024ull * 1024ull},
+    { "Ei", 1024ull * 1024ull * 1024ull * 1024ull * 1024ull * 1024ull},
+    { "Zi", 0 },
+    { "Yi", 0 },
+    { NULL, 0 }
+};
+
+
+// This function expects size to be ten-times the actual number.
+static inline unsigned long long _sizetoa_rounder(RoundingMethod method,
+						  unsigned long long size,
+						  unsigned long long remainder,
+						  unsigned long long base)
+{
+    unsigned long long half = base / 2;
+    unsigned long long significant_digits = size / base;
+    switch (method)
+    {
+    case ROUND_DOWN:
+	break;
+
+    case ROUND_UP:
+	if (remainder || (size % base))
+	    ++significant_digits;
+	break;
+
+    case ROUND_UP_AT_POINT_FIVE:
+	if ((size % base) >= half)
+	    ++significant_digits;
+	break;
+
+    case ROUND_DOWN_AT_POINT_FIVE:
+	unsigned long long r = size % base;
+	if ((r > half) || (remainder && (r == half)))
+	    ++significant_digits;
+	break;
+    }
+    return significant_digits;
+}
+
+
 // This function helps sizetoa() and sizektoa() below.  It takes a
 // bunch of digits, and the default unit (indexed by size); and turns
 // them into a WvString that's formatted to human-readable rounded
 // sizes, with one decimal place.
-WvString _sizetoa(unsigned long long digits, int size = 0)
+//
+// You must be very careful here never to add anything to size.
+// Otherwise, you might cause an overflow to occur.  Similarly, you
+// must be careful when you subtract or you might cause an underflow.
+static WvString _sizetoa(unsigned long long size, unsigned long blocksize,
+			 RoundingMethod rounding_method,
+			 const prefix_t *prefixes, WvStringParm unit)
 {
-    // Programmatically determine the units.  In order, these are:
-    // bytes, kilobytes, megabytes, gigabytes, terabytes, petabytes,
-    // exabytes, zettabytes, yottabytes.  Note that these are SI
-    // prefixes, not binary ones.
-    static char* size_name[] = { "B", "KB", "MB", "GB", "TB",
-				 "PB", "EB", "ZB", "YB", NULL };
+    assert(blocksize);
 
-    // Let's loop, until we can get our "units" to less-than 1000.
-    // But we also have to keep enough significant figures for two
-    // decimal places, in order to round properly.  Therefore, we
-    // should stop looping at 1000000.
-    while (digits >= 1000000) {
-	// We'll make an exception for 1000 TB and higher, since we
-	// have no larger unit.  Well, I guess we can use exabytes,
-	// but that's a little futher in the future.
-	if (size_name[size + 1] == NULL)
+    // To understand rounding, consider the display of the value 999949.
+    // For each rounding method the string displayed should be:
+    // ROUND_DOWN: 999.9 kB
+    // ROUND_UP_AT_POINT_FIVE: 999.9 kB
+    // ROUND_UP: 1.0 MB
+    // On the other hand, for the value 999950, the strings should be:
+    // ROUND_DOWN: 999.9 kB
+    // ROUND_DOWN_AT_POINT_FIVE: 999.9 kB
+    // ROUND_UP_AT_POINT_FIVE: 1.0 MB
+    // ROUND_UP: 1.0 MB
+
+    // Deal with blocksizes without overflowing.
+    const unsigned long long group_base = prefixes[0].base;
+    int shift = 0;
+    unsigned long prev_blocksize = 0;
+    while (blocksize >= group_base)
+    {
+	prev_blocksize = blocksize;
+	blocksize /= group_base;
+	++shift;
+    }
+
+    // If we have a very large blocksize, make sure to keep enough of
+    // it to make rounding possible.
+    if (prev_blocksize && prev_blocksize != group_base)
+    {
+	blocksize = prev_blocksize;
+	--shift;
+    }
+
+    int p = -1;
+    unsigned long long significant_digits = size * 10;
+    unsigned int remainder = 0;
+    if (significant_digits < size)
+    {
+	// A really big size.  We'll divide by a grouping before going up one.
+	remainder = size % group_base;
+	size /= group_base;
+	++shift;
+    }
+    while (size >= group_base)
+    {
+	++p;
+	significant_digits = _sizetoa_rounder(rounding_method,
+					      size * 10,
+					      remainder,
+					      prefixes[p].base);
+	if (significant_digits < (group_base * 10)
+	    || !prefixes[p + shift + 1].name)
 	    break;
-
-	// OK.  Let's go up another unit.
-	digits /= 1000;
-	size += 1;
     }
 
-    // Now we can perform our rounding calculation.  We use the
-    // algorithm derived from grade school.  If it is a 5 or higher,
-    // round up.
-    unsigned long long units = digits / 1000;
-    unsigned tenths = digits % 1000 / 100;
-    unsigned hundredths = digits % 100 / 10;
-    if (hundredths >= 5)
-	tenths += 1;
-    if (tenths >= 10) {
-	tenths = 0;
-	units += 1;
-    }
-    if (units >= 1000 && (size_name[size + 1] != NULL)) {
-	units /= 1000;
-	tenths = 0;
-	size += 1;
+    // Correct for blocksizes that aren't powers of group_base.
+    if (blocksize > 1)
+    {
+	significant_digits *= blocksize;
+	while (significant_digits >= (group_base * 10)
+	       && prefixes[p + shift + 1].name)
+	{
+	    significant_digits = _sizetoa_rounder(rounding_method,
+						  significant_digits,
+						  0,
+						  group_base);
+	    ++p;
+	}
     }
 
     // Now we can return our result.
-    return WvString("%s.%s %s", units, tenths, size_name[size]);
+    return WvString("%s.%s %s%s",
+		    significant_digits / 10,
+		    significant_digits % 10,
+		    prefixes[p + shift].name,
+		    unit);
 }
 
-WvString sizetoa(unsigned long long blocks, unsigned int blocksize)
+WvString sizetoa(unsigned long long blocks, unsigned long blocksize,
+		 RoundingMethod rounding_method)
 {
     unsigned long long bytes = blocks * blocksize;
 
-    // Test if we are dealing in just bytes.  Plus, we should ensure
-    // that we didn't overflow.  (Although that is highly unlikely,
-    // with a 64-bit integer.)
-    if ((bytes < 1000) && !(blocks * blocksize / 1000))
-        return WvString("%s bytes", blocks * blocksize);
+    // Test if we are dealing in just bytes.
+    if (bytes < 1000 && bytes >= blocks)
+	return WvString("%s bytes", bytes);
 
-    return _sizetoa(bytes, 1);
+    return _sizetoa(blocks, blocksize, rounding_method, si, "B");
 }
 
 
-WvString sizektoa(unsigned int kbytes)
+WvString sizektoa(unsigned long long kbytes, RoundingMethod rounding_method)
 {
-    // Test if we are dealing in just kilobytes.
     if (kbytes < 1000)
-        return WvString("%s KB", kbytes);
+	return WvString("%s kB", kbytes);
 
-    return _sizetoa(kbytes, 2);
+    return sizetoa(kbytes, 1000, rounding_method);
+}
+
+WvString sizeitoa(unsigned long long blocks, unsigned long blocksize,
+		  RoundingMethod rounding_method)
+{
+    unsigned long long bytes = blocks * blocksize;
+
+    // Test if we are dealing in just bytes.
+    if (bytes < 1024 && bytes >= blocks)
+	return WvString("%s bytes", bytes);
+
+    return _sizetoa(blocks, blocksize, rounding_method, iec, "B");
+}
+
+
+WvString sizekitoa(unsigned long long kbytes, RoundingMethod rounding_method)
+{
+    if (kbytes < 1024)
+	return WvString("%s KiB", kbytes);
+
+    return sizeitoa(kbytes, 1024, rounding_method);
 }
 
 WvString secondstoa(unsigned int total_seconds)
@@ -746,6 +887,27 @@ WvString fqdomainname()
 }
 
 
+WvString wvgetcwd()
+{
+    int maxlen = 0;
+    for (;;)
+    {
+        maxlen += 80;
+        char *name = new char[maxlen];
+        char *res = getcwd(name, maxlen);
+        if (res)
+        {
+            WvString s(name);
+            deletev name;
+            return s;
+        }
+	if (errno == EACCES || errno == ENOENT)
+	    return "."; // can't deal with those errors
+        assert(errno == ERANGE); // buffer too small
+    }
+}
+
+
 WvString metriculate(const off_t i)
 {
     WvString res;
@@ -787,6 +949,9 @@ WvString metriculate(const off_t i)
 
 WvString afterstr(WvStringParm line, WvStringParm a)
 {
+    if (!line || !a)
+	return WvString::null;
+
     char *loc = strstr(line, a);
     if (loc == 0)
 	return "";
@@ -800,8 +965,11 @@ WvString afterstr(WvStringParm line, WvStringParm a)
 
 WvString beforestr(WvStringParm line, WvStringParm a)
 {
+    if (!line || !a)
+	return WvString::null;
+
     WvString ret = line;
-    ret.unique();    
+    ret.unique();     
     char *loc = strstr(ret, a);
 
     if (loc == 0)
@@ -823,6 +991,252 @@ WvString substr(WvString line, unsigned int pos, unsigned int len)
     char *tmp2 = ret.edit();
     if (pos + len < line.len())
 	tmp2[len] = '\0';
+
+    return ret;
+}
+
+const CStrExtraEscape CSTR_TCLSTR_ESCAPES[3] =
+{
+    { '{', "\\<" },
+    { '}', "\\>" },
+    { 0, NULL }
+};
+
+static inline const char *cstr_escape_char(char ch)
+{
+    static const char *xlat[256] =
+    {
+        "\\0", "\\x01", "\\x02", "\\x03", "\\x04", "\\x05", "\\x06", "\\a", 
+        "\\b", "\\t", "\\n", "\\v", "\\x0C", "\\r", "\\x0E", "\\x0F", 
+        "\\x10", "\\x11", "\\x12", "\\x13", "\\x14", "\\x15", "\\x16", "\\x17", 
+        "\\x18", "\\x19", "\\x1A", "\\x1B", "\\x1C", "\\x1D", "\\x1E", "\\x1F", 
+        " ", "!", "\\\"", "#", "$", "%", "&", "'", 
+        "(", ")", "*", "+", ",", "-", ".", "/", 
+        "0", "1", "2", "3", "4", "5", "6", "7", 
+        "8", "9", ":", ";", "<", "=", ">", "?", 
+        "@", "A", "B", "C", "D", "E", "F", "G", 
+        "H", "I", "J", "K", "L", "M", "N", "O", 
+        "P", "Q", "R", "S", "T", "U", "V", "W", 
+        "X", "Y", "Z", "[", "\\\\", "]", "^", "_", 
+        "`", "a", "b", "c", "d", "e", "f", "g", 
+        "h", "i", "j", "k", "l", "m", "n", "o", 
+        "p", "q", "r", "s", "t", "u", "v", "w", 
+        "x", "y", "z", "{", "|", "}", "~", "\\x7F", 
+        "\\x80", "\\x81", "\\x82", "\\x83", "\\x84", "\\x85", "\\x86", "\\x87", 
+        "\\x88", "\\x89", "\\x8A", "\\x8B", "\\x8C", "\\x8D", "\\x8E", "\\x8F", 
+        "\\x90", "\\x91", "\\x92", "\\x93", "\\x94", "\\x95", "\\x96", "\\x97", 
+        "\\x98", "\\x99", "\\x9A", "\\x9B", "\\x9C", "\\x9D", "\\x9E", "\\x9F", 
+        "\\xA0", "\\xA1", "\\xA2", "\\xA3", "\\xA4", "\\xA5", "\\xA6", "\\xA7", 
+        "\\xA8", "\\xA9", "\\xAA", "\\xAB", "\\xAC", "\\xAD", "\\xAE", "\\xAF", 
+        "\\xB0", "\\xB1", "\\xB2", "\\xB3", "\\xB4", "\\xB5", "\\xB6", "\\xB7", 
+        "\\xB8", "\\xB9", "\\xBA", "\\xBB", "\\xBC", "\\xBD", "\\xBE", "\\xBF", 
+        "\\xC0", "\\xC1", "\\xC2", "\\xC3", "\\xC4", "\\xC5", "\\xC6", "\\xC7", 
+        "\\xC8", "\\xC9", "\\xCA", "\\xCB", "\\xCC", "\\xCD", "\\xCE", "\\xCF", 
+        "\\xD0", "\\xD1", "\\xD2", "\\xD3", "\\xD4", "\\xD5", "\\xD6", "\\xD7", 
+        "\\xD8", "\\xD9", "\\xDA", "\\xDB", "\\xDC", "\\xDD", "\\xDE", "\\xDF", 
+        "\\xE0", "\\xE1", "\\xE2", "\\xE3", "\\xE4", "\\xE5", "\\xE6", "\\xE7", 
+        "\\xE8", "\\xE9", "\\xEA", "\\xEB", "\\xEC", "\\xED", "\\xEE", "\\xEF", 
+        "\\xF0", "\\xF1", "\\xF2", "\\xF3", "\\xF4", "\\xF5", "\\xF6", "\\xF7", 
+        "\\xF8", "\\xF9", "\\xFA", "\\xFB", "\\xFC", "\\xFD", "\\xFE", "\\xFF"
+    };
+    return xlat[(unsigned char)ch];
+}
+
+static inline int hex_digit_val(char ch)
+{
+    static int val[256] =
+    {
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        0, 1, 2, 3, 4, 5, 6, 7, 
+        8, 9, -1, -1, -1, -1, -1, -1,
+        -1, 10, 11, 12, 13, 14, 15, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, 10, 11, 12, 13, 14, 15, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1,
+        -1, -1, -1, -1, -1, -1, -1, -1
+    };
+    return val[(unsigned char)ch];
+}
+
+static inline bool cstr_unescape_char(const char *&cstr, char &ch)
+{
+    if (*cstr == '\\')
+    {
+    	++cstr;
+    
+        switch (*cstr)
+        {
+            case '"': ch = '"'; break;
+            case 't': ch = '\t'; break;
+            case 'n': ch = '\n'; break;
+    	    case '\\': ch = '\\'; break;
+    	    case 'r': ch = '\r'; break;
+    	    case 'a': ch = '\a'; break;
+    	    case 'v': ch = '\v'; break;
+    	    case 'b': ch = '\b'; break;
+    	    case '0': ch = '\0'; break;
+            case 'x':
+            {
+                int vals[2];
+                int i;
+                for (i=0; i<2; ++i)
+                {
+                    if ((vals[i] = hex_digit_val(*++cstr)) == -1)
+                        return false;
+                }
+                ch = (vals[0] << 4) | vals[1];
+            }
+            break;
+            default: return false;
+        }
+    	
+    	++cstr;
+    	
+    	return true;
+    }
+    else
+    {
+        ch = *cstr++;
+        return true;
+    }
+}
+
+WvString cstr_escape(const void *data, size_t size,
+        const CStrExtraEscape extra_escapes[])
+{
+    if (!data) return WvString::null;
+
+    const char *cdata = (const char *)data;
+
+    WvString result;
+    result.setsize(4*size + 3); // We could do better but it would slow us down
+    char *cstr = result.edit();
+    
+    *cstr++ = '\"';
+    while (size-- > 0)
+    {
+    	const char *esc = NULL;
+        if (extra_escapes)
+        {
+            const CStrExtraEscape *extra = &extra_escapes[0];
+            while (extra->ch && extra->esc)
+            {
+                if (*cdata == extra->ch)
+                {
+                    esc = extra->esc;
+                    break;
+                }
+                
+                ++extra;
+            }
+        }
+        if (!esc) esc = cstr_escape_char(*cdata);
+        ++cdata;
+        while (*esc) *cstr++ = *esc++;
+    }
+    *cstr++ = '\"';
+    *cstr = '\0';
+    
+    return result;
+}
+
+bool cstr_unescape(WvStringParm cstr, void *data, size_t max_size, size_t &size,
+        const CStrExtraEscape extra_escapes[])
+{
+    const char *q = cstr;
+    char *cdata = (char *)data;
+    
+    if (!q) goto misformatted;
+    size = 0;
+    
+    for (;;)
+    {
+        while (isspace(*q)) q++;
+        if (*q == '\0') break;
+
+        if (*q++ != '\"') goto misformatted;
+        while (*q && *q != '\"')
+        {
+            bool found = false;
+            char unesc;
+            if (extra_escapes)
+            {
+                const CStrExtraEscape *extra = &extra_escapes[0];
+                while (extra->ch && extra->esc)
+                {
+                    size_t len = strlen(extra->esc);
+                    if (strncmp(extra->esc, q, len) == 0)
+                    {
+                        unesc = extra->ch;
+                        q += len;
+                        found = true;
+                        break;
+                    }
+                    
+                    ++extra;
+                }
+            }
+            if (!found && !cstr_unescape_char(q, unesc)) goto misformatted;
+            if (size++ < max_size && cdata) *cdata++ = unesc;
+        }
+        if (*q++ != '\"') goto misformatted;
+    }
+    
+    return size <= max_size;
+
+misformatted:
+
+    size = 0;
+    return false;
+}
+
+WvString local_date(time_t when)
+{
+    WvString out;
+    out.setsize(80);
+
+    if (when < 0)
+        when = time(NULL);
+
+    struct tm *tmwhen = localtime(&when);
+    strftime(out.edit(), 80, "%b %d %I:%M:%S %p", tmwhen);
+
+    return out;
+}
+
+
+// Removes any trailing punctuation ('.', '?', or '!') from the line
+WvString depunctuate(WvStringParm line)
+{
+    WvString ret = line;
+    char * edit = ret.edit();
+    int last = ret.len() - 1;
+    if (edit[last] == '.' || edit[last] == '?' || edit[last] == '!')
+        edit[last] = '\0';
 
     return ret;
 }

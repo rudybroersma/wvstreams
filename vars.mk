@@ -18,9 +18,9 @@ TARGETS += libwvbase.so libwvbase.a
 TARGETS += libwvutils.so libwvutils.a
 TARGETS += libwvstreams.so libwvstreams.a
 TARGETS += libuniconf.so libuniconf.a
-TARGETS += wvtestmain.o
+TARGETS += wvtestmain.o libwvtest.a
 TARGETS += uniconf/daemon/uniconfd uniconf/tests/uni
-GARBAGE += wvtestmain.o tmp.ini
+GARBAGE += wvtestmain.o tmp.ini .wvtest-total
 
 #ifneq ("$(with_swig)", "no")
 #  ifneq ("$(with_tcl)", "no")
@@ -36,19 +36,6 @@ GARBAGE += wvtestmain.o tmp.ini
 #    CPPFLAGS += `php-config --includes`
 #  endif
 #endif
-
-ifneq ("$(with_ogg)", "no")
-  ifneq ("$(with_vorbis)", "no")
-    TARGETS += libwvoggvorbis.so libwvoggvorbis.a
-  endif
-  ifneq ("$(with_speex)", "no")
-    TARGETS += libwvoggspeex.so libwvoggspeex.a
-  endif
-endif
-
-ifneq ("$(with_fftw)", "no")
-  TARGETS += libwvfft.so libwvfft.a
-endif
 
 ifneq ("$(with_qt)", "no")
   TARGETS += libwvqt.so libwvqt.a
@@ -68,7 +55,7 @@ DISTCLEAN += autom4te.cache config.mk config.log config.status \
 
 REALCLEAN += stamp-h.in configure include/wvautoconf.h.in
 
-CPPFLAGS += -Iinclude -pipe
+CPPFLAGS += -Iinclude -Ignulib -pipe
 ARFLAGS = rs
 
 DEBUG:=$(filter-out no,$(enable_debug))
@@ -130,10 +117,6 @@ ifeq ("$(enable_efence)", "yes")
 LDLIBS+=-lefence
 endif
 
-ifneq ("$(with_fam)", "no")
-  libwvstreams.so: -lfam
-endif
-
 ifneq ("$(with_bdb)", "no")
   libwvutils.so-LIBS+=-ldb
 endif
@@ -142,25 +125,20 @@ ifneq ("$(with_qdbm)", "no")
   libwvutils.so-LIBS+=-L. -lqdbm
 endif
 
-libwvbase.so: LIBS+=-lxplc-cxx
-
-ifneq ("$(with_fam)", "no")
-  libwvstreams.so: -lfam
-endif
+libwvbase.so-LIBS+=-lxplc-cxx -lm
+libwvbase.so:
 
 ifneq ("$(with_openslp)", "no")
   libwvstreams.so: -lslp
 endif
 
 ifneq ("$(with_pam)", "no")
-  libwvstreams.so: -lpam
+  libwvutils.so: -lpam
 endif
 
-LDLIBS := -lgcc $(LDLIBS) \
+LDLIBS := $(LDLIBS) \
 	$(shell $(CC) -lsupc++ -lgcc_eh 2>&1 | grep -q "undefined reference" \
 		&& echo " -lsupc++ -lgcc_eh")
-
-RELEASE?=$(PACKAGE_VERSION)
 
 include $(filter-out xplc/% linuxstreams/%,$(wildcard */vars.mk */*/vars.mk)) \
 	$(wildcard $(foreach dir,$(ARCH_SUBDIRS),$(dir)/*/vars.mk)) /dev/null
@@ -174,10 +152,13 @@ BASEOBJS= \
 	streams/wvfdstream.o \
 	utils/wvfork.o \
 	utils/wvhash.o \
+	utils/wvhashtable.o \
 	utils/wvlinklist.o \
 	utils/wvmoniker.o \
+	utils/wvregex.o \
 	utils/wvscatterhash.o utils/wvsorter.o \
 	utils/wvstring.o utils/wvstringlist.o \
+	utils/wvstringmask.o \
 	utils/strutils.o \
 	utils/wvtask.o \
 	utils/wvtimeutils.o \
@@ -190,16 +171,21 @@ BASEOBJS= \
 	uniconf/unihashtree.o \
 	uniconf/unimountgen.o \
 	uniconf/unitempgen.o \
-	$(BASEOBJS_EXTRA)
-
-BASEOBJS_EXTRA= \
 	utils/wvbackslash.o \
 	utils/wvencoder.o \
 	utils/wvtclstring.o \
+	utils/wvstringcache.o \
 	uniconf/uniinigen.o \
+	uniconf/unigenhack.o \
+	uniconf/unilistiter.o \
 	streams/wvfile.o \
 	streams/wvstreamclone.o  \
-	streams/wvconstream.o
+	streams/wvconstream.o \
+	utils/wvcrashbase.o
+
+TESTOBJS = \
+	utils/wvtest.o \
+	utils/wvtest_filecountprefix.o
 
 # print the sizes of all object files making up libwvbase, to help find
 # optimization targets.
@@ -208,9 +194,12 @@ basesize:
 
 micro: micro.o libwvbase.so
 
-libwvbase.a libwvbase.so: $(BASEOBJS)
+libwvbase.a libwvbase.so: $(filter-out uniconf/unigenhack.o,$(BASEOBJS))
+libwvbase.a: uniconf/unigenhack_s.o
+libwvbase.so: uniconf/unigenhack.o
+libwvbase.so: LIBS+=$(LIBXPLC)
 
-libwvutils.a libwvutils.so: $(filter-out $(BASEOBJS),$(call objects,utils))
+libwvutils.a libwvutils.so: $(filter-out $(BASEOBJS) $(TESTOBJS),$(call objects,utils)) gnulib/libgnu.a
 libwvutils.so: libwvbase.so
 libwvutils.so: -lz -lcrypt
 
@@ -222,19 +211,13 @@ libwvstreams.so: LIBS+=-lssl -lcrypto
 
 libuniconf.a libuniconf.so: $(filter-out $(BASEOBJS), \
 	$(call objects,uniconf))
+libuniconf.a: uniconf/uniconfroot.o
 libuniconf.so: libwvstreams.so libwvutils.so libwvbase.so
-
-libwvoggvorbis.a libwvoggvorbis.so: $(call objects,oggvorbis)
-libwvoggvorbis.so: -logg -lvorbis -lvorbisenc libwvutils.so libwvbase.so
-
-libwvoggspeex.a libwvoggspeex.so: $(call objects,oggspeex)
-libwvoggspeex.so: -logg -lspeex libwvutils.so libwvbase.so
-
-libwvfft.a libwvfft.so: $(call objects,fft)
-libwvfft.so: -lfftw -lrfftw libwvutils.so libwvbase.so
 
 libwvtelephony.a libwvtelephony.so: $(call objects,telephony)
 libwvtelephony.so: 
+
+libwvtest.a: wvtestmain.o $(TESTOBJS)
 
 ifeq ("$(wildcard /usr/lib/libqt-mt.so)", "/usr/lib/libqt-mt.so")
   libwvqt.so-LIBS+=-lqt-mt

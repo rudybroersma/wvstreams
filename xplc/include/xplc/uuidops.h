@@ -34,6 +34,10 @@
 #ifndef __XPLC_UUIDOPS_H__
 #define __XPLC_UUIDOPS_H__
 
+#if defined(__GNUC__) && __GNUC__ > 3
+# pragma GCC system_header
+#endif
+
 #include <xplc/uuid.h>
 
 #if !defined _SYS_GUID_OPERATOR_EQ_ && !defined _NO_SYS_GUID_OPERATOR_EQ_
@@ -45,10 +49,10 @@
 inline int operator==(const UUID& uuid1, const UUID& uuid2) {
     return
       (&uuid1 == &uuid2) ||
-      ((static_cast<const unsigned long*>(&uuid1.Data1)[0] == static_cast<const unsigned long*>(&uuid2.Data1)[0]) &&
-       (static_cast<const unsigned long*>(&uuid1.Data1)[1] == static_cast<const unsigned long*>(&uuid2.Data1)[1]) &&
-       (static_cast<const unsigned long*>(&uuid1.Data1)[2] == static_cast<const unsigned long*>(&uuid2.Data1)[2]) &&
-       (static_cast<const unsigned long*>(&uuid1.Data1)[3] == static_cast<const unsigned long*>(&uuid2.Data1)[3]));
+      ((static_cast<const u_int32_t*>(&uuid1.Data1)[0] == static_cast<const u_int32_t*>(&uuid2.Data1)[0]) &&
+       (static_cast<const u_int32_t*>(&uuid1.Data1)[1] == static_cast<const u_int32_t*>(&uuid2.Data1)[1]) &&
+       (static_cast<const u_int32_t*>(&uuid1.Data1)[2] == static_cast<const u_int32_t*>(&uuid2.Data1)[2]) &&
+       (static_cast<const u_int32_t*>(&uuid1.Data1)[3] == static_cast<const u_int32_t*>(&uuid2.Data1)[3]));
 }
 
 /**
@@ -57,10 +61,10 @@ inline int operator==(const UUID& uuid1, const UUID& uuid2) {
 inline int operator!=(const UUID& uuid1, const UUID& uuid2) {
     return
       (&uuid1 != &uuid2) &&
-      ((static_cast<const unsigned long*>(&uuid1.Data1)[0] != static_cast<const unsigned long*>(&uuid2.Data1)[0]) ||
-       (static_cast<const unsigned long*>(&uuid1.Data1)[1] != static_cast<const unsigned long*>(&uuid2.Data1)[1]) ||
-       (static_cast<const unsigned long*>(&uuid1.Data1)[2] != static_cast<const unsigned long*>(&uuid2.Data1)[2]) ||
-       (static_cast<const unsigned long*>(&uuid1.Data1)[3] != static_cast<const unsigned long*>(&uuid2.Data1)[3]));
+      ((static_cast<const u_int32_t*>(&uuid1.Data1)[0] != static_cast<const u_int32_t*>(&uuid2.Data1)[0]) ||
+       (static_cast<const u_int32_t*>(&uuid1.Data1)[1] != static_cast<const u_int32_t*>(&uuid2.Data1)[1]) ||
+       (static_cast<const u_int32_t*>(&uuid1.Data1)[2] != static_cast<const u_int32_t*>(&uuid2.Data1)[2]) ||
+       (static_cast<const u_int32_t*>(&uuid1.Data1)[3] != static_cast<const u_int32_t*>(&uuid2.Data1)[3]));
 }
 
 #endif

@@ -12,18 +12,18 @@
 #include "time.h"
 #endif
 
-#include "wvxplc.h"
 #include "wverror.h"
 #include "wvcallback.h"
 #include "wvbuf.h"
+#include "wvxplc.h"
 
 
 class WvAddr;
 class WvStream;
 
 
-// parameters are: owning-stream, userdata
-typedef WvCallback<void, WvStream&, void*> WvStreamCallback;
+/* The stream gets passed back as a parameter. */
+typedef WvCallback<void, WvStream&> IWvStreamCallback;
 
 
 class IWvStream : public WvErrorBase, public IObject
@@ -143,9 +143,24 @@ public:
      */
     virtual bool should_flush() = 0;
 
+    /*
+     * WARNING: these don't work as expected!
+     */
+    /** Sets a callback to be invoked when the stream is readable. */
+    virtual IWvStreamCallback setreadcallback(IWvStreamCallback _callfunc) = 0;
+
+    /** Sets a callback to be invoked when the stream is writable. */
+    virtual IWvStreamCallback setwritecallback(IWvStreamCallback _callfunc) = 0;
+
+    /** Sets a callback to be invoked when the stream is in exception
+     * state. */
+    virtual IWvStreamCallback setexceptcallback(IWvStreamCallback _callfunc) = 0;
+    /* 
+     * END WARNING
+     */
+
     /** Sets a callback to be invoked on close().  */
-    virtual void setclosecallback(WvStreamCallback _callfunc,
-				  void *_userdata) = 0;
+    virtual IWvStreamCallback setclosecallback(IWvStreamCallback _callfunc) = 0;
 };
 
 

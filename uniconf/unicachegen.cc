@@ -7,6 +7,10 @@
 #include "uniconf.h"
 #include "unicachegen.h"
 #include "wvmoniker.h"
+#include "wvlinkerhack.h"
+
+WV_LINK(UniCacheGen);
+
 
 // if 'obj' is non-NULL and is a UniConfGen, wrap that; otherwise wrap the
 // given moniker.
@@ -31,14 +35,15 @@ UniCacheGen::UniCacheGen(IUniConfGen *_inner)
     : log("UniCache", WvLog::Debug1), inner(_inner)
 {
     if (inner)
-        inner->setcallback(UniConfGenCallback(this,
-            &UniCacheGen::deltacallback), NULL);
+        inner->add_callback(this, UniConfGenCallback(this,
+            &UniCacheGen::deltacallback));
     refreshed_once = false;
 }
 
 
 UniCacheGen::~UniCacheGen()
 {
+    inner->del_callback(this);
     WVRELEASE(inner);
 }
 
@@ -90,8 +95,7 @@ void UniCacheGen::loadtree(const UniConfKey &key)
 }
 
 
-void UniCacheGen::deltacallback(const UniConfKey &key, WvStringParm value,
-                                void *userdata)
+void UniCacheGen::deltacallback(const UniConfKey &key, WvStringParm value)
 {
     UniTempGen::set(key, value);
 }

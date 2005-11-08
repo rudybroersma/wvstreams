@@ -11,9 +11,11 @@
 #define ZBUFSIZE 10240
 
 
-WvGzipEncoder::WvGzipEncoder(Mode _mode) :
-    tmpbuf(ZBUFSIZE), mode(_mode)
+WvGzipEncoder::WvGzipEncoder(Mode _mode, size_t _out_limit) :
+    out_limit(_out_limit), tmpbuf(ZBUFSIZE), mode(_mode)
 {
+    ignore_decompression_errors = false;
+    full_flush = false;
     init();
 }
 
@@ -64,6 +66,7 @@ void WvGzipEncoder::close()
 bool WvGzipEncoder::_encode(WvBuf &inbuf, WvBuf &outbuf, bool flush)
 {
     bool success;
+    output = 0;
     for (;;)
     {
         prepare(& inbuf);
@@ -77,7 +80,7 @@ bool WvGzipEncoder::_encode(WvBuf &inbuf, WvBuf &outbuf, bool flush)
         }
         if (! success)
             return false;
-        if (alldata)
+        if (alldata || (out_limit && (output == out_limit)))
             return true;
     }
 }
@@ -119,33 +122,47 @@ void WvGzipEncoder::prepare(WvBuf *inbuf)
 bool WvGzipEncoder::process(WvBuf &outbuf, bool flush, bool finish)
 {
     int flushmode = finish ? Z_FINISH :
-        flush ? Z_SYNC_FLUSH : Z_NO_FLUSH;
+        flush ? (full_flush ? Z_FULL_FLUSH : Z_SYNC_FLUSH) : Z_NO_FLUSH;
     int retval;
     do
     {
         // process the next chunk
         tmpbuf.zap();
-        zstr->avail_out = tmpbuf.free();
-	zstr->next_out = tmpbuf.alloc(tmpbuf.free());
+        size_t avail_out = tmpbuf.free();
+        if (out_limit)
+            avail_out = tmpbuf.free() < (out_limit - output) ? tmpbuf.free()
+                : (out_limit - output);
+
+        zstr->avail_out = avail_out;
+	zstr->next_out = tmpbuf.alloc(avail_out);
 	if (mode == Deflate)
 	    retval = deflate(zstr, flushmode);
 	else
 	    retval = inflate(zstr, flushmode);
 	tmpbuf.unalloc(zstr->avail_out);
 
+        output += avail_out - zstr->avail_out;
+
         // consume pending output
         outbuf.merge(tmpbuf);
-    } while (retval == Z_OK);
+
+        if (retval == Z_DATA_ERROR && mode == Inflate
+            && ignore_decompression_errors)
+            retval = inflateSync(zstr);
+    } while (retval == Z_OK && (!out_limit || (out_limit == output)));
 
     if (retval == Z_STREAM_END)
         setfinished();
-    else if (retval != Z_OK && retval != Z_BUF_ERROR)
+    else if (retval != Z_OK && retval != Z_BUF_ERROR &&
+             !(retval == Z_DATA_ERROR && mode == Inflate
+               && ignore_decompression_errors))
     {
         seterror("error %s during gzip %s: %s", retval,
             mode == Deflate ? "compression" : "decompression",
             zstr->msg ? zstr->msg : "unknown");
         return false;
     }
+
     return true;
 }
 

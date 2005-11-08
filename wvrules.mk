@@ -26,31 +26,31 @@ export WVSTREAMS WVSTREAMS_SRC WVSTREAMS_LIB WVSTREAMS_INC WVSTREAMS_BIN
 
 SHELL=/bin/bash
 
-ifeq (${WVTESTRUN},)
-  WVTESTRUN=$(WVSTREAMS_BIN)/wvtesthelper
-endif
-
-#ifneq "$(filter-out $(NO_CONFIGURE_TARGETS),$(if $(MAKECMDGOALS),$(MAKECMDGOALS),default))" ""
-#  -include config.mk
-#endif
-
 ifneq ($(wildcard $(WVSTREAMS_SRC)/config.mk),)
   include $(WVSTREAMS_SRC)/config.mk
+endif
+
+ifeq (${EXEEXT},.exe)
+  include $(WVSTREAMS_SRC)/wvrules-win32.mk
+endif
+
+ifeq (${WVTESTRUN},)
+  WVTESTRUN=$(WVSTREAMS_BIN)/wvtesthelper
 endif
 
 ifneq ("$(with_xplc)", "no")
 ifneq ("$(with_xplc)", "")
   LDFLAGS:=-L$(with_xplc) $(LDFLAGS)
 endif
-  LIBXPLC=-lxplc-cxx -lxplc
+  LIBXPLC=-lxplc-cxx
 endif
 
 LIBWVBASE=$(WVSTREAMS_LIB)/libwvbase.so $(LIBXPLC)
 LIBWVUTILS=$(WVSTREAMS_LIB)/libwvutils.so $(LIBWVBASE)
 LIBWVSTREAMS=$(WVSTREAMS_LIB)/libwvstreams.so $(LIBWVUTILS)
-LIBWVOGG=$(WVSTREAMS_LIB)/libwvoggvorbis.so $(LIBWVSTREAMS)
 LIBUNICONF=$(WVSTREAMS_LIB)/libuniconf.so $(LIBWVSTREAMS)
 LIBWVQT=$(WVSTREAMS_LIB)/libwvqt.so $(LIBWVSTREAMS)
+LIBWVTEST=$(WVSTREAMS_LIB)/libwvtest.a $(LIBWVUTILS)
 
 #
 # Initial C compilation flags
@@ -61,6 +61,9 @@ C_AND_CXX_FLAGS += -D_BSD_SOURCE -D_GNU_SOURCE $(OSDEFINE) \
 CFLAGS += $(COPTS) $(C_AND_CXX_FLAGS) 
 CXXFLAGS += $(CXXOPTS) $(C_AND_CXX_FLAGS)
 LDFLAGS += $(LDOPTS) -L$(WVSTREAMS_LIB)
+
+# Default compiler we use for linking
+WVLINK_CC = gcc
 
 # FIXME: what does this do??
 XX_LIBS := $(XX_LIBS) $(shell $(CC) -lsupc++ -lgcc_eh 2>&1 | grep -q "undefined reference" && echo " -lsupc++ -lgcc_eh")
@@ -130,9 +133,12 @@ xsubdirs=$(sort $(wildcard $1/*/subdir.mk)) /dev/null
 default: all
 
 # default "test" rule does nothing...
-.PHONY: test runtests
+.PHONY: test runtests clean-valgrind
 test:
-runtests:
+runtests: clean-valgrind
+
+clean-valgrind:
+	@rm -f valgrind.log.pid*
 
 %/test:
 	$(MAKE) -C $(dir $@) test
@@ -253,23 +259,29 @@ wvcxx=$(call wvcc_base,$1,$2,$3,$(CXX) $(CFLAGS) $(CXXFLAGS) $($1-CPPFLAGS) $($1
 define wvlink_ar
 	$(LINK_MSG)set -e; rm -f $1 $(patsubst %.a,%.libs,$1); \
 	echo $2 >$(patsubst %.a,%.libs,$1); \
-	ar q $1 $(filter %.o,$2); \
+	$(AR) q $1 $(filter %.o,$2); \
 	for d in "" $(filter %.libs,$2); do \
 	    if [ "$$d" != "" ]; then \
-			cd `dirname "$$d"`; \
-			ar q $(shell pwd)/$1 $$(cat $$(basename $$d)); \
+			cd $$(dirname "$$d"); \
+			$(AR) q $(shell pwd)/$1 $$(cat $$(basename $$d)); \
 			cd $(shell pwd); \
 		fi; \
 	done; \
-	ranlib $1
+	$(AR) s $1
 endef
+%.so: SONAME=$@$(if $(SO_VERSION),.$(SO_VERSION))
 wvsoname=$(if $($1-SONAME),$($1-SONAME),$(if $(SONAME),$(SONAME),$1))
 define wvlink_so
-	$(LINK_MSG)$(CC) $(LDFLAGS) $($1-LDFLAGS) -Wl,-soname,$(call wvsoname,$1) -shared -o $1 $(filter %.o %.a %.so,$2) $($1-LIBS) $(LIBS) $(XX_LIBS)
+	$(LINK_MSG)$(WVLINK_CC) $(LDFLAGS) $($1-LDFLAGS) -Wl,-soname,$(call wvsoname,$1) -shared -o $1 $(filter %.o %.a %.so,$2) $($1-LIBS) $(LIBS) $(XX_LIBS)
 	$(if $(filter-out $(call wvsoname,$1),$1),$(call wvlns,$1,$(call wvsoname,$1)))
 endef
 
 wvlink=$(LINK_MSG)$(CC) $(LDFLAGS) $($1-LDFLAGS) -o $1 $(filter %.o %.a %.so, $2) $($1-LIBS) $(LIBS) $(XX_LIBS) $(LDLIBS)
+
+../%.so:;	@echo "Shared library $@ does not exist!"; exit 1
+../%.a:;	@echo "Library $@ does not exist!"; exit 1
+../%.o:;	@echo "Object $@ does not exist!"; exit 1
+/%.a:;		@echo "Library $@ does not exist!"; exit 1
 
 %.o: %.c;	$(call wvcc ,$@,$<,$*)
 %.fpic.o: %.c;	$(call wvcc ,$@,$<,$*,-fPIC)
@@ -286,13 +298,8 @@ wvlink=$(LINK_MSG)$(CC) $(LDFLAGS) $($1-LDFLAGS) -o $1 $(filter %.o %.a %.so, $2
 
 %.moc: %.h;	moc -o $@ $<
 
-../%.so:;	@echo "Shared library $@ does not exist!"; exit 1
-../%.a:;	@echo "Library $@ does not exist!"; exit 1
-../%.o:;	@echo "Object $@ does not exist!"; exit 1
-/%.a:;		@echo "Library $@ does not exist!"; exit 1
-
 %: %.o;		$(call wvlink,$@,$^) 
-%.t: %.t.o;	$(call wvlink,$@,$(WVSTREAMS_SRC)/wvtestmain.o $(call reverse,$(filter %.o,$^)) $(filter-out %.o,$^) $(LIBWVUTILS))
+%.t: %.t.o;	$(call wvlink,$@,$(call reverse,$(filter %.o,$^)) $(filter-out %.o,$^) $(LIBWVTEST))
 %.a %.libs:;	$(call wvlink_ar,$@,$^)
 %.so:;		$(call wvlink_so,$@,$^)
 
@@ -379,27 +386,57 @@ subdirs: ${SUBDIRS}
 # Auto-clean rule.  Feel free to append to this in your own directory, by
 # defining your own "clean" rule.
 #
-clean: FORCE _wvclean
+.PHONY: clean _wvclean
 
-_wvclean: FORCE
-	rm -f *~ *.tmp *.o *.a *.so *.so.* *.libs *.moc *.d .*.d .depend .\#* \
-		.tcl_paths pkgIndex.tcl gmon.out core build-stamp wvtestmain
-	rm -f $(patsubst %.t.cc,%.t,$(wildcard *.t.cc) $(wildcard t/*.t.cc)) \
+clean: _wvclean
+
+_wvclean:
+	@echo '--> Cleaning $(shell pwd)...'
+	@rm -f *~ *.tmp *.o *.a *.so *.so.* *.libs *.moc *.d .*.d .depend \
+		 .\#* .tcl_paths pkgIndex.tcl gmon.out core build-stamp \
+		 wvtestmain
+	@rm -f $(patsubst %.t.cc,%.t,$(wildcard *.t.cc) $(wildcard t/*.t.cc)) \
 		t/*.o t/*~ t/.*.d t/.\#*
-	rm -f semantic.cache tags
-	rm -rf debian/tmp
+	@rm -f valgrind.log.pid*
+	@rm -f semantic.cache tags
+	@rm -rf debian/tmp
 
 #
 # default dist rules.
 distclean: clean
 
+PKGNAME := $(notdir $(shell pwd))
+PPKGNAME := $(shell echo $(PKGNAME) | tr a-z A-Z | tr - _)
+PKGVER := $(shell test -f wvver.h \
+	    && cat wvver.h | sed -ne "s/\#define $(PPKGNAME)_VER_STRING.*\"\([^ ]*\).*\".*/\1/p")
+ifneq ($(PKGVER),)
+PKGDIR := $(PKGNAME)-$(PKGVER)
+else
+PKGDIR := $(PKGNAME)
+endif
+ifneq ($(PKGSNAPSHOT),)
+PKGDIR := $(PKGDIR)+$(shell date +%Y%m%d)
+endif
+dist-dir:
+	@echo $(PKGDIR)
+
 dist-hook:
 
-dist: dist-hook distclean ChangeLog
+dist: dist-hook ChangeLog
+	@echo '--> Making dist in ../build/$(PKGDIR)...'
+	@test -d ../build || mkdir ../build
+	@rsync -a --delete --force '$(shell pwd)/' '../build/$(PKGDIR)'
+	@find '../build/$(PKGDIR)' -name .svn -type d -print0 | xargs -0 rm -rf --
+	@find '../build/$(PKGDIR)' -name .cvsignore -type f -print0 | xargs -0 rm -f --
+	@$(MAKE) -C '../build/$(PKGDIR)' distclean
+	@rm -f '../build/$(PKGDIR).tar.gz'
+	@cd ../build; tar -zcf '$(PKGDIR).tar.gz' '$(PKGDIR)'
+	@echo '--> Created tarball in ../build/$(PKGDIR).tar.gz.'
 
 ChangeLog: FORCE
-	-cvs2cl --utc
-	@rm -f ChangeLog.bak
+	@echo '--> Generating ChangeLog from Subversion...'
+	@rm -f ChangeLog ChangeLog.bak
+	@svn log --xml --verbose | xsltproc svn2cl.xsl - > ChangeLog
 
 #
 # Make 'tags' file using the ctags program - useful for editing

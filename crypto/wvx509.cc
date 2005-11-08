@@ -1,17 +1,19 @@
 /*
  * Worldvisions Weaver Software:
- *   Copyright (C) 1997-2002 Net Integration Technologies, Inc.
+ *   Copyright (C) 1997-2005 Net Integration Technologies, Inc.
  * 
  * X.509 certificate management classes.
  */ 
 #include "wvx509.h"
 #include "wvrsa.h"
+#include "wvcrl.h"
 #include "wvsslhacks.h"
 #include "wvdiriter.h"
 #include "wvcrypto.h"
 #include "wvstringlist.h"
 #include "wvbase64.h"
-#include "strutils.h"
+#include "wvstrutils.h"
+#include "wvfileutils.h"
 
 #include <openssl/pem.h>
 #include <openssl/x509v3.h>
@@ -20,7 +22,33 @@
 #include <openssl/sha.h>
 #include <openssl/pkcs12.h>
 
+UUID_MAP_BEGIN(WvX509Mgr)
+  UUID_MAP_ENTRY(IObject)
+  UUID_MAP_END
+
 static int ssl_init_count = 0;
+
+namespace {
+class AutoClose {
+public:
+    AutoClose(FILE *fp): fp(fp) { }
+    ~AutoClose()
+    {
+        if (fp)
+            fclose(fp);
+    }
+    
+    operator FILE *() const
+    {
+	return fp;
+    }
+    
+private:
+    FILE *fp;
+};
+} // anomymous namespace...
+
+
 
 void wvssl_init()
 {
@@ -78,6 +106,15 @@ WvX509Mgr::WvX509Mgr(X509 *_cert)
 	// so this is one case where 
 	// cert == NULL && rsa == NULL && errstr == NULL
 	// That the programmer should be doing something about.
+}
+
+
+WvX509Mgr::WvX509Mgr()
+    : debug("X509", WvLog::Debug5), pkcs12pass(WvString::null)
+{
+    wvssl_init();
+    cert = X509_new();
+    rsa = NULL;
 }
 
 
@@ -141,6 +178,8 @@ WvX509Mgr::WvX509Mgr(WvStringParm _dname, int bits)
 
 WvX509Mgr::~WvX509Mgr()
 {
+    debug("Deleting.\n");
+    
     if (rsa)
 	delete rsa;
 
@@ -174,6 +213,7 @@ const WvRSAKey &WvX509Mgr::get_rsa()
 
     return *rsa;
 }
+
 
 // The people who designed this garbage should be shot!
 // Support old versions of openssl...
@@ -240,8 +280,14 @@ static WvString set_name_entry(X509_NAME *name, WvStringParm dn)
 	    nid = NID_Domain;
 	    force_fqdn = value;
 	}
+	else if (sid == "email")
+	    nid = NID_pkcs9_emailAddress;
 	else
 	    nid = NID_domainComponent;
+	
+	// Sometimes we just want to parse dn into fqdn.
+	if (name == NULL)
+	    continue;
 	
 	if (!ne)
 	    ne = X509_NAME_ENTRY_create_by_NID(NULL, nid,
@@ -251,6 +297,7 @@ static WvString set_name_entry(X509_NAME *name, WvStringParm dn)
 			       V_ASN1_APP_CHOOSE, (unsigned char *)value, -1);
 	if (!ne)
 	    continue;
+	
 	X509_NAME_add_entry(name, ne, count++, 0);
     }
     
@@ -265,21 +312,15 @@ static WvString set_name_entry(X509_NAME *name, WvStringParm dn)
 
 void WvX509Mgr::create_selfsigned(bool is_ca)
 {
-    EVP_PKEY *pk = NULL;
-    X509_NAME *name = NULL;
-    X509_EXTENSION *ex = NULL;
-
-    // RFC2459 says that this number must be unique for each certificate
-    // issued by a CA.  It may be that some web browsers get confused if
-    // more than one cert with the same name has the same serial number, so
-    // let's be careful.
-    srand(time(NULL));
-    int	serial = rand();
-
-    WvString serverfqdn;
-
     assert(rsa);
 
+    if (cert)
+    {
+	debug("Replacing already existant certificate...\n");
+	X509_free(cert);
+	cert = NULL;
+    }
+    
     // double check RSA key
     if (rsa->isok())
 	debug("RSA Key is fine.\n");
@@ -289,97 +330,53 @@ void WvX509Mgr::create_selfsigned(bool is_ca)
 	return;
     }
 
-    if ((pk = EVP_PKEY_new()) == NULL)
-    {
-	seterr("Error creating key handler for new certificate");
-	return;
-    }
     if ((cert = X509_new()) == NULL)
     {
 	seterr("Error creating new X509 object");
 	return;
     }
 
-    // Assign RSA Key from WvRSAKey into stupid package that OpenSSL needs
-    if (!EVP_PKEY_set1_RSA(pk, rsa->rsa))
-    {
-	seterr("Error adding RSA keys to certificate");
-	return;
-    }
-
     // Completely broken in my mind - this sets the version
     // string to '3'  (I guess version starts at 0)
-    X509_set_version(cert, 0x2);
+    set_version();
 
-    // Set the Serial Number for the certificate
-    ASN1_INTEGER_set(X509_get_serialNumber(cert), serial);
-
-    // Set the NotBefore time to now.
-    X509_gmtime_adj(X509_get_notBefore(cert), 0);
-
-    // Now + 10 years... should be shorter, but since we don't currently
-    // have a set of routines to refresh the certificates, make it
-    // REALLY long.
-    X509_gmtime_adj(X509_get_notAfter(cert), (long)60*60*24*3650);
-    X509_set_pubkey(cert, pk);
-
-    name = X509_get_subject_name(cert);
-    serverfqdn = set_name_entry(name, dname);
+    // RFC2459 says that this number must be unique for each certificate
+    // issued by a CA.  It may be that some web browsers get confused if
+    // more than one cert with the same name has the same serial number, so
+    // let's be careful.
+    srand(time(NULL));
+    int	serial = rand();
+    set_serial(serial);
     
-    if (!serverfqdn)
-	serverfqdn = "null.noname.null";
+    // 10 years...
+    set_lifetime(60*60*24*3650);
+    
+    set_pubkey(rsa);
 				       
-    X509_set_issuer_name(cert, name);
-    X509_set_subject_name(cert, name);
-
-    // Add in the netscape-specific server extension
-    ex = X509V3_EXT_conf_nid(NULL, NULL, NID_netscape_cert_type, "server");
-    X509_add_ext(cert, ex, -1);
-    X509_EXTENSION_free(ex);
-
-    debug("Setting Netscape SSL server name extension to %s\n", serverfqdn);
-
-    // Set the netscape server name extension to our server name
-    ex = X509V3_EXT_conf_nid(NULL, NULL, NID_netscape_ssl_server_name,
-			     serverfqdn.edit());
-    X509_add_ext(cert, ex, -1);
-    X509_EXTENSION_free(ex);
-
+    set_issuer(dname);
+    set_subject(dname);
+    
     // Set the RFC2459-mandated keyUsage field to critical, and restrict
-    // the usage of this cert to digital signature and key encipherment.
-    ex = X509V3_EXT_conf_nid(NULL, NULL, NID_key_usage,
-	     "critical, digitalSignature, keyEncipherment, keyCertSign");
-    X509_add_ext(cert, ex, -1);
-    X509_EXTENSION_free(ex);
-    
-    // This could cause Netscape to barf because if we set basicConstraints 
-    // to critical, we break RFC2459 compliance. Why they chose to enforce 
-    // that bit, and not the rest is beyond me... but oh well...
+    // the usage of this cert to digital signature, key agreement, and 
+    // key encipherment.
     if (is_ca)
-	ex = X509V3_EXT_conf_nid(NULL, NULL, NID_basic_constraints,
-				 "critical, CA:TRUE");
-    else
-	ex = X509V3_EXT_conf_nid(NULL, NULL, NID_basic_constraints,
-				 "CA:FALSE");
-	
-    X509_add_ext(cert, ex, -1);
-    X509_EXTENSION_free(ex);
-    
-    ex = X509V3_EXT_conf_nid(NULL, NULL, NID_ext_key_usage,
-	     "TLS Web Server Authentication, TLS Web Client Authentication");
-    X509_add_ext(cert, ex, -1);
-    X509_EXTENSION_free(ex);
-
-    // Sign the certificate with our own key ("Self Sign")
-    if (!X509_sign(cert, pk, EVP_sha1()))
     {
-	seterr("Could not self sign the certificate");
-	X509_free(cert);
-	EVP_PKEY_free(pk);
-	return;
+	debug("Setting Extensions with CA Parameters\n");
+	set_key_usage("critical, keyCertSign, cRLSign");
+	set_extension(NID_basic_constraints, "critical, CA:TRUE");
+	set_constraints("requireExplicitPolicy");
+    }
+    else
+    {
+	debug("Setting Key Usage with normal server parameters\n");
+	set_nsserver(dname);
+	set_key_usage("critical, digitalSignature, keyEncipherment, keyAgreement");
+	set_extension(NID_basic_constraints, "CA:FALSE");
+	set_ext_key_usage("TLS Web Server Authentication,"
+			  "TLS Web Client Authentication");
     }
     
-    EVP_PKEY_free(pk);
+    signcert(cert);
     
     debug("Certificate for %s created\n", dname);
 }
@@ -405,35 +402,12 @@ WvRSAKey *WvX509Mgr::fillRSAPubKey()
 }
 
 
-static FILE *file_hack_start()
-{
-    return tmpfile();
-}
-
-
-static WvString file_hack_end(FILE *f)
-{
-    WvDynBuf b;
-    size_t len;
-    
-    rewind(f);
-    while ((len = fread(b.alloc(1024), 1, 1024, f)) > 0)
-	b.unalloc(1024 - len);
-    b.unalloc(1024 - len);
-    fclose(f);
-
-    return b.getstr();
-}
-
-
 WvString WvX509Mgr::certreq()
 {
     EVP_PKEY *pk = NULL;
     X509_NAME *name = NULL;
     X509_REQ *certreq = NULL;
 
-    FILE *stupid = file_hack_start();
-    
     assert(rsa);
     assert(dname);
 
@@ -478,7 +452,6 @@ WvString WvX509Mgr::certreq()
     X509_REQ_set_subject_name(certreq, name);
     char *sub_name = X509_NAME_oneline(X509_REQ_get_subject_name(certreq), 
 				       0, 0);
-
     debug("SubjectDN: %s\n", sub_name);
     OPENSSL_free(sub_name);
     
@@ -506,33 +479,45 @@ WvString WvX509Mgr::certreq()
     // Horribly involuted hack to get around the fact that the
     // OpenSSL people are too braindead to have a PEM_write function
     // that returns a char *
-    PEM_write_X509_REQ(stupid, certreq);
+    WvDynBuf retval;
+    BIO *bufbio = BIO_new(BIO_s_mem());
+    BUF_MEM *bm;
+    
+    PEM_write_bio_X509_REQ(bufbio, certreq);
+    BIO_get_mem_ptr(bufbio, &bm);
+    retval.put(bm->data, bm->length);
+    
     X509_REQ_free(certreq);
     EVP_PKEY_free(pk);
-  
-    return file_hack_end(stupid);
+    BIO_free(bufbio);
+
+    return retval.getstr();
 }
 
 
 WvString WvX509Mgr::signcert(WvStringParm pkcs10req)
 {
     assert(rsa);
+    assert(cert);
+    debug("Signing a certificate request with : %s\n", get_subject());
     
+    // Break this next part out into a de-pemify section, since that is what
+    // this part up until the FIXME: is about.
     WvString pkcs10(pkcs10req);
     
-    char *begin = strstr(pkcs10.edit(), "\nMII") + 1;
+    char *begin = strstr(pkcs10.edit(), "\nMII");
     if (!begin)
     {
 	debug("This doesn't look like PEM Encoded information...\n");
 	return WvString::null;
     }
-    char *end = strstr(begin, "=\n---") + 1 ;
+    char *end = strstr(begin + 1, "\n---");
     if (!end)
     {
 	debug("Is this a complete certificate request?\n");
 	return WvString::null;
     }
-    *end = '\0';
+    *++end = '\0';
     WvString body(begin); // just the PKCS#10 request, 
                           // without the ---BEGIN and ---END
     
@@ -546,45 +531,31 @@ WvString WvX509Mgr::signcert(WvStringParm pkcs10req)
     X509_REQ *certreq = wv_d2i_X509_REQ(NULL, &req, reqlen);
     if (certreq)
     {
-	X509 *newcert = X509_new();
+	WvX509Mgr newcert;
 
-	// Set the subject name of the new certificate to be 
-	// exactly the subject name of the request.
-	X509_set_subject_name(newcert, X509_REQ_get_subject_name(certreq));
-
-	// Completely broken in my mind - this sets the version
-	// string to '3'  (I guess version starts at 0)
-	X509_set_version(newcert, 0x2);
+	newcert.set_subject(X509_REQ_get_subject_name(certreq));
+	newcert.set_version();
 	
 	// Set the Serial Number for the certificate
 	srand(time(NULL));
 	int serial = rand();
-	ASN1_INTEGER_set(X509_get_serialNumber(newcert), serial);
+	newcert.set_serial(serial);
 	
-	// Set the NotBefore time to now.
-	X509_gmtime_adj(X509_get_notBefore(newcert), 0);
+	newcert.set_lifetime(60*60*24*3650);
 	
-	// Now + 10 years... should be shorter, but since we don't currently
-	// have a set of routines to refresh the certificates, make it
-	// REALLY long.
-	X509_gmtime_adj(X509_get_notAfter(newcert), (long)60*60*24*3650);
-
 	// The public key of the new cert should be the same as that from 
 	// the request.
 	EVP_PKEY *pk = X509_REQ_get_pubkey(certreq);
-	X509_set_pubkey(newcert, pk);
+	X509_set_pubkey(newcert.get_cert(), pk);
 	EVP_PKEY_free(pk);
 	
 	// The Issuer name is the subject name of the current cert
-	X509_set_issuer_name(newcert, X509_get_subject_name(cert));
+	newcert.set_issuer(get_subject());
 	
 	X509_EXTENSION *ex = NULL;
 	// Set the RFC2459-mandated keyUsage field to critical, and restrict
 	// the usage of this cert to digital signature and key encipherment.
-	ex = X509V3_EXT_conf_nid(NULL, NULL, NID_key_usage,
-				 "critical, digitalSignature, keyEncipherment");
-	X509_add_ext(newcert, ex, -1);
-	X509_EXTENSION_free(ex);
+	newcert.set_key_usage("critical, digitalSignature, keyEncipherment");
     
 	// This could cause Netscape to barf because if we set basicConstraints 
 	// to critical, we break RFC2459 compliance. Why they chose to enforce 
@@ -592,32 +563,15 @@ WvString WvX509Mgr::signcert(WvStringParm pkcs10req)
 	ex = X509V3_EXT_conf_nid(NULL, NULL, NID_basic_constraints,
 				 "CA:FALSE");
 	
-	X509_add_ext(newcert, ex, -1);
+	X509_add_ext(newcert.get_cert(), ex, -1);
 	X509_EXTENSION_free(ex);
 
-	ex = X509V3_EXT_conf_nid(NULL, NULL, NID_ext_key_usage,
-				 "critical, TLS Web Client Authentication");
-	X509_add_ext(newcert, ex, -1);
-	X509_EXTENSION_free(ex);
+	newcert.set_ext_key_usage("critical, TLS Web Client Authentication");
 
-	// Ok, now sign the new cert with the current RSA key
-	EVP_PKEY *certkey = EVP_PKEY_new();
-	bool cakeyok = EVP_PKEY_set1_RSA(certkey, rsa->rsa);
-	if (newcert && cakeyok)
-	    X509_sign(newcert, certkey, EVP_sha1());
-	else
-	{
-	    debug("No keys??\n");
-	    return WvString::null;
-	}
-	
-	EVP_PKEY_free(certkey);
-	
-        // Note - takes ownership of newcert, and will delete it for us.
-	WvX509Mgr nmgr(newcert);
+	signcert(newcert.get_cert());
 	
 	X509_REQ_free(certreq);
-	return WvString(nmgr.encode(CertPEM));
+	return WvString(newcert.encode(CertPEM));
     }
     else
     {
@@ -801,6 +755,7 @@ bool WvX509Mgr::signedbyCAinfile(WvStringParm certfile)
 }
 
 
+#ifndef _WIN32
 bool WvX509Mgr::signedbyCAindir(WvStringParm certdir)
 {
     WvDirIter i(certdir,false);
@@ -811,6 +766,7 @@ bool WvX509Mgr::signedbyCAindir(WvStringParm certdir)
     }    
     return true;
 }
+#endif
 
 
 bool WvX509Mgr::signedbyCA(WvX509Mgr *cacert)
@@ -825,48 +781,57 @@ bool WvX509Mgr::signedbyCA(WvX509Mgr *cacert)
 
 WvString WvX509Mgr::encode(const DumpMode mode)
 {
-    FILE *stupid = NULL;
     WvString nil;
+    WvDynBuf retval;
+    BIO *bufbio = BIO_new(BIO_s_mem());
+    BUF_MEM *bm;
     
-    stupid = file_hack_start();
-    
-    if (stupid)
+    switch(mode)
     {
-	switch(mode)
-	{
-	case CertPEM:
-	    debug("Dumping X509 certificate.\n");
-	    PEM_write_X509(stupid, cert);
-	    break;
-	    
-	case RsaPEM:
-	    debug("Dumping RSA keypair.\n");
-	    fclose(stupid);
-	    return rsa->getpem(true);
-	    break;
-	    
-	case RsaPubPEM:
-	    debug("Dumping RSA Public Key!\n");
-	    fclose(stupid);
-	    return rsa->getpem(false);
-	    break;
-	case RsaRaw:
-	    debug("Dumping raw RSA keypair.\n");
-	    RSA_print_fp(stupid, rsa->rsa, 0);
-	    break;
-
-	default:
-	    seterr("Unknown Mode\n");
-	    return nil;
-	}
+    case CertPEM:
+	debug("Dumping X509 certificate.\n");
+	PEM_write_bio_X509(bufbio, cert);
+	break;
 	
-	return file_hack_end(stupid);
-    }
-    else
-    {
-	debug(WvLog::Error, "Can't create temp file in WvX509Mgr::encode!\n");
+    case CertDER:
+	debug("Dumping X509 certificate in DER format\n");
+	i2d_X509_bio(bufbio, cert);
+	break;
+	
+    case RsaPEM:
+	debug("Dumping RSA keypair.\n");
+	BIO_free(bufbio);
+	return rsa->getpem(true);
+	break;
+	
+    case RsaPubPEM:
+	debug("Dumping RSA Public Key!\n");
+	BIO_free(bufbio);
+	return rsa->getpem(false);
+	break;
+
+    case RsaRaw:
+	debug("Dumping raw RSA keypair.\n");
+	RSA_print(bufbio, rsa->rsa, 0);
+	break;
+	
+    default:
+	seterr("Unknown Mode\n");
 	return nil;
     }
+
+    BIO_get_mem_ptr(bufbio, &bm);
+    retval.put(bm->data, bm->length);
+    BIO_free(bufbio);
+    if (mode == CertDER)
+    {
+	WvBase64Encoder enc;
+	WvString output;
+	enc.flushbufstr(retval, output, true);
+	return output;
+    }
+    else
+	return retval.getstr();
 }
 
 void WvX509Mgr::decode(const DumpMode mode, WvStringParm pemEncoded)
@@ -878,102 +843,72 @@ void WvX509Mgr::decode(const DumpMode mode, WvStringParm pemEncoded)
     }
     
     // Let the fun begin... ;)
-    FILE *stupid = NULL;
+    AutoClose stupid(tmpfile());
     WvString outstring = pemEncoded;
     
-    stupid = file_hack_start();
-
-    if (stupid)
+    // I HATE OpenSSL... this is SO Stupid!!!
+    rewind(stupid);
+    unsigned int written = fwrite(outstring.edit(), 1, outstring.len(), stupid);
+    if (written != outstring.len())
     {
-	// I HATE OpenSSL... this is SO Stupid!!!
-	rewind(stupid);
-	unsigned int written = fwrite(outstring.edit(), 1, outstring.len(), stupid);
-	if (written != outstring.len())
-	{
-	    debug(WvLog::Error,"Couldn't write full amount to temp file!\n");
-	    fclose(stupid);
-	    return;
-	}
-	rewind(stupid);
-	switch(mode)
-	{
-	case CertPEM:
-	    debug("Importing X509 certificate.\n");
-	    if(cert)
-	    {
-		X509_free(cert);
-		cert = NULL;
-	    }
-	    cert = PEM_read_X509(stupid, NULL, NULL, NULL);
-	    if (cert)
-	    {
-		filldname();
-		if (!rsa)
-		    rsa = fillRSAPubKey();
-	    }
-	    else
-		seterr("Certificate failed to import!");
-	    break;
-	    
-	case RsaPEM:
-	    debug("Importing RSA keypair.\n");
-	    debug("Make sure that you load or generate a new Certificate!\n");
-	    if (rsa) delete rsa;
-	    rsa = new WvRSAKey(PEM_read_RSAPrivateKey(stupid, NULL, NULL, NULL), 
-			       true);
-	    if (!rsa->isok())
-		seterr("RSA Key failed to import\n");
-	    break;
-	case RsaPubPEM:
-	    debug("Importing RSA Public Key.\n");
-	    debug("Are you REALLY sure that you want to do this?\n");
-	    if (rsa) delete rsa;
-	    rsa = new WvRSAKey(PEM_read_RSAPublicKey(stupid, NULL, NULL, NULL), 
-			       true);
-	    if (!rsa->isok())
-		seterr("RSA Public Key failed to import\n");
-	    break;
-	case RsaRaw:
-	    debug("Importing raw RSA keypair not supported.\n");
-	    break;
-
-	default:
-	    seterr("Unknown Mode\n");
-	}
-	fclose(stupid);
+	debug(WvLog::Error,"Couldn't write full amount to temp file!\n");
+	return;
     }
-    else
-    {   
-        debug(WvLog::Error, "Can't create temp file in WvX509Mgr::decode!\n");
-        return;
+    rewind(stupid);
+    switch(mode)
+    {
+    case CertPEM:
+	debug("Importing X509 certificate.\n");
+	if(cert)
+	{
+	    debug("Replacing an already existant X509 Certificate!\n");
+	    X509_free(cert);
+	    cert = NULL;
+	}
+	cert = PEM_read_X509(stupid, NULL, NULL, NULL);
+	if (cert)
+	{
+	    filldname();
+	    if (!rsa)
+		rsa = fillRSAPubKey();
+	}
+	else
+	    seterr("Certificate failed to import!");
+	break;
+    case RsaPEM:
+	debug("Importing RSA keypair.\n");
+	debug("Make sure that you load or generate a new Certificate!\n");
+	if (rsa) delete rsa;
+
+	rsa = new WvRSAKey(PEM_read_RSAPrivateKey(stupid, NULL, NULL, NULL), 
+			   true);
+	if (!rsa->isok())
+	    seterr("RSA Key failed to import\n");
+	break;
+    case RsaPubPEM:
+	debug("Importing RSA Public Key.\n");
+	debug("Are you REALLY sure that you want to do this?\n");
+	if (rsa) delete rsa;
+	rsa = new WvRSAKey(PEM_read_RSAPublicKey(stupid, NULL, NULL, NULL), 
+			   true);
+	if (!rsa->isok())
+	    seterr("RSA Public Key failed to import\n");
+	break;
+    case RsaRaw:
+	debug("Importing raw RSA keypair not supported.\n");
+	break;
+	
+    default:
+	seterr("Unknown Mode\n");
     }
 }
 
-namespace {
-class AutoClose {
-public:
-    AutoClose(FILE *fp): fp(fp) { }
-    ~AutoClose()
-    {
-        if (fp)
-            fclose(fp);
-    }
-    
-    operator FILE *() const
-    {
-	return fp;
-    }
-    
-private:
-    FILE *fp;
-};
-} // anomymous namespace...
 
 void WvX509Mgr::write_p12(WvStringParm filename)
 {
     debug("Dumping RSA Key and X509 Cert to PKCS12 structure.\n");
 
-    AutoClose fp = fopen(filename, "w");
+    AutoClose fp = fopen(filename, "wb");
 
     if (!fp)
     {
@@ -1099,6 +1034,15 @@ WvString WvX509Mgr::get_issuer()
 }
 
 
+void WvX509Mgr::set_issuer(WvStringParm issuer)
+{
+    assert(cert);
+    X509_NAME *name = X509_get_issuer_name(cert);
+    set_name_entry(name, issuer);
+    X509_set_issuer_name(cert, name);
+}
+
+
 WvString WvX509Mgr::get_subject()
 {
     if (cert)
@@ -1112,6 +1056,77 @@ WvString WvX509Mgr::get_subject()
 	return WvString::null;
 }
 
+
+void WvX509Mgr::set_subject(WvStringParm subject)
+{
+    assert(cert);
+    X509_NAME *name = X509_get_subject_name(cert);
+    set_name_entry(name, subject);
+    X509_set_subject_name(cert, name);
+}
+
+
+void WvX509Mgr::set_subject(X509_NAME *name)
+{
+    X509_set_subject_name(cert, name);
+}
+
+
+void WvX509Mgr::set_pubkey(WvRSAKey *_rsa)
+{
+    EVP_PKEY *pk = NULL;
+
+    if ((pk = EVP_PKEY_new()) == NULL)
+    {
+	seterr("Error creating key handler for new certificate");
+	return;
+    }
+
+    // Assign RSA Key from WvRSAKey into stupid package that OpenSSL needs
+    if (!EVP_PKEY_set1_RSA(pk, rsa->rsa))
+    {
+	seterr("Error adding RSA keys to certificate");
+	return;
+    }
+    
+    X509_set_pubkey(cert, pk);
+
+    if (pk)
+	EVP_PKEY_free(pk);
+}
+
+
+
+void WvX509Mgr::set_nsserver(WvStringParm servername)
+{
+    assert(cert);
+    
+    WvString fqdn;
+    
+    // FQDN cannot have a = in it, therefore it
+    // must be a distinguished name :)
+    if (strchr(servername, '='))
+	fqdn = set_name_entry(NULL, servername);
+    else
+	fqdn = servername;
+    
+    if (!fqdn)
+	fqdn = "null.noname.null";
+    
+    debug("Setting Netscape SSL server name extension to '%s'.\n", fqdn);
+
+    // Add in the netscape-specific server extension
+    set_extension(NID_netscape_cert_type, "server");
+    set_extension(NID_netscape_ssl_server_name, fqdn);
+}
+
+
+WvString WvX509Mgr::get_nsserver()
+{
+    return get_extension(NID_netscape_ssl_server_name);
+}
+
+
 WvString WvX509Mgr::get_serial()
 {
     if (cert)
@@ -1120,6 +1135,19 @@ WvString WvX509Mgr::get_serial()
     }
     else
 	return WvString::null;
+}
+
+
+void WvX509Mgr::set_version()
+{
+	X509_set_version(cert, 0x2);
+}
+
+
+void WvX509Mgr::set_serial(long serial)
+{
+    assert(cert);
+    ASN1_INTEGER_set(X509_get_serialNumber(cert), serial);
 }
 
 
@@ -1134,10 +1162,108 @@ WvString WvX509Mgr::get_cp_oid()
     return get_extension(NID_certificate_policies);
 }
 
+void WvX509Mgr::set_cp_oid(WvStringParm oid, WvStringParm _url)
+{
+    assert(cert);
+    WvString url(_url);
+    ASN1_OBJECT *pobj = OBJ_txt2obj(oid, 0);
+    POLICYINFO *pol = POLICYINFO_new();
+    POLICYQUALINFO *qual = NULL;
+    STACK_OF(POLICYINFO) *sk_pinfo = sk_POLICYINFO_new_null();
+    pol->policyid = pobj;
+    if (!!url)
+    {
+	pol->qualifiers = sk_POLICYQUALINFO_new_null();
+	qual = POLICYQUALINFO_new();
+	qual->pqualid = OBJ_nid2obj(NID_id_qt_cps);
+	qual->d.cpsuri = M_ASN1_IA5STRING_new();
+	ASN1_STRING_set(qual->d.cpsuri, url.edit(), url.len());
+	sk_POLICYQUALINFO_push(pol->qualifiers, qual);
+    }
+    sk_POLICYINFO_push(sk_pinfo, pol);
+    X509_EXTENSION *ex = X509V3_EXT_i2d(NID_certificate_policies, 0, 
+					sk_pinfo);
+    X509_add_ext(cert, ex, -1);
+    X509_EXTENSION_free(ex);
+    sk_POLICYINFO_free(sk_pinfo);
+}
+
+
+void WvX509Mgr::set_lifetime(long seconds)
+{
+    // Set the NotBefore time to now.
+    X509_gmtime_adj(X509_get_notBefore(cert), 0);
+    
+    // Now + 10 years... should be shorter, but since we don't currently
+    // have a set of routines to refresh the certificates, make it
+    // REALLY long.
+    X509_gmtime_adj(X509_get_notAfter(cert), seconds);
+}
+
+
+void WvX509Mgr::set_key_usage(WvStringParm values)
+{
+    set_extension(NID_key_usage, values);
+}
+
+
+WvString WvX509Mgr::get_key_usage()
+{
+    return get_extension(NID_key_usage);
+}
+
+
+void WvX509Mgr::set_ext_key_usage(WvStringParm values)
+{
+    set_extension(NID_ext_key_usage, values);
+}
+
+
+WvString WvX509Mgr::get_ext_key_usage()
+{
+    return get_extension(NID_ext_key_usage);
+}
+
 
 WvString WvX509Mgr::get_altsubject()
 {
     return get_extension(NID_subject_alt_name);
+}
+
+
+WvString WvX509Mgr::get_constraints()
+{
+    return get_extension(NID_policy_constraints);
+}
+
+
+void WvX509Mgr::set_constraints(WvStringParm constraint)
+{
+    assert(cert);
+    set_extension(NID_policy_constraints, constraint);
+}
+
+
+void WvX509Mgr::set_aia(WvStringParm _identifier)
+{
+    WvString identifier(_identifier);
+    unsigned char *list;
+    list = reinterpret_cast<unsigned char *>(identifier.edit());
+    AUTHORITY_INFO_ACCESS *ainfo = sk_ACCESS_DESCRIPTION_new_null();
+    ACCESS_DESCRIPTION *acc = ACCESS_DESCRIPTION_new();
+    sk_ACCESS_DESCRIPTION_push(ainfo, acc);
+    GENERAL_NAME_free(acc->location);
+    i2d_GENERAL_NAME(acc->location, &list);
+    
+    X509_EXTENSION *ex = X509V3_EXT_i2d(NID_info_access, 0, ainfo);
+    X509_add_ext(cert, ex, -1);
+    X509_EXTENSION_free(ex);
+    sk_ACCESS_DESCRIPTION_free(ainfo);
+}
+
+WvString WvX509Mgr::get_aia()
+{
+    return get_extension(NID_info_access);
 }
 
 WvString WvX509Mgr::get_extension(int nid)
@@ -1169,13 +1295,12 @@ WvString WvX509Mgr::get_extension(int nid)
 #else
 		    unsigned char **ext_value_data = &ext->value->data;
 #endif
-
 		    if (method->it) 
-			ext_data = ASN1_item_d2i(NULL, ext_value_data, 
+			ext_data = ASN1_item_d2i(NULL, ext_value_data,
 						ext->value->length, 
 						ASN1_ITEM_ptr(method->it));
 		    else
-			ext_data = method->d2i(NULL, ext_value_data, 
+			ext_data = method->d2i(NULL, ext_value_data,
 					      ext->value->length);
 		    
 		    if (method->i2s)
@@ -1189,7 +1314,19 @@ WvString WvX509Mgr::get_extension(int nid)
 		    else if (method->i2v)
 			retval = "Stack type!";
 		    else if (method->i2r)
-			retval = "Guess what - it's raw..!";
+		    {
+			WvDynBuf retvalbuf;
+			BIO *bufbio = BIO_new(BIO_s_mem());
+			BUF_MEM *bm;
+			method->i2r(method, ext_data, bufbio, 0);
+			BIO_get_mem_ptr(bufbio, &bm);
+			retvalbuf.put(bm->data, bm->length);
+			BIO_free(bufbio);
+			retval = retvalbuf.getstr();
+			if (method->it)
+			    ASN1_item_free((ASN1_VALUE *)ext_data, 
+					   ASN1_ITEM_ptr(method->it));
+		    }
 		}
 	    }
 	}
@@ -1199,6 +1336,17 @@ WvString WvX509Mgr::get_extension(int nid)
 	return retval;
     else
 	return WvString::null;
+}
+
+void WvX509Mgr::set_extension(int nid, WvStringParm _values)
+{
+    WvString values(_values);
+    X509_EXTENSION *ex = NULL;
+    // Set the RFC2459-mandated keyUsage field to critical, and restrict
+    // the usage of this cert to digital signature and key encipherment.
+    ex = X509V3_EXT_conf_nid(NULL, NULL, nid, values.edit());
+    X509_add_ext(cert, ex, -1);
+    X509_EXTENSION_free(ex);
 }
 
 
@@ -1234,6 +1382,34 @@ int WvX509Mgr::geterr() const
         ret = -1;
     }
     return ret;
+}
+
+
+bool WvX509Mgr::signcert(X509 *unsignedcert)
+{
+    if (!(cert == unsignedcert) || 
+	!((cert->ex_flags & EXFLAG_KUSAGE) && 
+	  (cert->ex_kusage & KU_KEY_CERT_SIGN)))
+    {
+	debug("Certificate not allowed to sign Certificates!\n");
+	return false;
+    }
+
+    
+    // Ok, now sign the new cert with the current RSA key
+    EVP_PKEY *certkey = EVP_PKEY_new();
+    bool cakeyok = EVP_PKEY_set1_RSA(certkey, rsa->rsa);
+    if (cakeyok)
+	X509_sign(unsignedcert, certkey, EVP_sha1());
+    else
+    {
+	debug("No keys??\n");
+	EVP_PKEY_free(certkey);
+	return false;
+    }
+    
+    EVP_PKEY_free(certkey);
+    return true;
 }
 
 WvString WvX509Mgr::sign(WvStringParm data)
@@ -1320,3 +1496,67 @@ bool WvX509Mgr::verify(WvBuf &original, WvStringParm signature)
     else
 	return true;
 }
+
+
+ASN1_TIME *WvX509Mgr::get_notvalid_before()
+{
+    assert(cert);
+    return X509_get_notBefore(cert);
+}
+
+
+ASN1_TIME *WvX509Mgr::get_notvalid_after()
+{
+    assert(cert);
+    return X509_get_notAfter(cert);
+}
+
+
+bool WvX509Mgr::signcrl(WvCRLMgr *crl)
+{
+    assert(crl);
+    assert(rsa);
+    
+    if (!((cert->ex_flags & EXFLAG_KUSAGE) && 
+	  (cert->ex_kusage & KU_CRL_SIGN)))
+    {
+	debug("Certificate not allowed to sign CRLs!\n");
+	return false;
+    }
+    
+    EVP_PKEY *certkey = EVP_PKEY_new();
+    bool cakeyok = EVP_PKEY_set1_RSA(certkey, rsa->rsa);
+    if (crl->getcrl() && cakeyok)
+    {
+	// Use Version 2 CRLs - Of COURSE that means
+	// to set it to 1 here... grumble..
+	X509_CRL_set_version(crl->getcrl(), 1);
+
+	X509_CRL_set_issuer_name(crl->getcrl(), X509_get_subject_name(cert));
+
+	ASN1_TIME *tmptm = ASN1_TIME_new();
+	// Set the LastUpdate time to now.
+	X509_gmtime_adj(tmptm, 0);
+	X509_CRL_set_lastUpdate(crl->getcrl(), tmptm);
+	// CRL's are valid for 30 days
+	X509_gmtime_adj(tmptm, (long)60*60*24*30);
+	X509_CRL_set_nextUpdate(crl->getcrl(), tmptm);
+	ASN1_TIME_free(tmptm);
+	
+	// OK - now sign it...
+	X509_CRL_sign(crl->getcrl(), certkey, EVP_sha1());
+    }
+    else
+    {
+	debug("No keys??\n");
+	EVP_PKEY_free(certkey);
+	return false;
+    }
+    EVP_PKEY_free(certkey);
+
+    crl->setca(this);
+    
+    return true;
+}
+
+

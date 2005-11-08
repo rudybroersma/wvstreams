@@ -2,12 +2,12 @@
  * Worldvisions Weaver Software:
  *   Copyright (C) 1997-2002 Net Integration Technologies, Inc.
  *
- * Test program for the new, hierarchical WvConf.
+ * Test program for the new, hierarchical WvConfEmu.
  */
 #include "wvlog.h"
 #include "wvlogrcv.h"
 #include "wvdiriter.h"
-#include "wvconf.h"
+#include "wvconfemu.h"
 #include "wvfile.h"
 #include "wvtclstring.h"
 #include "uniconf.h"
@@ -164,7 +164,7 @@ WvString UniConfFileTreeGen::get(const UniConfKey &key)
         line = NULL;
         if (!file.isok())
             break;
-	line = file.getline(-1);
+	line = file.blocking_getline(-1);
 	if (!line)
             break;
 	line = trim_string(line);

@@ -7,11 +7,14 @@
  */
 #include "fileutils.h"
 #include "wvfile.h"
+#include "wvdiriter.h"
 #include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <utime.h>
+#ifndef _WIN32
 #include <fnmatch.h>
+#endif
 
 bool mkdirp(WvStringParm _dir, int create_mode)
 {
@@ -27,14 +30,37 @@ bool mkdirp(WvStringParm _dir, int create_mode)
     while ((p = strchr(++p, '/')))
     {
         *p = '\0';
+#ifndef _WIN32
         if (access(dir.cstr(), X_OK) && mkdir(dir.cstr(), create_mode))
+#else
+        if (access(dir.cstr(), X_OK) && mkdir(dir.cstr()))
+#endif
             return false;
         *p = '/';
     }
 
     // You're probably creating the directory to write to it? Maybe this should
     // look for R_OK&X_OK instead of X_OK&W_OK...
+#ifndef _WIN32
     return  !(access(dir.cstr(), X_OK&W_OK) && mkdir(dir.cstr(), create_mode));
+#else
+    return  !(access(dir.cstr(), X_OK&W_OK) && mkdir(dir.cstr()));
+#endif
+}
+
+
+void rm_rf(WvStringParm dir)
+{
+    WvDirIter i(dir, false, false); // non-recursive, don't skip_mounts
+    for (i.rewind(); i.next(); )
+    {
+	if (i.isdir())
+	    rm_rf(i->fullname);
+	else
+	    ::unlink(i->fullname);
+    }
+    ::rmdir(dir);
+    ::unlink(dir);
 }
 
 
@@ -102,6 +128,7 @@ bool samedate(WvStringParm dir1, WvStringParm dir2, WvStringParm relname)
 }
 
 
+#ifndef _WIN32
 // runs fnmatch against everything in patterns.  We also interpret 
 // CVS-style '!' patterns, which makes us very fancy.
 bool wvfnmatch(WvStringList& patterns, WvStringParm name, int flags)
@@ -136,3 +163,88 @@ bool wvfnmatch(WvStringList& patterns, WvStringParm name, int flags)
 
     return match;
 }
+
+// Only chmod a given file or dir, do not follow symlinks
+int wvchmod(const char *path, mode_t mode)
+{
+    struct stat st;
+    if (lstat(path, &st) == -1) {
+        return -1;
+    }
+
+    int filedes = open(path, O_RDONLY);
+    if (filedes == -1) {
+	// if we're not running as root, this file/dir may have 0
+	// perms and open() fails, so let's try again
+	//
+	// NOTE: This is not as secure as the proper way, since
+	// it's conceivable that someone swaps out the dir/file
+	// for a symlink between our check and the chmod() call
+	//
+        struct stat sst;
+	if (getuid() != 0)
+	    if (stat(path, &sst) != -1)
+		if (st.st_ino == sst.st_ino)
+		    return chmod(path, mode);
+	
+	return -1;
+    }
+
+    struct stat fst;
+    if (fstat(filedes, &fst) == -1) {
+	close(filedes);
+	return -1;
+    }
+
+    if (st.st_ino != fst.st_ino) {
+	close(filedes);
+	return -1;
+    }
+
+    int retval = fchmod(filedes, mode);
+    close(filedes);
+
+    return retval;
+}
+#endif
+
+
+FILE *wvtmpfile()
+{
+#ifndef _WIN32 // tmpfile() is really the best choice, when it works
+    return tmpfile();
+#else
+    // in win32, tmpfile() creates files in c:\...
+    // and that directory isn't always writable!  Idiots.
+    char *name = _tempnam("c:\\temp", "wvtmp");
+    FILE *f = fopen(name, "wb+");
+    free(name);
+    return f;
+#endif
+}
+
+
+WvString wvtmpfilename(WvStringParm prefix)
+{
+#ifndef _WIN32 // tmpfile() is really the best choice, when it works
+    WvString tmpname("/tmp/%sXXXXXX", prefix);
+    int fd;
+    if ((fd = mkstemp(tmpname.edit())) == (-1))
+        return WvString();    
+    close(fd);
+#else
+    WvString tmpname(_tempnam("c:\\temp", prefix.cstr()));
+#endif
+
+    return tmpname;
+}
+
+
+mode_t get_umask()
+{
+    mode_t rv = umask(0);
+    umask(rv);
+
+    return rv;
+}
+

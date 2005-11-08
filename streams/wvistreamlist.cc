@@ -29,6 +29,7 @@ WvIStreamList WvIStreamList::globallist;
 WvIStreamList::WvIStreamList():
     in_select(false)
 {
+    readcb = writecb = exceptcb = 0;
     auto_prune = true;
     if (this == &globallist)
     {
@@ -73,14 +74,14 @@ private:
 bool WvIStreamList::pre_select(SelectInfo &si)
 {
     //BoolGuard guard(in_select);
-    bool one_dead = false;
+    bool already_sure = false;
     SelectRequest oldwant;
     
     sure_thing.zap();
     
     time_t alarmleft = alarm_remaining();
     if (alarmleft == 0)
-	return true; // alarm has rung
+	already_sure = true;
     
     oldwant = si.wants;
     
@@ -89,22 +90,27 @@ bool WvIStreamList::pre_select(SelectInfo &si)
     {
 	IWvStream &s(*i);
 	
+        si.wants = oldwant;
+
 	if (!s.isok())
 	{
-	    one_dead = true;
+	    already_sure = true;
 	    if (auto_prune)
 		i.xunlink();
 	    continue;
 	}
 	else if (s.pre_select(si))
+	{
+	    // printf("pre_select sure_thing: '%s'\n", i.link->id);
 	    sure_thing.append(&s, false, i.link->id);
+	}
     }
 
     if (alarmleft >= 0 && (alarmleft < si.msec_timeout || si.msec_timeout < 0))
 	si.msec_timeout = alarmleft;
     
     si.wants = oldwant;
-    return one_dead || !sure_thing.isempty();
+    return already_sure || !sure_thing.isempty();
 }
 
 
@@ -163,7 +169,14 @@ void WvIStreamList::execute()
 	i.xunlink();
 	
 	if (s.isok())
+        {
+#if DEBUG
+            WvString strace_node("execute %s",
+                    id? id: "(unidentified stream)");
+            ::write(-1, strace_node, strace_node.len()); 
+#endif
 	    s.callback();
+        }
 	
 	// list might have changed!
 	i.rewind();

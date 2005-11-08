@@ -1,9 +1,26 @@
-wvstreams (4.0.2-5) unstable; urgency=low
+wvstreams (4.2-1) unstable; urgency=low
 
-  * Use ucf for /etc/uniconf.conf, so that parallel installations can
-  co-exist.
+  * New upstream version.
+    - WvStreams supports high baud rates.  (Closes: Bug#271095)
+    - Builds on GNU/kFreeBSD.  (Closes: Bug#332993)
+    - Builds with OpenSSL 0.9.8. (Closes: Bug#336591)
+  * Acknowledge NMUs.  (Closes: Bug#325247, Bug#328001)
 
- -- Simon Law <sfllaw@debian.org>  Fri, 11 Nov 2005 13:37:04 -0500
+ -- Simon Law <sfllaw@debian.org>  Tue,  8 Nov 2005 13:22:24 -0500
+
+wvstreams (4.1.1-1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- William Lachance <wlach@nit.ca>  Wed,  6 Jul 2005 17:46:37 -0500
+
+wvstreams (4.1.0-1) unstable; urgency=low
+
+  * New upstream version.
+  * We now depend on XPLC 0.3.11.
+  * Remove fam, fftw, vorbis, speex dependancies
+
+ -- William Lachance <wlach@nit.ca>  Wed,  6 Apr 2005 19:31:07 -0500
 
 wvstreams (4.0.2-4) unstable; urgency=low
 

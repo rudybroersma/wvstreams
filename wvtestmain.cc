@@ -1,28 +1,51 @@
 #include "wvtest.h"
+#include "wvstring.h"
 #include <stdlib.h>
+#include <stdio.h>
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h>
+#else
 #include <unistd.h>
 #include <fcntl.h>
-#include <stdio.h>
+#endif
+
+static bool fd_is_valid(int fd)
+{
+#ifdef _WIN32
+    if ((HANDLE)_get_osfhandle(fd) != INVALID_HANDLE_VALUE) return true;
+#endif    
+    int nfd = dup(fd);
+    if (nfd >= 0)
+    {
+	close(nfd);
+	return true;
+    }
+    return false;
+
+}
+
 
 static int fd_count(const char *when)
 {
-    long arg = 0;
     int count = 0;
     
     printf("fds open at %s:", when);
     
     for (int fd = 0; fd < 1024; fd++)
     {
-	if (!fcntl(fd, F_GETFD, &arg))
+	if (fd_is_valid(fd))
 	{
 	    count++;
 	    printf(" %d", fd);
+	    fflush(stdout);
 	}
     }
     printf("\n");
     
     return count;
 }
+
 
 int main(int argc, char **argv)
 {
@@ -43,6 +66,10 @@ int main(int argc, char **argv)
     endfd = fd_count("end");
     
     WVPASS(startfd == endfd);
+#ifndef _WIN32
+    if (startfd != endfd)
+	system(WvString("ls -l /proc/%s/fd", getpid()));
+#endif    
     
     // keep 'make' from aborting if this environment variable is set
     if (getenv("WVTEST_NO_FAIL"))

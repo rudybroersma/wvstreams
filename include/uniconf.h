@@ -210,13 +210,11 @@ public:
     /**
      * Stores a string value for this key into the registry.  If the value
      * is WvString::null, deletes the key and all of its children.
-     * Returns true on success.
      */
     void setme(WvStringParm value) const;
 
     /**
      * Stores a string value for this key into the registry.
-     * Returns true on success.
      */
     void setme(WVSTRING_FORMAT_DECL) const
         { return setme(WvString(WVSTRING_FORMAT_CALL)); }
@@ -227,7 +225,6 @@ public:
 
     /**
      * Stores an integer value for this key into the registry.
-     * Returns true on success.
      */
     void setmeint(int value) const;
 
@@ -255,7 +252,6 @@ public:
 
     /**
      * Removes this key and all of its children from the registry.
-     * Returns true on success.
      */
     void remove() const
         { setme(WvString::null); }
@@ -318,6 +314,9 @@ public:
     /** Determines if any generators are mounted at this key. */
     bool ismountpoint() const;
     
+    /** Returns true if the generator at this key isok(). */
+    bool isok() const;
+    
     /**
      * Finds the generator that owns this key.
      * 
@@ -336,6 +335,10 @@ public:
     /**
      * Requests notification when any of the keys covered by the
      * recursive depth specification change by invoking a callback.
+     *
+     * As a programmer, you probably DO NOT want to use this.  Use
+     * UniWatchList.add() instead.  Otherwise, make sure you call
+     * del_callback at the appropriate time.
      */
     void add_callback(void *cookie, const UniConfCallback &callback,
 		      bool recurse = true) const;
@@ -586,7 +589,7 @@ private:
     void _purge();
     void _rewind();
     
-    static int wrapcomparator(const UniConf **a, const UniConf **b);
+    static int wrapcomparator(const UniConf *a, const UniConf *b);
     static Comparator innercomparator;
 
 protected:
@@ -598,7 +601,7 @@ protected:
     {
         _purge();
         for (i.rewind(); i.next(); )
-            xkeys.append(new UniConf(*i));
+            xkeys.append(new UniConf(*i), true);
         _rewind();
     }
 };
@@ -665,6 +668,7 @@ public:
  * C Interface
  */
 
+#ifdef ASHLEY
 
 #ifdef __cplusplus
 extern "C" {
@@ -694,6 +698,6 @@ void uniconf_set(uniconf_t _uniconf,
 #ifdef	__cplusplus
 }
 #endif  // __cplusplus
-
+#endif
 
 #endif // __UNICONF_H

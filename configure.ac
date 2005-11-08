@@ -1,5 +1,6 @@
 # Process this file with autoconf to produce a configure script.
-AC_INIT(WvStreams, 4.0, wvstreams-dev@nit.ca, wvstreams)
+AC_INIT(WvStreams, 4.2, wvstreams-dev@nit.ca, wvstreams)
+SO_VERSION=4.2
 
 save_args() {
     ARGS=""
@@ -28,12 +29,14 @@ AC_DEFUN(WV_APPEND,
 QT_SEARCH_PATH="
 $prefix
 /usr
+$libdir/qt-3.1
 $libdir/qt3
 $libdir/qt
 $datadir/qt3
 $datadir/qt
 /usr
 /usr/lib/qt3
+/usr/lib/qt-3.1
 /usr/share/qt3
 /usr/lib/qt
 /usr/share/qt
@@ -89,11 +92,8 @@ AC_ARG_ENABLE(testgui,
               AC_HELP_STRING([--disable-testgui],
                              [GUI for unit tests]))
 
-AC_ARG_WITH(fam, AC_HELP_STRING([--with-fam], [FAM]))
-AC_ARG_WITH(fftw, AC_HELP_STRING([--with-fftw], [FFTW]))
 AC_ARG_WITH(bdb, AC_HELP_STRING([--with-bdb], [Berkeley DB 1.x (or compatible)]))
 AC_ARG_WITH(qdbm, AC_HELP_STRING([--with-qdbm], [QDBM]))
-AC_ARG_WITH(ogg, AC_HELP_STRING([--with-ogg], [Ogg]))
 AC_ARG_WITH(openssl, AC_HELP_STRING([--with-openssl], [OpenSSL >= 0.9.7 (required)]))
 AC_ARG_WITH(openslp, AC_HELP_STRING([--with-openslp], [OpenSLP]))
 AC_ARG_WITH(pam, AC_HELP_STRING([--with-pam], [PAM]))
@@ -101,9 +101,7 @@ AC_ARG_WITH(tcl, AC_HELP_STRING([--with-tcl], [Tcl]))
 AC_ARG_WITH(telephony, AC_HELP_STRING([--with-telephony], [Telephony]))
 AC_ARG_WITH(swig, AC_HELP_STRING([--with-swig], [SWIG]))
 AC_ARG_WITH(qt, AC_HELP_STRING([--with-qt], [Qt]))
-AC_ARG_WITH(speex, AC_HELP_STRING([--with-speex], [Speex]))
-AC_ARG_WITH(vorbis, AC_HELP_STRING([--with-vorbis], [Vorbis]))
-xplc_version='0.3.11'
+xplc_version='0.3.13'
 AC_ARG_WITH(xplc, AC_HELP_STRING([--with-xplc], [XPLC ${xplc_version} (required)]))
 AC_ARG_WITH(zlib, AC_HELP_STRING([--with-zlib], [zlib (required)]))
 
@@ -119,6 +117,11 @@ AC_PROG_CPP
 AC_PROG_CXXCPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
+AC_PROG_MAKE_SET
+AC_PROG_RANLIB
+
+# Poke gnulib
+gl_EARLY
 
 # Detect target build environment
 AC_CANONICAL_TARGET
@@ -140,8 +143,36 @@ AC_SUBST(ARCH_SUBDIRS)
 # Detect endianness
 AC_C_BIGENDIAN
 
+# Look for __attribute__ ((deprecated))
+CPPFLAGS_save="$CPPFLAGS"
+WV_APPEND(CPPFLAGS, -Werror)
+AC_MSG_CHECKING(for __attribute__ ((deprecated)))
+AC_COMPILE_IFELSE(
+[#include "confdefs.h"
+void f() __attribute__ ((deprecated));
+void f()
+{
+}
+
+int main()
+{
+    return 0;
+}
+],
+		  [AC_MSG_RESULT([yes])
+		   AC_DEFINE([ATTR_DEPRECATED],
+			     [__attribute__ ((deprecated))],
+			     [Compiler warning on deprecated functions])],
+		  [AC_MSG_RESULT([no])
+		   AC_DEFINE([ATTR_DEPRECATED], [],
+			     [Compiler warning on deprecated functions])])
+CPPFLAGS="$CPPFLAGS_save"
+
 # Function checks
 AC_FUNC_ALLOCA
+
+# Initialise gnulib
+gl_INIT
 
 # Check for error_t
 AC_CHECK_HEADERS([argz.h errno.h])
@@ -288,12 +319,6 @@ AC_CHECK_HEADERS([netinet/tcp.h])
 AC_CHECK_HEADERS([linux/serial.h])
 AC_CHECK_FUNCS([cfmakeraw])
 
-# Look for getopt
-AC_CHECK_FUNCS([getopt],,[getopt=no])
-if test "$getopt" = "no"; then
-    AC_CHECK_HEADERS([getopt.h])
-fi
-
 # Detect hard-linking based on LN_S's behaviour
 AC_MSG_CHECKING([whether ln works...])
 case "$LN_S" in
@@ -329,6 +354,10 @@ if test "$enable_devel" = "yes"; then
     enable_warnings=yes
 fi
 
+if test "$enable_debug" != "no"; then
+    AC_DEFINE_UNQUOTED(VER_STRING_EXTRA, [" (`whoami`@`hostname`$VER_STRING_EXTRA)"], [Extra version string.])
+fi
+
 # exceptions
 if test "$enable_exceptions" = "no"; then
     WV_APPEND(CXXFLAGS, -fno-exceptions)
@@ -349,22 +378,6 @@ fi
 # rtti
 if test "$enable_rtti" = "no"; then
     WV_APPEND(CXXFLAGS, -fno-rtti)
-fi
-
-# fam
-if test "$with_fam" != "no"; then
-    AC_CHECK_HEADERS(fam.h,, [with_fam=no])
-    AC_CHECK_LIB(fam, FAMOpen,, [with_fam=no])
-    if test "$with_fam" != "no"; then
-        AC_DEFINE(WITH_FAM,, [Define to enable FAM support.])
-    fi 
-fi
-
-# fftw
-if test "$with_fftw" != "no"; then
-    AC_CHECK_HEADERS(rfftw.h,, [with_fftw=no])
-    AC_CHECK_LIB(fftw, fftw,, [with_fftw=no])
-    AC_CHECK_LIB(rfftw, rfftw,, [with_fftw=no])
 fi
 
 # bdb
@@ -410,13 +423,6 @@ fi
 #    AC_CHECK_LIB(gtk, gtk_main,, [with_gtk=no])
 #    test "$with_gtk" = no && CPPFLAGS="$CPPFLAGS_save"
 #fi
-
-# ogg
-if test "$with_ogg" != "no"; then
-    AC_CHECK_HEADERS(ogg/ogg.h,, [with_ogg=no])
-    AC_CHECK_LIB(ogg, ogg_stream_init,, [with_ogg=no])
-fi
-
 
 # openslp
 if test "$with_openslp" != "no"; then
@@ -527,31 +533,20 @@ if test "$with_qt" != "no"; then
     AC_PATH_PROG(MOC, moc, [moc not found], $with_qt/bin)
 fi
 
-# speex
-if test "$with_speex" != "no"; then
-    AC_CHECK_HEADERS(speex.h speex_header.h,, [with_speex=no])
-    AC_CHECK_LIB(speex, speex_encoder_init,, [with_speex=no])
-fi
-
 # valgrind
 AC_CHECK_PROG(VALGRIND, valgrind, valgrind)
 AC_CHECK_HEADERS(valgrind/memcheck.h)
 
-# vorbis
-if test "$with_vorbis" != "no"; then
-    AC_CHECK_HEADERS(vorbis/codec.h vorbis/vorbisenc.h,, [with_vorbis=no])
-    AC_CHECK_LIB(vorbis, vorbis_info_init,, [with_vorbis=no])
-    AC_CHECK_LIB(vorbisenc, vorbis_encode_init,, [with_vorbis=no])
-fi
-
 # xplc
 if test "$with_xplc" != "no"; then
     if test "$with_xplc" = ""; then
-	if pkg-config --modversion xplc-${xplc_version} 2>/dev/null >/dev/null; then
+	if pkg-config --modversion xplc-${xplc_version}; then
             WV_APPEND(CPPFLAGS, [`pkg-config --cflags xplc-${xplc_version}`])
 	    WV_APPEND(LDFLAGS, [`pkg-config --libs xplc-${xplc_version}`])
 	    AC_CHECK_HEADERS(xplc/core.h,, [with_xplc=no], [#define UNSTABLE])
+	    LIBS_save="$LIBS"
 	    AC_CHECK_LIB(xplc, XPLC_getServiceManager,, [with_xplc=no])
+	    LIBS="$LIBS_save"
 	    xplc_pc="xplc-${xplc_version}"
 	else
 	    with_xplc='no'
@@ -560,7 +555,9 @@ if test "$with_xplc" != "no"; then
         WV_APPEND(CPPFLAGS, [-I$with_xplc/include])
 	WV_APPEND(LDFLAGS, [-L$with_xplc])
 	AC_CHECK_HEADERS(xplc/core.h,, [with_xplc=no], [#define UNSTABLE])
+	LIBS_save="$LIBS"
 	AC_CHECK_LIB(xplc, XPLC_getServiceManager,, [with_xplc=no])
+	LIBS="$LIBS_save"
 	xplc_pc="xplc-${xplc_version}"
     fi
     # What if we can't find it?
@@ -583,20 +580,8 @@ fi
 # check for missing packages
 missing_required=
 missing_devel=
-if test "$with_fam" = "no"; then
-    AC_MSG_WARN([FAM is missing.])
-    missing_devel=yes
-fi
-if test "$with_fftw" = "no"; then
-    AC_MSG_WARN([FFTW is missing.])
-    missing_devel=yes
-fi
 if test "$with_qdbm" = "no"; then
     AC_MSG_WARN([QDBM is missing.])
-    missing_devel=yes
-fi
-if test "$with_ogg" = "no"; then
-    AC_MSG_WARN([Ogg is missing.])
     missing_devel=yes
 fi
 if test "$with_pam" = "no"; then
@@ -609,14 +594,6 @@ if test "$with_telephony" = "no"; then
 fi
 if test "$with_qt" = "no"; then
     AC_MSG_WARN([Qt is missing.])
-    missing_devel=yes
-fi
-if test "$with_speex" = "no"; then
-    AC_MSG_WARN([Speex is missing.])
-    missing_devel=yes
-fi
-if test "$with_vorbis" = "no"; then
-    AC_MSG_WARN([Vorbis is missing.])
     missing_devel=yes
 fi
 if test "$with_xplc" = "no"; then
@@ -649,8 +626,10 @@ if test "$enable_devel" = "yes"; then
 fi
 
 if test "$VALGRIND" != ""; then
-    VALGRIND="valgrind --tool=memcheck --leak-check=yes --num-callers=10 --logfile-fd=-1 --suppressions=\$(WVSTREAMS_SRC)/suppressions.wv"
+    VALGRIND="valgrind --tool=memcheck --leak-check=yes --num-callers=10 --logfile=valgrind.log --suppressions=\$(WVSTREAMS_SRC)/suppressions.wv"
 fi
+
+AC_SUBST(SO_VERSION)
 
 AC_SUBST(enable_debug)
 AC_SUBST(enable_devel)
@@ -666,20 +645,15 @@ AC_SUBST(enable_warnings)
 AC_SUBST(enable_testgui)
 
 AC_SUBST(with_bdb)
-AC_SUBST(with_fam)
-AC_SUBST(with_fftw)
 AC_SUBST(with_qdbm)
 AC_SUBST(with_gtk)
-AC_SUBST(with_ogg)
 AC_SUBST(with_openslp)
 AC_SUBST(with_openssl)
 AC_SUBST(with_pam)
 AC_SUBST(with_telephony)
 AC_SUBST(with_qt)
-AC_SUBST(with_speex)
 AC_SUBST(with_swig)
 AC_SUBST(with_tcl)
-AC_SUBST(with_vorbis)
 AC_SUBST(with_xplc)
 AC_SUBST(with_zlib)
 
@@ -689,23 +663,33 @@ AC_SUBST(xplc_pc)
 AC_SUBST(ac_libs)
 
 AC_CONFIG_FILES(config.mk)
+AC_CONFIG_FILES(gnulib/Makefile)
 AC_CONFIG_FILES([pkgconfig/libuniconf.pc
+                 pkgconfig/libuniconf-uninstalled.pc
 		 pkgconfig/libwvbase.pc
-		 pkgconfig/libwvfft.pc
-		 pkgconfig/liboggspeex.pc
-		 pkgconfig/liboggvorbis.pc
+		 pkgconfig/libwvbase-uninstalled.pc
 		 pkgconfig/libwvqt.pc
+		 pkgconfig/libwvqt-uninstalled.pc
 		 pkgconfig/libwvstreams.pc
-		 pkgconfig/libwvutils.pc])
+		 pkgconfig/libwvstreams-uninstalled.pc
+		 pkgconfig/libwvutils.pc
+		 pkgconfig/libwvutils-uninstalled.pc
+		 pkgconfig/libwvtest.pc
+                 pkgconfig/libwvtest-uninstalled.pc])
+
 if test "$xplc_pc" = "wvxplc"; then
     AC_CONFIG_FILES([pkgconfig/wvxplc.pc])
 fi
 AC_CONFIG_HEADERS(include/wvautoconf.h)
 
-# We wish to tell any sub-configures to install their header files into
-# $includedir/wvstreams/, not the default location.  This prevents clashes
-# with other libraries.
-AC_CONFIG_COMMANDS_POST([ac_configure_args="$ac_configure_args --includedir=\${includedir}/wvstreams --oldincludedir=\${oldincludedir}/wvstreams"])
-
 AC_OUTPUT
 
+# Now remove PACKAGE_* macros from include/wvautoconf.h
+sed 's,^#.*define.*PACKAGE_.*$,/* & */,' include/wvautoconf.h > include/wvautoconf.h.new
+if test "x$?" = "x0"; then
+    if ! diff include/wvautoconf.h include/wvautoconf.h >/dev/null; then
+	mv include/wvautoconf.h.new include/wvautoconf.h
+    else
+	rm include/wvautoconf.h.new
+    fi
+fi

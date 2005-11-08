@@ -18,6 +18,7 @@ typedef int pid_t;
 #define kill(a,b)
 #define waitpid(a,b,c) (0)
 #define alarm(a)
+#include "streams.h"
 #else
 #include "wvautoconf.h"
 #include "wvfork.h"
@@ -41,11 +42,17 @@ public:
     ~WvResolverHost()
         {
 	    WVRELEASE(loop);
+#ifndef WVRESOLVER_SKIP_FORK
             if (pid && pid != -1)
             {
                 kill(pid, SIGKILL);
-                waitpid(pid, NULL, 0);
+                pid_t rv;
+                // In case a signal is in the process of being delivered...
+                while ((rv = waitpid(pid, NULL, 0)) != pid)
+                    if (rv == -1 && errno != EINTR)
+                        break;
             }
+#endif
         }
 protected:
     WvResolverHost()
@@ -108,6 +115,7 @@ static void namelookup(const char *name, WvLoopback *loop)
 	// because otherwise it would timeout nicely after 60 seconds
 	// overall, not 60 seconds per request.
 	sleep(1);
+
 	alarm(60);
     }
 }
@@ -255,7 +263,7 @@ int WvResolver::findaddr(int msec_timeout, WvStringParm name,
     
     do
     {
-	line = host->loop->getline(-1);
+	line = host->loop->blocking_getline(-1);
     } while (!line && host->loop->isok());
     
     if (line && line[0] != 0)

@@ -1,12 +1,14 @@
 /*
  * Worldvisions Weaver Software:
- *   Copyright (C) 2002 Net Integration Technologies, Inc.
+ *   Copyright (C) 2002-2005 Net Integration Technologies, Inc.
  * 
  * A UniConf generator that stores keys in memory.
  */
 #include "unitempgen.h"
 #include "wvmoniker.h"
 #include "wvlog.h"
+#include "wvstringcache.h"
+#include "unilistiter.h"
 
 static IUniConfGen *creator(WvStringParm, IObject *, void *)
 {
@@ -14,6 +16,7 @@ static IUniConfGen *creator(WvStringParm, IObject *, void *)
 }
 
 static WvMoniker<IUniConfGen> reg("temp", creator);
+
 
 /***** UniTempGen *****/
 
@@ -43,9 +46,15 @@ WvString UniTempGen::get(const UniConfKey &key)
     return WvString::null;
 }
 
-
-void UniTempGen::set(const UniConfKey &_key, WvStringParm value)
+void UniTempGen::notify_deleted(const UniConfValueTree *node, void *)
 {
+    delta(node->fullkey(), WvString::null);
+}
+
+void UniTempGen::set(const UniConfKey &_key, WvStringParm _value)
+{
+    WvString value(scache.get(_value));
+    
     hold_delta();
     UniConfKey key = _key;
     bool trailing_slash = false;
@@ -68,11 +77,15 @@ void UniTempGen::set(const UniConfKey &_key, WvStringParm value)
             UniConfValueTree *node = root->find(key);
             if (node)
             {
+                hold_delta();
+                // Issue notifications for every key that gets deleted.
+                node->visit(UniConfValueTree::Visitor(this,
+                    &UniTempGen::notify_deleted), NULL, false, true);
                 delete node;
                 if (node == root)
                     root = NULL;
                 dirty = true;
-                delta(key, WvString::null); // REMOVED
+                unhold_delta();
             }
         }
     }
@@ -92,14 +105,18 @@ void UniTempGen::set(const UniConfKey &_key, WvStringParm value)
             {
 		// we'll have to create the sub-node, since we couldn't
 		// find the most recent part of the key.
-                node = new UniConfValueTree(prev, prevkey,
-					    more ? WvStringParm("") : value);
+                node = new UniConfValueTree(prev, scache.get(prevkey),
+					    more ? scache.get("") : value);
                 dirty = true;
                 if (!prev) // we just created the root
                     root = node;
-                delta(node->fullkey(), value); // ADDED
-                if (!more)
-                    break; // done!
+		if (more)
+		    delta(node->fullkey(), WvString::empty); // AUTO-VIVIFIED
+		else
+		{
+		    delta(node->fullkey(), value); // ADDED
+		    break; // done!
+		}
             }
             else if (!more)
             {
@@ -125,14 +142,9 @@ void UniTempGen::set(const UniConfKey &_key, WvStringParm value)
 }
 
 
-bool UniTempGen::exists(const UniConfKey &key)
+void UniTempGen::setv(const UniConfPairList &pairs)
 {
-    if (root)
-    {
-        UniConfValueTree *node = root->find(key);
-        return node != NULL;
-    }
-    return false;
+    setv_naive(pairs);
 }
 
 
@@ -157,13 +169,23 @@ UniConfGen::Iter *UniTempGen::iterator(const UniConfKey &key)
 	    ListIter *it = new ListIter(this);
 	    UniConfValueTree::Iter i(*node);
 	    for (i.rewind(); i.next(); )
-	    {
-		it->keys.append(new WvString(i->key()), true);
-		it->values.append(new WvString(i->value()), true);
-	    }
+		it->add(i->key(), i->value());
             return it;
 	}
     }
     return NULL;
 }
 
+
+void UniTempGen::commit()
+{
+    scache.clean();
+    UniConfGen::commit();
+}
+
+
+bool UniTempGen::refresh()
+{
+    scache.clean();
+    return UniConfGen::refresh();
+}

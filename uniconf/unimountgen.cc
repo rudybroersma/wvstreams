@@ -8,11 +8,23 @@
 #include "wvmoniker.h"
 #include "wvhash.h"
 #include "wvstrutils.h"
+#include "unilistiter.h"
+#include "wvstringtable.h"
 #include <assert.h>
 
-DeclareWvTable(WvString);
-
 /***** UniMountGen *****/
+
+UniMountGen::UniMountGen()
+{
+    // nothing special
+}
+
+
+UniMountGen::~UniMountGen()
+{
+    zap();
+}
+
 
 WvString UniMountGen::get(const UniConfKey &key)
 {
@@ -37,6 +49,51 @@ void UniMountGen::set(const UniConfKey &key, WvStringParm value)
     if (!found)
         return;
     found->gen->set(trimkey(found->key, key), value);
+}
+
+
+struct UniMountGen::UniGenMountPairs
+{
+    UniGenMount *mount;
+    WvString key;
+    UniConfPairList pairs;
+
+    UniGenMountPairs(UniGenMount *_mount)
+	: mount(_mount)
+    {
+	if (mount)
+	    key = mount->key;
+    }
+};
+
+
+void UniMountGen::setv(const UniConfPairList &pairs)
+{
+    UniGenMountPairsDict mountpairs(mounts.count());
+
+    {
+	MountList::Iter m(mounts);
+	for (m.rewind(); m.next(); )
+	    mountpairs.add(new UniGenMountPairs(m.ptr()), true);
+    }
+
+    {
+	UniConfPairList::Iter pair(pairs);
+	for (pair.rewind(); pair.next(); )
+	{
+	    UniGenMount *found = findmount(pair->key());
+	    if (!found)
+		continue;
+	    UniConfPair *trimmed = new UniConfPair(trimkey(found->key,
+							   pair->key()),
+						   pair->value());
+	    mountpairs[found->key]->pairs.add(trimmed, true);
+	}
+    }
+
+    UniGenMountPairsDict::Iter i(mountpairs);
+    for (i.rewind(); i.next(); )
+	i->mount->gen->setv(i->pairs);
 }
 
 
@@ -122,8 +179,9 @@ IUniConfGen *UniMountGen::mount(const UniConfKey &key,
     IUniConfGen *gen = wvcreate<IUniConfGen>(moniker);
     if (gen)
         mountgen(key, gen, refresh); // assume always succeeds for now
-
-    // assert(gen && "Moniker doesn't get us a generator!");
+#if DEBUG
+    assert(gen && "Moniker doesn't get us a generator!");
+#endif
     if (gen && !gen->exists("/"))
         gen->set("/", "");
     return gen;
@@ -137,8 +195,9 @@ IUniConfGen *UniMountGen::mountgen(const UniConfKey &key,
 	return NULL;
     
     UniGenMount *newgen = new UniGenMount(gen, key);
-    gen->setcallback(UniConfGenCallback(this,
-				&UniMountGen::gencallback), &newgen->key);
+    gen->add_callback(this,
+		      WvBoundCallback<UniConfGenCallback, const UniConfKey&>
+		      (this, &UniMountGen::gencallback, newgen->key));
 
     hold_delta();
     delta(key, WvString());
@@ -175,7 +234,7 @@ void UniMountGen::unmount(IUniConfGen *gen, bool commit)
     
     if (commit)
         gen->commit();
-    gen->setcallback(UniConfGenCallback(), NULL);
+    gen->del_callback(this);
 
     UniConfKey key(i->key);
     IUniConfGen *next = NULL;
@@ -203,6 +262,13 @@ void UniMountGen::unmount(IUniConfGen *gen, bool commit)
 }
 
 
+void UniMountGen::zap()
+{
+    while (!mounts.isempty())
+	unmount(mounts.first()->gen, false);
+}
+
+
 IUniConfGen *UniMountGen::whichmount(const UniConfKey &key,
 				    UniConfKey *mountpoint)
 {
@@ -213,7 +279,7 @@ IUniConfGen *UniMountGen::whichmount(const UniConfKey &key,
         if (i->key.suborsame(key))
         {
             if (mountpoint)
-                *mountpoint = key;
+                *mountpoint = i->key;
             return i->gen;
         }
     }
@@ -270,9 +336,7 @@ UniMountGen::Iter *UniMountGen::iterator(const UniConfKey &key)
 	}
         WvStringTable::Sorter s(t, &::wvstrcmp);
         for (s.rewind(); s.next();)
-        {
-		it->keys.append(new WvString(s()), true);
-        }
+	    it->add(*s);
 
 	return it;
     }
@@ -335,11 +399,10 @@ UniMountGen::UniGenMount *UniMountGen::findmountunder(const UniConfKey &key)
 }
 
 
-void UniMountGen::gencallback(const UniConfKey &key, WvStringParm value,
-                                  void *userdata)
+void UniMountGen::gencallback(const UniConfKey &base, const UniConfKey &key,
+			      WvStringParm value)
 {
-    UniConfKey *base = static_cast<UniConfKey*>(userdata);
-    delta(UniConfKey(*base, key), value);
+    delta(UniConfKey(base, key), value);
 }
 
 

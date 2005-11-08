@@ -22,6 +22,10 @@
 #ifndef __XPLC_ICATEGORY_H__
 #define __XPLC_ICATEGORY_H__
 
+#if defined(__GNUC__) && __GNUC__ > 3
+# pragma GCC system_header
+#endif
+
 #include <xplc/IFactory.h>
 #include <xplc/ICategoryIterator.h>
 
@@ -29,11 +33,7 @@
  * Represents a category.
  */
 
-#if 0
-class ICategory: public IFactory {
-#else
 class ICategory: public IObject {
-#endif
   UNSTABLE_INTERFACE
 public:
   /** Gets an iterator for the category. */

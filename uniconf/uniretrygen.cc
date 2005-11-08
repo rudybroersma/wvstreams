@@ -9,20 +9,25 @@
 #include "wvmoniker.h"
 #include "wvtclstring.h"
 #include "wvstringlist.h"
+#include "wvlinkerhack.h"
+
+WV_LINK(UniRetryGen);
 
 
-//#define DPRINTF(format, args...) fprintf(stderr, format ,##args);
-#define DPRINTF(format, args...)
+#if 0
+#define DPRINTF(format, args...) fprintf(stderr, format ,##args);
+#else
+#define DPRINTF if (0) printf
+#endif
 
 
 // Wrap the given moniker.  For the retry generator, obj is useless since
 // it gives us no idea as to how to recreate itself.
-static IUniConfGen *creator(WvStringParm s, IObject *obj, void *)
+static IUniConfGen *creator(WvStringParm encoded_params, IObject *obj, void *)
 {
     if (obj)
     	return NULL;
     
-    WvString encoded_params = wvtcl_unescape(s);
     DPRINTF("encoded_params = %s\n", encoded_params.cstr());
     WvStringList params;
     wvtcl_decode(params, encoded_params);
@@ -37,7 +42,8 @@ static IUniConfGen *creator(WvStringParm s, IObject *obj, void *)
     time_t retry_interval_ms = retry_interval_ms_str.num();
     if (retry_interval_ms < 0)
     	retry_interval_ms = 0;
-    return new UniRetryGen(moniker, retry_interval_ms);
+    return new UniRetryGen(moniker, UniRetryGen::ReconnectCallback(),
+            retry_interval_ms);
 }
 
 static WvMoniker<IUniConfGen> reg("retry", creator);
@@ -46,10 +52,12 @@ static WvMoniker<IUniConfGen> reg("retry", creator);
 /***** UniRetryGen *****/
 
 UniRetryGen::UniRetryGen(WvStringParm _moniker,
+        ReconnectCallback _reconnect_callback,
     	time_t _retry_interval_ms) 
     : UniFilterGen(NULL),
     	log(WvString("UniRetryGen %s", _moniker), WvLog::Debug1),
     	moniker(_moniker),
+        reconnect_callback(_reconnect_callback),
     	retry_interval_ms(_retry_interval_ms),
     	next_reconnect_attempt(wvtime())
 {
@@ -81,6 +89,8 @@ void UniRetryGen::maybe_reconnect()
     	    	log("Connected\n");
     	    	
     	    	setinner(gen);
+
+                if (!!reconnect_callback) reconnect_callback(*this);
     	    }
     	    else
     	    {

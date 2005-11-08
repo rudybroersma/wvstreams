@@ -119,6 +119,7 @@ private:
 
     WvConfigSectionEmuDict sections;
     bool hold;
+    bool dirty;
     WvList<CallbackInfo> callbacks;
     WvStringTable values;
 
@@ -129,6 +130,7 @@ public:
     WvConfEmu(const UniConf &_uniconf);
     ~WvConfEmu();
     void zap();
+    bool isclean() const;
     bool isok() const;
     void load_file(WvStringParm filename);
     void save(WvStringParm filename, int _create_mode = 0666);
@@ -144,6 +146,9 @@ public:
     void add_setbool(bool *b, WvStringParm _section, WvStringParm _key);
     void del_setbool(bool *b, WvStringParm _section, WvStringParm _key);
 
+    // The addname callback will add the key "ent" in "sect" to the "list" 
+    // whenever "ent" changes. If ent is empty, add any key in the sect to
+    // the list when one is added/deleted/changed
     void add_addname(WvStringList *list, WvStringParm sect, WvStringParm ent);
     void del_addname(WvStringList *list, WvStringParm sect, WvStringParm ent);
 

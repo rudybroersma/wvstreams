@@ -18,15 +18,14 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string> // no code is actually used from here
 
 
-/*
- * 1 byte for terminating NUL, 4 more to kludge around libc5+efence
- * incompatibility with strcat().
- */
-#define WVSTRING_EXTRA 5
+/* 1 byte for terminating NUL */
+#define WVSTRING_EXTRA 1
 
 
+#define __WVS_F(n) WvStringParm __wvs_##n
 #define __WVS_FORM(n) WvStringParm __wvs_##n = WvFastString::null
 #define WVSTRING_FORMAT_DECL WvStringParm __wvs_format, \
 		WvStringParm __wvs_a0, \
@@ -37,6 +36,15 @@
 		__WVS_FORM(a13), __WVS_FORM(a14), __WVS_FORM(a15), \
 		__WVS_FORM(a16), __WVS_FORM(a17), __WVS_FORM(a18), \
 		__WVS_FORM(a19)
+#define WVSTRING_FORMAT_DEFN WvStringParm __wvs_format, \
+		WvStringParm __wvs_a0, \
+		__WVS_F( a1), __WVS_F( a2), __WVS_F( a3), \
+		__WVS_F( a4), __WVS_F( a5), __WVS_F( a6), \
+		__WVS_F( a7), __WVS_F( a8), __WVS_F( a9), \
+		__WVS_F(a10), __WVS_F(a11), __WVS_F(a12), \
+		__WVS_F(a13), __WVS_F(a14), __WVS_F(a15), \
+		__WVS_F(a16), __WVS_F(a17), __WVS_F(a18), \
+		__WVS_F(a19)
 #define WVSTRING_FORMAT_CALL __wvs_format, __wvs_a0, \
 		__wvs_a1, __wvs_a2, __wvs_a3, __wvs_a4, __wvs_a5, \
 		__wvs_a6, __wvs_a7, __wvs_a8, __wvs_a9, __wvs_a10, \
@@ -129,6 +137,12 @@ public:
      */
     WvFastString(const QString &s);
     WvFastString(const QCString &s);
+    
+    /**
+     * Create a string out of a stdc++ string.  To use this, #include
+     * wvstdstring.h.
+     */
+    inline WvFastString(const std::string &s);
 
     /**
      * NOTE: make sure that 32 bytes is big enough for your longest
@@ -202,6 +216,8 @@ public:
     size_t len() const;
 
 protected:
+    void construct(const char *_str);
+
     // this doesn't exist - it's just here to keep it from being auto-created
     // by stupid C++.
     WvFastString &operator= (const WvFastString &s2);
@@ -250,6 +266,12 @@ public:
      * You need to link to libwvqt.so if you use this.
      */
     operator QString() const;
+    
+    /**
+     * Return a stdc++ string with the contents of this string.  To use
+     * this, #include wvstdstring.h.
+     */
+    //inline operator std::string() const;
     
     /**
      * used to convert WvString to int, when needed.
@@ -341,6 +363,12 @@ public:
     WvString(const QString &);
     WvString(const QCString &);
 
+    /**
+     * Create a string out of a stdc++ string.  To use this, #include
+     * wvstdstring.h.
+     */
+    inline WvString(const std::string &s);
+
     WvString(WVSTRING_FORMAT_DECL) : WvFastString(WVSTRING_FORMAT_CALL)
         { }
     
@@ -355,6 +383,9 @@ public:
     
     /** make the buf and str pointers owned only by this WvString. */
     WvString &unique();
+    
+    /** returns true if this string is already unique() */
+    bool is_unique() const;
 
     /** make the string editable, and return a non-const (char*) */
     char *edit()
@@ -362,7 +393,15 @@ public:
     
 protected:
     void copy_constructor(const WvFastString &s);
-
+    inline void WvString::construct(const char *_str)
+        {
+            link(&nullbuf, _str);
+    
+            // apenwarr (2002/04/24): from now on, all WvString objects are created
+            // with unique(), so you should _never_ have to call it explicitly.  We
+            // still can (and should!) use fast parameter passing via WvFastString.
+            unique();
+        }
 };
 
 

@@ -13,6 +13,9 @@
 #define FIVE_LETTERS_ENC	"a2Vua2U="
 #define SIX_LETTERS 		"kenken"
 #define SIX_LETTERS_ENC		"a2Vua2Vu"
+#define FOURTEEN_LETTERS        "aaaaaa:bbbbbbb"
+#define FOURTEEN_LETTERS_ENC    "YWFhYWFhOmJiYmJiYmI="
+
 #define BASE64_ALPHABET_DEC	{0, 16, 131, 16, 81, 135, 32, 146, 139, 48, 211, 143, 65, 20, 147, 81, 85, 151, 97, 150, 155, 113, 215, 159, 130, 24, 163, 146, 89, 167, 162, 154, 171, 178, 219, 175, 195, 28, 179, 211, 93, 183, 227, 158, 187, 243, 223, 191};
 #define BASE64_ALPHABET		"ABCDEFGHIJKLMNOPQRSTUVWXYZ" \
 				"abcdefghijklmnopqrstuvwxyz" \
@@ -54,6 +57,12 @@ WVTEST_MAIN("basic encoding")
 	WvString result = enc.strflushstr(SIX_LETTERS, true);
 	WVPASS(result == SIX_LETTERS_ENC);
     }
+    
+    { // 14 characters
+	WvBase64Encoder enc;
+	WvString result = enc.strflushstr(FOURTEEN_LETTERS, true);
+	WVPASS(result == FOURTEEN_LETTERS_ENC);
+    }
 
     { // many characters long... no newlines should be put in after 76
 	// characters (see RFC2045) since this encoder is not MIME-specific
@@ -65,7 +74,7 @@ WVTEST_MAIN("basic encoding")
     { // very special test that makes sure encoded output uses all possible
 	// characters
 	WvBase64Encoder enc;
-	const char a[] = BASE64_ALPHABET_DEC;
+	const unsigned char a[] = BASE64_ALPHABET_DEC;
 	WvString result = enc.strflushmem(a, sizeof(a), true);
 	WVPASS(result == BASE64_ALPHABET);
     }
@@ -110,7 +119,7 @@ WVTEST_MAIN("basic decoding")
 	WvBase64Decoder dec;
 	WvDynBuf dest;
 	dec.flushstrbuf( BASE64_ALPHABET, dest, true );
-	char a[] = BASE64_ALPHABET_DEC;
+	const unsigned char a[] = BASE64_ALPHABET_DEC;
 	WVPASS(dest.used() == sizeof( a )
 	       && !memcmp( a, dest.get(dest.used()), sizeof(a))
 	       );

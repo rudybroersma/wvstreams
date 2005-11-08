@@ -5,12 +5,17 @@
  * A generator for .ini files.
  */
 #include "uniinigen.h"
-#include "unitempgen.h"
-#include "wvtclstring.h"
 #include "strutils.h"
+#include "unitempgen.h"
 #include "wvfile.h"
 #include "wvmoniker.h"
+#include "wvstringmask.h"
+#include "wvtclstring.h"
 #include <ctype.h>
+#include "wvlinkerhack.h"
+
+WV_LINK(UniIniGen);
+
 
 static IUniConfGen *creator(WvStringParm s, IObject *, void *)
 {
@@ -30,9 +35,18 @@ static void printkey(WvStream &file, const UniConfKey &_key,
 UniIniGen::UniIniGen(WvStringParm _filename, int _create_mode)
     : filename(_filename), create_mode(_create_mode), log(_filename)
 {
-    //log(WvLog::Debug1, "Using IniFile \"%s\"\n", filename);
-    // consider the generator dirty until it is first refreshed
-    dirty = true;
+    // Create the root, since this generator can't handle it not existing.
+    UniTempGen::set(UniConfKey::EMPTY, WvString::empty);
+    memset(&old_st, 0, sizeof(old_st));
+}
+
+
+void UniIniGen::set(const UniConfKey &key, WvStringParm value)
+{
+    // Don't allow people to delete the root, since this generator can't
+    // handle it not existing.
+    if (!(value.isnull() && key.isempty()))
+        UniTempGen::set(key, value);
 }
 
 
@@ -45,7 +59,7 @@ bool UniIniGen::refresh()
 {
     WvFile file(filename, O_RDONLY);
 
-    #ifndef _WIN32
+#ifndef _WIN32
     struct stat statbuf;
     if (file.isok() && fstat(file.getrfd(), &statbuf) == -1)
     {
@@ -59,7 +73,19 @@ bool UniIniGen::refresh()
 	file.close();
 	file.seterr(EAGAIN);
     }
-    #endif
+    
+    if (file.isok() // guarantes statbuf is valid from above
+	&& statbuf.st_ctime == old_st.st_ctime
+	&& statbuf.st_dev == old_st.st_dev
+	&& statbuf.st_ino == old_st.st_ino
+	&& statbuf.st_blocks == old_st.st_blocks
+	&& statbuf.st_size == old_st.st_size)
+    {
+	log(WvLog::Debug3, "refresh: file hasn't changed; do nothing.\n");
+	return true;
+    }
+    memcpy(&old_st, &statbuf, sizeof(statbuf));
+#endif
 
     if (!file.isok())
     {
@@ -72,36 +98,26 @@ bool UniIniGen::refresh()
     
     // loop over all Tcl words in the file
     UniTempGen *newgen = new UniTempGen();
+    newgen->set(UniConfKey::EMPTY, WvString::empty);
     UniConfKey section;
     WvDynBuf buf;
-    for (bool eof = false; !eof; )
+    while (buf.used() || file.isok())
     {
         if (file.isok())
         {
             // read entire lines to ensure that we get whole values
-            char *line = file.getline(-1);
+            char *line = file.blocking_getline(-1);
             if (line)
+	    {
                 buf.putstr(line);
-            else
-                eof = true;
+		buf.put('\n'); // this was auto-stripped by getline()
+	    }
         }
-        else
-            eof = true;
-
-        if (eof)
-        {
-            // detect missing newline at end of file
-            size_t avail = buf.used();
-            if (avail == 0)
-                break;
-            if (buf.peek(avail - 1) == '\n')
-                break;
-            // run the loop one more time to compensate
-        }
-        buf.put('\n');
 
         WvString word;
-	while (!(word = wvtcl_getword(buf, "\r\n", false)).isnull())
+	while (!(word = wvtcl_getword(buf,
+				      WVTCL_NASTY_NEWLINES,
+				      false)).isnull())
         {
 	    //log(WvLog::Info, "LINE: '%s'\n", word);
 	    
@@ -128,7 +144,8 @@ bool UniIniGen::refresh()
 	    
             // we possibly have a key = value line
             WvConstStringBuffer line(word);
-            WvString name = wvtcl_getword(line, "=", false);
+	    static const WvStringMask nasty_equals("=");
+            WvString name = wvtcl_getword(line, nasty_equals, false);
             if (!name.isnull() && line.used())
             {
                 name = wvtcl_unescape(trim_string(name.edit()));
@@ -149,33 +166,30 @@ bool UniIniGen::refresh()
                 }
             }
 	    
+	    // if we get here, the line was tcl-decoded but not useful.
             log(WvLog::Warning,
 		"Ignoring malformed input line: \"%s\"\n", word);
         }
+	
+	if (buf.used() && !file.isok())
+	{
+	    // EOF and some of the data still hasn't been used.  Weird.
+	    // Let's remove a line of data and try again.
+	    size_t offset = buf.strchr('\n');
+	    assert(offset); // the last thing we put() is *always* a newline!
+	    WvString line1(trim_string(buf.getstr(offset).edit()));
+	    if (!!line1) // not just whitespace
+		log(WvLog::Warning,
+		    "XXX Ignoring malformed input line: \"%s\"\n", line1);
+	}
     }
 
-    // close the file
-    file.close();
     if (file.geterr())
     {
         log(WvLog::Warning, 
-	    "Error reading from config file: \"%s\"\n", file.errstr());
+	    "Error reading from config file: %s\n", file.errstr());
         WVRELEASE(newgen);
         return false;
-    }
-
-    // handle unparsed input
-    size_t avail = buf.used();
-    while (avail > 0 && buf.peek(avail - 1) == '\n')
-    {
-        buf.unalloc(1); // strip off uninteresting trailing newlines
-        avail -= 1;
-    }
-    if (avail > 0)
-    {
-        // last line must have contained junk
-        log(WvLog::Warning,
-	    "XXX Ignoring malformed input line: \"%s\"\n", buf.getstr());
     }
 
     // switch the trees and send notifications
@@ -185,20 +199,15 @@ bool UniIniGen::refresh()
     root = newtree;
     newgen->root = NULL;
     dirty = false;
-    if (oldtree && newtree)
-    {
-        oldtree->compare(newtree, UniConfValueTree::Comparator
+    oldtree->compare(newtree, UniConfValueTree::Comparator
             (this, &UniIniGen::refreshcomparator), NULL);
-        delete oldtree;
-    }
-    else
-    {
-        delta(UniConfKey::EMPTY, WvString::null); // REMOVED
-    }
+    
+    delete oldtree;
     unhold_delta();
 
     WVRELEASE(newgen);
 
+    UniTempGen::refresh();
     return true;
 }
 
@@ -222,7 +231,9 @@ bool UniIniGen::refreshcomparator(const UniConfValueTree *a,
         else
         {
             // key removed
-            delta(a->fullkey(), WvString::null); // REMOVED
+	    // Issue notifications for every that is missing.
+            a->visit(UniConfValueTree::Visitor(this,
+                &UniIniGen::notify_deleted), NULL, false, true);
             return false;
         }
     }
@@ -236,66 +247,97 @@ bool UniIniGen::refreshcomparator(const UniConfValueTree *a,
 }
 
 
+#ifndef _WIN32
+bool UniIniGen::commit_atomic(WvStringParm real_filename)
+{
+    struct stat statbuf;
+
+    if (lstat(real_filename, &statbuf) == -1)
+    {
+	if (errno != ENOENT)
+	    return false;
+    }
+    else
+	if (!S_ISREG(statbuf.st_mode))
+	    return false;
+
+    WvString tmp_filename("%s.tmp%s", real_filename, getpid());
+    WvFile file(tmp_filename, O_WRONLY|O_TRUNC|O_CREAT, 0000);
+
+    if (file.geterr())
+    {
+	log(WvLog::Warning, "Can't write '%s': %s\n",
+	    tmp_filename, strerror(errno));
+	unlink(tmp_filename);
+	file.close();
+	return false;
+    }
+
+    save(file, *root); // write the changes out to our temp file
+
+    mode_t theumask = umask(0);
+    umask(theumask);
+    fchmod(file.getwfd(), create_mode & ~theumask);
+
+    file.close();
+
+    if (file.geterr() || rename(tmp_filename, real_filename) == -1)
+    {
+        log(WvLog::Warning, "Can't write '%s': %s\n",
+	    filename, strerror(errno));
+        unlink(tmp_filename);
+	return false;
+    }
+
+    return true;
+}
+#endif
+
+
 void UniIniGen::commit()
 {
-    if (!dirty) return;
+    if (!dirty)
+	return;
+
+    UniTempGen::commit();
 
 #ifdef _WIN32
-    // Windows doesn't support all that fancy stuff, just open the file
-    //   and be done with it
+    // Windows doesn't support all that fancy stuff, just open the
+    // file and be done with it
     WvFile file(filename, O_WRONLY|O_TRUNC|O_CREAT, create_mode);
+    save(file, *root); // write the changes out to our file
+    file.close();
+    if (file.geterr())
+    {
+        log(WvLog::Warning, "Can't write '%s': %s\n",
+	    filename, file.errstr());
+	return;
+    }
 #else
-    // try to overwrite the file atomically
-    char resolved_path[PATH_MAX];
     WvString real_filename(filename);
+    char resolved_path[PATH_MAX];
 
     if (realpath(filename, resolved_path) != NULL)
 	real_filename = resolved_path;
-	
-    WvString alt_filename("%s.tmp%s", real_filename, getpid());
-    WvFile file(alt_filename, O_WRONLY|O_TRUNC|O_CREAT, 0000);
-    struct stat statbuf;
 
-    if (file.geterr()
-	|| lstat(real_filename, &statbuf) == -1
-	|| !S_ISREG(statbuf.st_mode))
+    if (!commit_atomic(real_filename))
     {
-	if (file.geterr())
-	    log(WvLog::Warning, "couldn't create '%s'\n", alt_filename);
+        WvFile file(real_filename, O_WRONLY|O_TRUNC|O_CREAT, create_mode);
+        struct stat statbuf;
 
-	unlink(alt_filename);
-	alt_filename = WvString::null;
+        if (fstat(file.getwfd(), &statbuf) == -1)
+        {
+            log(WvLog::Warning, "Can't write '%s' ('%s'): %s\n",
+                filename, real_filename, strerror(errno));
+            return;
+        }
 
-	file.open(real_filename, O_WRONLY|O_TRUNC|O_CREAT, create_mode);
+        fchmod(file.getwfd(), (statbuf.st_mode & 07777) | S_ISVTX);
 
-	if (fstat(file.getwfd(), &statbuf) == -1)
-	{
-	    log(WvLog::Warning, "Can't write '%s' ('%s'): %s\n",
-		filename, real_filename, strerror(errno));
-	    return;
-	}
-
-	fchmod(file.getwfd(), (statbuf.st_mode & 07777) | S_ISVTX);
-    }
-#endif
+        save(file, *root);
     
-    if (root) // the tree may be empty, so NULL root is okay
-    {
-	// the root itself is a special case, since it's not in a section,
-	// and it's never NULL (so we don't need to write it if it's just
-	// blank)
-	if (!!root->value())
-	    printkey(file, root->key(), root->value());
-	
-	// do all subkeys
-	save(file, *root);
-    }
-
-#ifndef _WIN32
-    if (alt_filename.isnull())
-    {
-	if (!file.geterr())
-	{
+        if (!file.geterr())
+        {
 	    /* We only reset the sticky bit if all went well, but before
 	     * we close it, because we need the file descriptor. */
 	    statbuf.st_mode = statbuf.st_mode & ~S_ISVTX;
@@ -304,29 +346,6 @@ void UniIniGen::commit()
 	else
 	    log(WvLog::Warning, "Error writing '%s' ('%s'): %s\n",
 		filename, real_filename, file.errstr());
-    }
-#endif
-
-    file.close();
-
-    if (file.geterr())
-    {
-        log(WvLog::Warning, "Can't write '%s': %s\n",
-	    filename, file.errstr());
-	return;
-    }
-
-#ifndef _WIN32
-    if (!alt_filename.isnull())
-    {
-	chmod(alt_filename, create_mode);
-	if (rename(alt_filename, real_filename) == -1)
-	{
-	    log(WvLog::Warning, "Can't write '%s': %s\n",
-		filename, strerror(errno));
-	    unlink(alt_filename);
-	    return;
-	}
     }
 #endif
 
@@ -369,6 +388,9 @@ static bool absolutely_needs_escape(WvStringParm s, const char *sepchars)
     if (inescape || inspace)
 	return true; // terminating backslash or whitespace... evil.
     
+    if (numbraces != 0)
+        return true; // uneven number of braces, can't be good
+
     // otherwise, I guess we're safe.
     return false;
 }
@@ -377,12 +399,17 @@ static bool absolutely_needs_escape(WvStringParm s, const char *sepchars)
 static void printsection(WvStream &file, const UniConfKey &key)
 {
     WvString s;
-    
+    static const WvStringMask nasties("\r\n[]");
+
     if (absolutely_needs_escape(key, "\r\n[]"))
-	s = wvtcl_escape(key, "\r\n[]");
+	s = wvtcl_escape(key, nasties);
     else
 	s = key;
-    file.print("\n[%s]\n", s);
+    // broken up for optimization, no temp wvstring created
+    //file.print("\n[%s]\n", s);
+    file.print("\n[");
+    file.print(s);
+    file.print("]\n");
 }
 
 
@@ -390,9 +417,10 @@ static void printkey(WvStream &file, const UniConfKey &_key,
 		     WvStringParm _value)
 {
     WvString key, value;
-    
+    static const WvStringMask nasties("\r\n\t []=#");
+
     if (absolutely_needs_escape(_key, "\r\n[]=#\""))
-	key = wvtcl_escape(_key, "\r\n\t []=#");
+	key = wvtcl_escape(_key, nasties);
     else if (_key == "")
 	key = "/";
     else
@@ -401,13 +429,18 @@ static void printkey(WvStream &file, const UniConfKey &_key,
     // value is more relaxed, since we don't use wvtcl_getword after we grab
     // the "key=" part of each line
     if (absolutely_needs_escape(_value, "\r\n"))
-	value = wvtcl_escape(_value, "\r\n\t ");
+	value = wvtcl_escape(_value, WVTCL_NASTY_SPACES);
     else
 	value = _value;
     
     // need to escape []#= in key only to distinguish a key/value
     // pair from a section name or comment and to delimit the value
-    file.print("%s = %s\n", key, value);
+    // broken up for optimization, no temp wvstring created
+    //file.print("%s = %s\n", key, value);
+    file.print(key);
+    file.print(" = ");
+    file.print(value);
+    file.print("\n");
 }
 
 
@@ -448,6 +481,19 @@ static void save_sect(WvStream &file, UniConfValueTree &toplevel,
 
 void UniIniGen::save(WvStream &file, UniConfValueTree &parent)
 {
+    // parent might be NULL, so it really should be a pointer, not
+    // a reference.  Oh well...
+    if (!&parent) return;
+    
+    if (parent.fullkey() == root->fullkey())
+    {
+	// the root itself is a special case, since it's not in a section,
+	// and it's never NULL (so we don't need to write it if it's just
+	// blank)
+	if (!!parent.value())
+	    printkey(file, parent.key(), parent.value());
+    }
+
     bool printedsection = false;
     
     save_sect(file, parent, parent, printedsection, false);

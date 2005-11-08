@@ -1,3 +1,222 @@
+2005-10-31 23:19  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* NEWS, configure.ac: Updated the version numbers and the NEWS
+	file.
+
+2005-10-31 23:19  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* uuid/uuid_time.c: Some debug code in the uuid directory doesn't
+	build when --enable-debug is used.
+
+2005-10-26 19:19  Simon Law <sfllaw@nit.ca>
+
+	* configure.ac, config/config.mk.in: Get XPLC building on FreeBSD
+	4.11.
+
+2005-10-24 14:27  Simon Law <sfllaw@nit.ca>
+
+	* debian/copyright: Update copyright information.
+
+2005-10-21 16:23  Simon Law <sfllaw@nit.ca>
+
+	* debian/: .cvsignore, changelog, control.in, rules,
+	uuidcdef.install, uuidcdef.manpages: Add a uuidcdef package.
+
+2005-10-21 16:22  Simon Law <sfllaw@nit.ca>
+
+	* config.guess, config.sub: Update with new autoconf host guessing.
+
+2005-10-21 16:19  Simon Law <sfllaw@nit.ca>
+
+	* uuid/bin/uuidgen.c: Bug report address.
+
+2005-10-21 15:00  Simon Law <sfllaw@nit.ca>
+
+	* config/rules.mk: Manpages go in man1.
+
+2005-10-21 14:56  Simon Law <sfllaw@nit.ca>
+
+	* config/config.mk.in, config/rules.mk, uuid/bin/uuidgen.1: Add a
+	manpage for uuidgen.
+
+2005-10-21 14:18  Simon Law <sfllaw@nit.ca>
+
+	* uuid/bin/uuidgen.c: New FSF address.
+
+2005-10-21 14:17  Simon Law <sfllaw@nit.ca>
+
+	* uuid/bin/uuidgen.c: Fix whitespace.
+
+2005-10-21 13:18  Simon Law <sfllaw@nit.ca>
+
+	* configure.ac, config/config.mk.in, config/rules.mk,
+	uuid/.cvsignore, uuid/COPYING, uuid/ChangeLog, uuid/clear.c,
+	uuid/compare.c, uuid/copy.c, uuid/gen_uuid.c, uuid/gen_uuid_nt.c,
+	uuid/isnull.c, uuid/pack.c, uuid/parse.c, uuid/rules.mk,
+	uuid/unpack.c, uuid/unparse.c, uuid/uuid.h, uuid/uuidP.h,
+	uuid/uuid_time.c, uuid/uuid_types.h.in, uuid/vars.mk,
+	uuid/bin/.cvsignore, uuid/bin/tst_uuid.c, uuid/bin/uuidgen.c: Add a
+	UUID generation program that also spits out XPLC C definitions. 
+	This is supposed to be quite portable, so I've only used what POSIX
+	gives us.
+	
+	http://bugs.debian.org/310755
+
+2005-10-21 13:08  Simon Law <sfllaw@nit.ca>
+
+	* config/vars.mk: make distclean now removes include/autoconf.h
+
+2005-10-21 13:03  Simon Law <sfllaw@nit.ca>
+
+	* configure.ac, config/config.mk.in, config/rules.mk,
+	dist/xplc.pc.in: Properly handle the versioned include directory,
+	which we never did correctly before.
+
+2005-10-18 21:08  Simon Law <sfllaw@nit.ca>
+
+	* include/xplc/: ICategory.h, ICategoryIterator.h,
+	ICategoryManager.h, IFactory.h, IModule.h, IModuleLoader.h,
+	IModuleManagerFactory.h, IMoniker.h, IMonikerService.h, IObject.h,
+	IServiceHandler.h, IServiceManager.h, IStaticServiceHandler.h,
+	IWeakRef.h, delete.h, factory.h, module.h, ptr.h, trace.h, utils.h,
+	uuid.h, uuidops.h, xplc.h: Now get this to compile without warnings
+	in GCC 2.95.
+
+2005-10-18 20:35  Simon Law <sfllaw@nit.ca>
+
+	* include/xplc/: ICategory.h, ICategoryIterator.h,
+	ICategoryManager.h, IFactory.h, IModule.h, IModuleLoader.h,
+	IModuleManagerFactory.h, IMoniker.h, IMonikerService.h, IObject.h,
+	IServiceHandler.h, IServiceManager.h, IStaticServiceHandler.h,
+	IWeakRef.h, delete.h, factory.h, module.h, ptr.h, trace.h, utils.h,
+	uuid.h, uuidops.h, xplc.h: Suppress warnings about non-virtual
+	destructors in G++ 4 and up, by making XPLC headers considered
+	system headers.
+
+2005-10-18 20:11  Simon Law <sfllaw@nit.ca>
+
+	* config/rules.mk: Install the header files in a versioned location
+	as well, since XPLC's API has not stabilised either.
+
+2005-07-19 22:26  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* NEWS, configure.ac: Updated the version numbers and the NEWS
+	file.
+
+2005-07-06 18:11  Simon Law <sfllaw@nit.ca>
+
+	* Makefile, debian/changelog, debian/control.in, dist/pkg-config:
+	Remove build-depends on pkg-config.
+
+2005-07-06 17:32  Simon Law <sfllaw@nit.ca>
+
+	* debian/changelog: Update changelog in preparation for the new
+	XPLC 0.3.12 release.
+
+2005-07-06 17:30  Simon Law <sfllaw@nit.ca>
+
+	* debian/control.in: Apparently, we need pkg-config now.
+
+2005-04-24 23:33  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* include/xplc/module.h, tests/test010.cpp, tests/testobj.cpp,
+	tests/testobj.h, xplc/moduleloader.cpp: Added registration of the
+	category information contained in modules. Added unit testing
+	accordingly.
+
+2005-04-12 01:53  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* tests/: testobj.cpp, testobj.h: Added membership in a category to
+	the test module.
+
+2005-04-08 23:04  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* examples/simple-module/module.cpp, include/xplc/module.h,
+	tests/testobj.cpp, xplc/moduleloader.cpp: Removed the
+	loadModule/unloadModule function pointers and added a list of
+	categories to XPLC_ModuleInfo (currently unused).
+
+2005-04-08 22:50  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* debian/: changelog, rules: Applied updates to the Debian
+	packaging.
+
+2005-04-08 22:46  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* xplc/: moduleloader.cpp, moduleloader.h: Make it possible to use
+	the Module class internally for non-dynamically loaded modules.
+
+2005-03-09 20:03  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* configure.ac: Moved the warning message about the unstable API in
+	the configure script to the end, where it can be actually noticed.
+
+2005-02-10 07:13  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* include/xplc/ICategoryManager.h, xplc/catmgr.cpp, xplc/catmgr.h:
+	Removed the unimplemented support of ICategoryManager for
+	IServiceHandler.  It's a good idea, though, but it'll return when
+	it's needed (YAGNI, again) and with unit tests coverage to go with
+	it.
+
+2005-02-10 07:00  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* include/xplc/ICategoryIterator.h,
+	include/xplc/ICategoryManager.h, tests/test010.cpp,
+	xplc/categorynode.h, xplc/catiter.cpp, xplc/catiter.h,
+	xplc/catmgr.cpp, xplc/catmgr.h: Added an optional string that will
+	be kept with a category registration.
+
+2005-02-10 06:51  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* include/xplc/ICategory.h, xplc/category.cpp, xplc/category.h:
+	Applied YAGNI and removed the gunk about ICategory possibly
+	deriving from IFactory. Will be redone in time, if deemed
+	necessary.
+
+2005-02-04 16:59  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* debian/changelog: Fixed the version number of the Debian package
+	according to the wishes of the maintainer (Simon Law).
+
+2005-02-04 16:12  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* NEWS, configure.ac, debian/changelog: Updated the version numbers
+	and the NEWS file.
+
+2005-01-06 00:08  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* include/xplc/uuid.h, include/xplc/uuidops.h, tests/test007.cpp,
+	xplc-cxx/uuidtostr.cpp: Fixed AMD64 portability issue.
+
+2005-01-05 23:21  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* tests/rules.mk: You can pass a TESTS variable containing the
+	space separated list of tests to run to the "make tests" target.
+
+2004-12-31 08:56  Pierre Phaneuf <pp@ludusdesign.com>
+
+	* tests/testmain.cpp: Some improvements of the test framework.
+
+2004-12-02 13:22  Simon Law <sfllaw@nit.ca>
+
+	* debian/: changelog, control.in: XPLC should Build-Depend on
+	debhelper.
+
+2004-11-18 07:37  Simon Law <sfllaw@nit.ca>
+
+	* debian/changelog: Let people build their own unofficial Debian
+	builds of xplc.
+
+2004-11-18 07:36  Simon Law <sfllaw@nit.ca>
+
+	* debian/changelog: Note the bug number of xplc's Debian ITP.
+
+2004-10-07 19:42  Simon Law <sfllaw@nit.ca>
+
+	* debian/: changelog, libxplc-dev.examples, rules: Add the examples
+	directory to libxplc-dev.
+
 2004-10-07 16:53  Simon Law <sfllaw@nit.ca>
 
 	* config/vars.mk: Remove debian/control as part of `make realclean`

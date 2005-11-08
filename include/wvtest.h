@@ -19,6 +19,7 @@ class WvTest
     typedef void MainFunc();
     const char *descr, *idstr;
     MainFunc *main;
+    int slowness;
     WvTest *next;
     static WvTest *first, *last;
     static int fails, runs;
@@ -27,7 +28,7 @@ class WvTest
     static void alarm_handler(int sig);
    
 public:
-    WvTest(const char *_descr, const char *_idstr, MainFunc *_main);
+    WvTest(const char *_descr, const char *_idstr, MainFunc *_main, int _slow);
     static int run_all(const char * const *prefixes = NULL);
     static void start(const char *file, int line, const char *condstr);
     static void check(bool cond);
@@ -35,24 +36,29 @@ public:
 				   const char *condstr, bool cond)
         { start(file, line, condstr); check(cond); return cond; }
     static bool start_check_eq(const char *file, int line,
-			       const char *a, const char *b);
-    static bool start_check_eq(const char *file, int line, int a, int b);
+			       const char *a, const char *b, bool expect_pass);
+    static bool start_check_eq(const char *file, int line, int a, int b,
+                               bool expect_pass);
 };
 
 
 #define WVPASS(cond) \
     WvTest::start_check(__FILE__, __LINE__, #cond, (cond))
 #define WVPASSEQ(a, b) \
-    WvTest::start_check_eq(__FILE__, __LINE__, (a), (b))
+    WvTest::start_check_eq(__FILE__, __LINE__, (a), (b), true)
 #define WVFAIL(cond) \
     WvTest::start_check(__FILE__, __LINE__, "NOT(" #cond ")", !(cond))
+#define WVFAILEQ(a, b) \
+    WvTest::start_check_eq(__FILE__, __LINE__, (a), (b), false)
 
-#define WVTEST_MAIN3(descr, ff, ll) \
+#define WVTEST_MAIN3(descr, ff, ll, slowness) \
     static void _wvtest_main_##ll(); \
-    static WvTest _wvtest_##ll(descr, ff, _wvtest_main_##ll); \
+    static WvTest _wvtest_##ll(descr, ff, _wvtest_main_##ll, slowness); \
     static void _wvtest_main_##ll()
-#define WVTEST_MAIN2(descr, ff, ll) WVTEST_MAIN3(descr, ff, ll)
-#define WVTEST_MAIN(descr) WVTEST_MAIN2(descr, __FILE__, __LINE__)
+#define WVTEST_MAIN2(descr, ff, ll, slowness) \
+    WVTEST_MAIN3(descr, ff, ll, slowness)
+#define WVTEST_MAIN(descr) WVTEST_MAIN2(descr, __FILE__, __LINE__, 0)
+#define WVTEST_SLOW_MAIN(descr) WVTEST_MAIN2(descr, __FILE__, __LINE__, 1)
 
 
 #endif // __WVTEST_H

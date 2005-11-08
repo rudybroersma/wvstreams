@@ -11,12 +11,15 @@
 #define UNSTABLE
 #endif
 
+#ifndef _WIN32
 #include "wvautoconf.h"
+#endif
 
 #ifndef ENABLE_DELETE_DETECTOR
 #include <xplc/IObject.h>
 #define deletev delete[]
 #else
+#include <string>
 #include <xplc/delete.h>
 #endif
 

@@ -13,7 +13,6 @@
 #include "wvstringlist.h"
 #include "uniclientconn.h"
 
-
 /**
  * Communicates with a UniConfDaemon to fetch and store keys and
  * values.
@@ -27,32 +26,22 @@
  */
 class UniClientGen : public UniConfGen
 {
-    class RemoteKeyIter;
-
     UniClientConn *conn;
-
-    struct KeyVal
-    {
-	UniConfKey key;
-	WvString val;
-	
-	KeyVal(const UniConfKey &_key, WvStringParm _val)
-	    : key(_key), val(_val)
-	    { }
-    };
-    DeclareWvList(KeyVal);
 
     WvLog log;
 
     WvString result_key;        /*!< the key that the current result is from */
     WvString result;            /*!< the result from the current key */
     
-    KeyValList *result_list;    /*!< result list for iterations */
+    UniListIter *result_list;   /*!< result list for iterations */
 
     bool cmdinprogress;     /*!< true while a command is in progress */
     bool cmdsuccess;        /*!< true when a command completed successfully */
 
-    static const int TIMEOUT = 30000; // command timeout in ms
+    static const int TIMEOUT = 60000; // command timeout in ms
+    time_t timeout_activity;          // last time something happened relative to uptime
+
+    int version; /*!< version number of the protocol */
 
 public:
     /**
@@ -73,6 +62,7 @@ public:
     virtual void commit(); 
     virtual WvString get(const UniConfKey &key);
     virtual void set(const UniConfKey &key, WvStringParm value);
+    virtual void setv(const UniConfPairList &pairs);
     virtual bool haschildren(const UniConfKey &key);
     virtual Iter *iterator(const UniConfKey &key);
     virtual Iter *recursiveiterator(const UniConfKey &key);

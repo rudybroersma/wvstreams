@@ -11,6 +11,9 @@
 #include "wvtclstring.h"
 #include "wvlog.h"
 #include "wvbuf.h"
+#include "wvlinkerhack.h"
+
+WV_LINK(UniSecureGen);
 
 
 static IUniConfGen *creator(WvStringParm s, IObject *, void *)
@@ -125,11 +128,13 @@ class _UniSecureIter : public UniConfGen::Iter
 {
     UniFilterGen::Iter *it;
     UniSecureGen *gen;
+    UniConfKey subpath;
 
 public:
-    _UniSecureIter(UniFilterGen::Iter *_it, UniSecureGen *_gen) :
+    _UniSecureIter(UniFilterGen::Iter *_it, UniSecureGen *_gen, UniConfKey _subpath) :
         it(_it),
-        gen(_gen)
+        gen(_gen),
+        subpath(_subpath)
         { }
     virtual ~_UniSecureIter()
         { delete it; }
@@ -145,7 +150,9 @@ public:
 
     virtual WvString value() const
         {
-            return gen->get(it->key());
+            UniConfKey realkey = it->key();
+            realkey.prepend(subpath);
+            return gen->get(realkey);
         }               
 };
 
@@ -157,7 +164,7 @@ UniConfGen::Iter *UniSecureGen::iterator(const UniConfKey &key)
     // permissions on the parent key, we know we're allowed to at least read
     // the *names* of all child keys (even if the value itself is unreadable)
     if (findperm(key, UniPermGen::EXEC))
-        return new _UniSecureIter(UniFilterGen::iterator(key), this); 
+        return new _UniSecureIter(UniFilterGen::iterator(key), this, key); 
 
     return NULL;
 }
@@ -179,8 +186,7 @@ UniConfGen::Iter *UniSecureGen::recursiveiterator(const UniConfKey &key)
 }
 
 
-void UniSecureGen::gencallback(const UniConfKey &key, WvStringParm value,
-        void *userdata)
+void UniSecureGen::gencallback(const UniConfKey &key, WvStringParm value)
 {
     if (findperm(key, UniPermGen::READ))
         delta(key, value);

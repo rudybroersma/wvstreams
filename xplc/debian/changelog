@@ -1,6 +1,53 @@
-xplc (0.3.10-1) unstable; urgency=low
+xplc (0.3.13-1.1) NONE; urgency=low
+
+  * Unofficial build from CVS.
+
+ -- J. Random Hacker <jrhacker@example>  Sat, 22 Oct 2005 00:00:00 -0000
+
+xplc (0.3.13-1) unstable; urgency=low
 
   * New upstream release.
+    - Includes /usr/bin/uuidcdef.  (Closes: Bug#310755)
+  * Built for G++ 4.0.
+
+ -- Simon Law <sfllaw@debian.org>  Fri, 21 Oct 2005 09:48:37 -0400
+
+xplc (0.3.11-1) unstable; urgency=low
+
+  * New Upstream release. (Closes: #286505)
+  * Acknowledge NMU. (Closes: #290424)
+
+ -- James Morrison <phython@debian.org>  Tue, 22 Mar 2005 22:57:10 -0500
+
+xplc (0.3.10-3.1) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Fix for int size issues that break building on 64-bit platforms; not
+    release-critical for this package, but is holding up RC bugfixes for
+    packages that reverse-depend on xplc.  Thanks to Kurt Roeckx for the
+    patch.  (Closes: #286505)
+  * Invoke ldconfig as /sbin/ldconfig, fixing build failures when /sbin
+    is not part of the path (as is the case on many third-party build
+    systems).  Closes: #290424
+
+ -- Steve Langasek <vorlon@debian.org>  Tue, 18 Jan 2005 03:57:10 -0800
+
+xplc (0.3.10-3) unstable; urgency=low
+
+  * Add a Build-Depends for debhelper, which I though cdbs pulled in
+    automatically.  (Closes: Bug#283884)
+
+ -- Simon Law <sfllaw@debian.org>  Thu,  2 Dec 2004 07:52:49 -0500
+
+xplc (0.3.10-2) unstable; urgency=low
+
+  * Install examples into libxplc-dev.
+
+ -- Simon Law <sfllaw@debian.org>  Thu, 07 Oct 2004 15:02:12 -0400
+
+xplc (0.3.10-1) unstable; urgency=low
+
+  * New upstream release.  (Closes: Bug#281786)
   * New maintainer.
   * Renamed libxplc and libxplc-dev to reflect that they have unstable
     API and ABIs.
