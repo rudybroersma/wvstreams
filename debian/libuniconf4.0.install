@@ -1,2 +1,2 @@
 debian/tmp/usr/lib/libuniconf.so*
-debian/tmp/etc/uniconf.conf
+debian/tmp/usr/share/libuniconf4.0/uniconf.conf

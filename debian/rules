@@ -147,6 +147,10 @@ install-arch:
 	install -d `pwd`/debian/tmp/etc/default
 	install -m644 debian/uniconfd.default debian/tmp/etc/default/uniconfd
 
+	# Move /etc/uniconf.conf
+	install -d debian/tmp/usr/share/libuniconf4.0
+	mv debian/tmp/etc/uniconf.conf debian/tmp/usr/share/libuniconf4.0/
+
 	dh_install -s
 
 # Must not depend on anything. This is to be called by
