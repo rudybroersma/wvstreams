@@ -43,7 +43,7 @@
 static WvMap<WvString, IUniConfGen*> namedgens(42);
 
 
-static IUniConfGen *creator(WvStringParm s, IObject *, void *)
+static IUniConfGen *creator(WvStringParm s)
 {
     IUniConfGen* gen = namedgens[s];
 
@@ -250,6 +250,8 @@ public:
 		"name=moniker",
 		WvArgs::ArgCallback(this, &UniConfd::namedgen_cb), NULL);
 #endif
+	args.add_optional_arg("MONIKERS", true);
+	args.set_email("<" PACKAGE_BUGREPORT ">");
     }
     
     

@@ -1,6 +1,6 @@
 Summary: C++ network libraries for rapid application development.
 Name: wvstreams4.1
-Version: 4.2
+Version: 4.2.2
 Release: 1
 Source: http://open.nit.ca/download/wvstreams-%{version}.tar.gz
 URL: http://open.nit.ca/wvstreams
