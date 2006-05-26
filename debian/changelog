@@ -1,3 +1,10 @@
+wvstreams (4.2.2-2.1) unstable; urgency=low
+
+  * NMU as part of the GCC 4.1 transition.
+  * Remove extra qualifications from C++ files.  (Closes: Bug#357380).
+
+ -- Martin Michlmayr <tbm@cyrius.com>  Fri, 26 May 2006 15:03:18 +0200
+
 wvstreams (4.2.2-2) unstable; urgency=low
 
   * Fix FTBFS due to new GNU Make.  (Closes: Bug#348190)
