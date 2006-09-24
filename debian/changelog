@@ -1,3 +1,13 @@
+wvstreams (4.2.2-2.2) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Add OpenSSL_add_ssl_algorithms() to SSL initializiation, as we're using
+    the SSL part of OpenSSL and not just the crypto part (which was already
+    initialized); fixes problems with WvSSLStream on at least amd64.
+    (Closes: #385296)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Sun, 24 Sep 2006 19:53:20 +0200
+
 wvstreams (4.2.2-2.1) unstable; urgency=low
 
   * NMU as part of the GCC 4.1 transition.

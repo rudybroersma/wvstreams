@@ -55,6 +55,7 @@ void wvssl_init()
     if (!ssl_init_count)
     {
 	OpenSSL_add_all_algorithms();
+	OpenSSL_add_ssl_algorithms();
 	ERR_load_crypto_strings();
     }
     
