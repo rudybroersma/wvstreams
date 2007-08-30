@@ -1,3 +1,10 @@
+wvstreams (4.2.2-2.3) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Apply brian m. carlson's FTBFS patch.  (Closes: Bug#387989).
+
+ -- Robert S. Edmonds <edmonds@debian.org>  Thu, 30 Aug 2007 15:52:19 -0400
+
 wvstreams (4.2.2-2.2) unstable; urgency=medium
 
   * Non-maintainer upload.

@@ -358,7 +358,7 @@ public:
 	/** Returns a pointer to the current element */
 	T *ptr() const
 	{
-	    return static_cast<T *>(cur()->data);
+	    return static_cast<T *>(this->cur()->data);
 	}
 
 	WvIterStuff(T);
@@ -368,7 +368,7 @@ public:
 	 */
 	bool get_autofree() const
 	{
-	    return link->get_autofree();
+	    return this->link->get_autofree();
 	}
 
 	/**
@@ -376,7 +376,7 @@ public:
 	 */
 	void set_autofree(bool autofree)
 	{
-	    link->set_autofree(autofree);
+	    this->link->set_autofree(autofree);
 	}
 
         /**
@@ -386,7 +386,7 @@ public:
          */
         void remove(bool destroy = true)
         {
-	    WvVector::vec.remove(i, destroy);
+	    WvVector::vec.remove(this->i, destroy);
         }
 
         /**
@@ -404,8 +404,8 @@ public:
          */
 	void xremove(bool destroy = true)
 	{
-	    WvVector::vec.remove(i, destroy);
-	    prev();
+	    WvVector::vec.remove(this->i, destroy);
+	    this->prev();
 	}
     };
 };
