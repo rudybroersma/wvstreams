@@ -1,3 +1,4 @@
+#include "uniinigen.h"
 #include "wvfile.h"
 #include "wvfileutils.h"
 #include "uniconfroot.h"
@@ -7,7 +8,11 @@
 #include "uniwatch.h"
 #include "wvsystem.h"
 #include "wvtest.h"
+#include "uniconfgen-sanitytest.h"
 
+#ifdef _WIN32
+static inline int mkdir(const char *x, int y) { return mkdir(x); }
+#endif
 
 // Returns the filename where the content was written.  This file must be
 // deleted when no longer needed.  Returns WvString::null if unable to create
@@ -16,7 +21,7 @@ WvString inigen(WvStringParm content)
 {
     WvString ininame = wvtmpfilename("inigen_test.ini");
     WvFile file;
-    WVPASS(file.open(ininame, O_RDWR));
+    WVPASS(file.open(ininame, O_CREAT|O_RDWR));
     file.write(content);
     WVPASS(file.isok());
 
@@ -33,6 +38,15 @@ static int childcount(UniConf cfg)
 }
 
 
+WVTEST_MAIN("UniIniGen Sanity Test")
+{
+    WvString inifile("/tmp/inigen-test-%s.ini", getpid());
+    UniIniGen *gen = new UniIniGen(inifile);
+    UniConfGenSanityTester::sanity_test(gen, WvString("ini:%s", inifile));
+    WVRELEASE(gen);
+    unlink(inifile);
+}
+
 WVTEST_MAIN("commit-without-refresh")
 {
 
@@ -43,6 +57,7 @@ WVTEST_MAIN("commit-without-refresh")
     WVFAIL(cfg.haschildren());
 }
 
+#ifndef _WIN32
 WVTEST_MAIN("ini file permissions")
 {
     system("rm -f perm.ini");
@@ -59,6 +74,7 @@ WVTEST_MAIN("ini file permissions")
 
     system("rm -f perm.ini");
 }
+#endif
 
 WVTEST_MAIN("parsing1")
 {
@@ -133,6 +149,8 @@ WVTEST_MAIN("Setting and getting (bug 6090)")
     ::unlink(ininame);
 }
 
+// This is probably covered by sanity tests now.  OTOH, more tests is more
+// better.
 WVTEST_MAIN("Trailing slashes")
 {
     UniConfRoot cfg("ini:tmp.ini");

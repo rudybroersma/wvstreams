@@ -50,7 +50,7 @@ public:
      *  (number-of-minutes-in-a-day mod number of occurrences in a day) minutes
      *  in some arbitrary day that the event should occur.
      */
-    virtual bool pre_select( SelectInfo& si );
+    virtual void pre_select( SelectInfo& si );
     virtual bool post_select( SelectInfo& si );
 
     /**
@@ -86,6 +86,9 @@ private:
     time_t  prev;
     
     time_t  not_until;
+
+public:
+    const char *wstype() const { return "WvDailyEvent"; }
 };
 
 #endif

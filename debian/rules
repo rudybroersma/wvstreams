@@ -181,8 +181,7 @@ binary-common:
 	dh_makeshlibs -plibwvstreams$(version)-base \
 		      -plibwvstreams$(version)-extras \
 		      -plibwvstreams$(version)-qt \
-		      -plibuniconf$(version) \
-	dh_installdeb
+		      -plibuniconf$(version)
 	dh_installdeb
 	dh_shlibdeps -L libwvstreams$(version)-base \
 		     -L libwvstreams$(version)-extras \

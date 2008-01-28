@@ -16,16 +16,29 @@
 #include "wvstreamclone.h"
 #include "wvlog.h"
 #include "wvhashtable.h"
-#include "wvhttp.h"
 #include "wvbufstream.h"
 #include "wvbuf.h"
 #include "wvcont.h"
+#include "wvtcp.h"
 
 class WvBufUrlStream;
 class WvUrlStream;
 class WvHttpStream;
 
 static const WvString DEFAULT_ANON_PW("weasels@");
+
+struct WvHTTPHeader
+{
+    WvString name, value;
+    
+    WvHTTPHeader(WvStringParm _name, WvStringParm _value)
+	: name(_name), value(_value) 
+    		{}
+};
+
+
+DeclareWvDict(WvHTTPHeader, WvString, name);
+
 
 class WvUrlRequest
 {
@@ -80,6 +93,9 @@ public:
         {}
     virtual ~WvBufUrlStream()
         {}
+
+public:
+    const char *wstype() const { return "WvBufUrlStream"; }
 };
 
 DeclareWvTable(WvIPPortAddr);
@@ -133,6 +149,9 @@ public:
     { return 0; }
     
     virtual void execute() = 0;
+    
+public:
+    const char *wstype() const { return "WvUrlStream"; }
 };
 
 unsigned WvHash(const WvUrlStream::Target &n);
@@ -173,11 +192,14 @@ public:
     virtual ~WvHttpStream();
 
     virtual void close();
-    virtual bool pre_select(SelectInfo &si);
+    virtual void pre_select(SelectInfo &si);
     virtual bool post_select(SelectInfo &si);
     virtual void execute();
     virtual size_t remaining()
     { return bytes_remaining; }
+    
+public:
+    const char *wstype() const { return "WvHttpStream"; }
 };
 
 
@@ -187,6 +209,7 @@ class WvFtpStream : public WvUrlStream
     WvString password;
     WvTCPConn *data;
     time_t last_request_time;
+    bool sure;
 
     virtual void doneurl();
     virtual void request_next();
@@ -209,10 +232,13 @@ public:
     WvFtpStream(const WvIPPortAddr &_remaddr, WvStringParm _username,
 		WvStringParm _password);
 
-    virtual bool pre_select(SelectInfo &si);
+    virtual void pre_select(SelectInfo &si);
     virtual bool post_select(SelectInfo &si);
     virtual void close();
     virtual void execute();
+    
+public:
+    const char *wstype() const { return "WvFtpStream"; }
 };
 
 
@@ -224,6 +250,7 @@ class WvHttpPool : public WvIStreamList
     WvUrlStreamDict conns;
     WvUrlRequestList urls;
     int num_streams_created;
+    bool sure;
     
     WvIPPortAddrTable pipeline_incompatible;
     
@@ -231,7 +258,8 @@ public:
     WvHttpPool();
     virtual ~WvHttpPool();
     
-    virtual bool pre_select(SelectInfo &si);
+    virtual void pre_select(SelectInfo &si);
+    virtual bool post_select(SelectInfo &si);
     virtual void execute();
     
     WvBufUrlStream *addurl(WvStringParm _url, WvStringParm _method = "GET",
@@ -249,6 +277,9 @@ private:
 public:
     bool idle() const 
         { return !urls.count(); }
+    
+public:
+    const char *wstype() const { return "WvHttpPool"; }
 };
 
 

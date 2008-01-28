@@ -6,19 +6,23 @@
  * crashes.
  */
 #include "wvcrash.h"
+#include "wvtask.h"
 
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/syscall.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <time.h>
+#include <sys/types.h>
+
+#ifndef _WIN32
+# include <sys/wait.h>
+# include <sys/syscall.h>
+#endif
 
 #ifndef WVCRASH_USE_SIGALTSTACK
-#define WVCRASH_USE_SIGALTSTACK 0
+# define WVCRASH_USE_SIGALTSTACK 1
 #endif
 
 // FIXME: this file mostly only works in Linux
@@ -33,10 +37,15 @@ static const char *argv0 = program_invocation_short_name;
 static const char *argv0 = "UNKNOWN";
 #endif // __USE_GNU
 
+#if WVCRASH_USE_SIGALTSTACK
+static const size_t altstack_size = 1048576; // wvstreams can be a pig
+static char altstack[altstack_size];
+#endif
+
 // Reserve enough buffer for a screenful of programme.
-static const int buffer_size = 2048;
+static const int buffer_size = 2048 + wvcrash_ring_buffer_size;
+
 static char desc[buffer_size];
-WvCrashCallback callback;
 
 // write a string 'str' to fd
 static void wr(int fd, const char *str)
@@ -79,6 +88,18 @@ static void wrn(int fd, int num)
 }
 
 
+// convert 'addr' to hex and write it to fd.
+static void wra(int fd, const void *addr)
+{
+    const unsigned int ptrbitsshift = (sizeof(ptrdiff_t) << 3) - 4;
+    char digits[] = "0123456789ABCDEF";
+
+    write(fd, "0x", 2);
+    for (int shift=ptrbitsshift; shift>=0; shift-=4)
+        write(fd, &digits[(((ptrdiff_t)addr)>>shift)&0xF], 1);
+}
+
+
 static void wvcrash_real(int sig, int fd, pid_t pid)
 {
     static void *trace[64];
@@ -112,6 +133,84 @@ static void wvcrash_real(int sig, int fd, pid_t pid)
     wr(fd, pid_str);
     wr(fd, "\n");
 
+#if WVCRASH_USE_SIGALTSTACK
+    // Determine if this has likely been a stack overflow
+    const void *last_real_stack_frame;
+    for (;;)
+    {
+        last_real_stack_frame = __builtin_frame_address(0);
+        if (last_real_stack_frame == NULL
+                || last_real_stack_frame < &altstack[0]
+                || last_real_stack_frame >= &altstack[altstack_size])
+            break;
+        last_real_stack_frame = __builtin_frame_address(1);
+        if (last_real_stack_frame == NULL
+                || last_real_stack_frame < &altstack[0]
+                || last_real_stack_frame >= &altstack[altstack_size])
+            break;
+        last_real_stack_frame = __builtin_frame_address(2);
+        if (last_real_stack_frame == NULL
+                || last_real_stack_frame < &altstack[0]
+                || last_real_stack_frame >= &altstack[altstack_size])
+            break;
+        last_real_stack_frame = __builtin_frame_address(3);
+        if (last_real_stack_frame == NULL
+                || last_real_stack_frame < &altstack[0]
+                || last_real_stack_frame >= &altstack[altstack_size])
+            break;
+        last_real_stack_frame = __builtin_frame_address(4);
+        if (last_real_stack_frame == NULL
+                || last_real_stack_frame < &altstack[0]
+                || last_real_stack_frame >= &altstack[altstack_size])
+            break;
+        last_real_stack_frame = __builtin_frame_address(5);
+        if (last_real_stack_frame == NULL
+                || last_real_stack_frame < &altstack[0]
+                || last_real_stack_frame >= &altstack[altstack_size])
+            break;
+        last_real_stack_frame = NULL;
+        break;
+    }
+    if (last_real_stack_frame != NULL)
+    {
+        wr(fd, "\nLast real stack frame: ");
+        wra(fd, last_real_stack_frame);
+        const void *top_of_stack = WvTaskMan::current_top_of_stack();
+        wr(fd, "\nTop of stack: ");
+        wra(fd, top_of_stack);
+        size_t stack_size = size_t(top_of_stack) - size_t(last_real_stack_frame);
+        wr(fd, "\nStack size: ");
+        wrn(fd, int(stack_size));
+        size_t stack_size_limit = WvTaskMan::current_stacksize_limit();
+        if (stack_size_limit > 0)
+        {
+            wr(fd, "\nStack size rlimit: ");
+            wrn(fd, int(stack_size_limit));
+            if (stack_size > stack_size_limit)
+                wr(fd, "  DEFINITE STACK OVERFLOW");
+            else if (stack_size + 16384 > stack_size_limit)
+                wr(fd, "  PROBABLE STACK OVERFLOW");
+        }
+        wr(fd, "\n");
+    }
+#endif
+                
+
+    // Write out the contents of the ring buffer
+    {
+        const char *ring;
+        bool first = true;
+        while ((ring = wvcrash_ring_buffer_get()) != NULL)
+        {
+            if (first)
+            {
+                first = false;
+                wr(fd, "\nRing buffer:\n");
+            }
+            wr(fd, ring);
+        }
+    }
+    
     // Write out the assertion message, as logged by __assert*_fail(), if any.
     {
 	const char *assert_msg = wvcrash_read_assert();
@@ -130,6 +229,41 @@ static void wvcrash_real(int sig, int fd, pid_t pid)
 	    wr(fd, "\nLast Will and Testament:\n");
 	    wr(fd, will_msg);
 	    wr(fd, "\n");
+	}
+    }
+
+    if (WvCrashInfo::in_stream_state != WvCrashInfo::UNUSED
+	&& WvCrashInfo::in_stream)
+    {
+	const char *state = NULL;
+	switch (WvCrashInfo::in_stream_state)
+	{
+	case WvCrashInfo::UNUSED:
+	    // Can't possibly get here.
+	    break;
+	case WvCrashInfo::PRE_SELECT:
+	    state = "\nStream in pre_select: ";
+	    break;
+	case WvCrashInfo::POST_SELECT:
+	    state = "\nStream in post_select: ";
+	    break;
+	case WvCrashInfo::EXECUTE:
+	    state = "\nStream in execute: ";
+	    break;
+	}
+
+	if (state)
+	{
+	    static char ptr_str[32];
+	    snprintf(ptr_str, sizeof(ptr_str), "%p", WvCrashInfo::in_stream);
+	    ptr_str[sizeof(ptr_str) - 1] = '\0';
+
+	    wr(fd, state);
+	    wr(fd, WvCrashInfo::in_stream_id && WvCrashInfo::in_stream_id[0]
+	       ? WvCrashInfo::in_stream_id : "unknown stream");
+	    wr(fd, " (");
+	    wr(fd, ptr_str);
+	    wr(fd, ")\n");
 	}
     }
 
@@ -181,9 +315,6 @@ void wvcrash(int sig)
     signal(sig, SIG_DFL);
     wr(2, "\n\nwvcrash: crashing!\n");
     
-    if (!!callback)
-        callback(sig);
-    
     // close some fds, just in case the reason we're crashing is fd
     // exhaustion!  Otherwise we won't be able to create our pipe to a
     // subprocess.  Probably only closing two fds is possible, but the
@@ -234,23 +365,14 @@ void wvcrash(int sig)
 }
 
 
-WvCrashCallback wvcrash_set_callback(WvCrashCallback _callback)
-{
-    WvCrashCallback old_callback = callback;
-    callback = _callback;
-    return old_callback;
-}
-
 static void wvcrash_setup_alt_stack()
 {
 #if WVCRASH_USE_SIGALTSTACK
-    const size_t stack_size = 1048576; // wvstreams can be a pig
-    static char stack[stack_size];
     stack_t ss;
     
-    ss.ss_sp = stack;
+    ss.ss_sp = altstack;
     ss.ss_flags = 0;
-    ss.ss_size = stack_size;
+    ss.ss_size = altstack_size;
     
     if (ss.ss_sp == NULL || sigaltstack(&ss, NULL))
         fprintf(stderr, "Failed to setup sigaltstack for wvcrash: %s\n",
@@ -263,10 +385,10 @@ void wvcrash_add_signal(int sig)
 #if WVCRASH_USE_SIGALTSTACK
     struct sigaction act;
     
+    memset(&act,0,sizeof(act));
     act.sa_handler = wvcrash;
     sigfillset(&act.sa_mask);
     act.sa_flags = SA_ONSTACK | SA_RESTART;
-    act.sa_restorer = NULL;
     
     if (sigaction(sig, &act, NULL))
         fprintf(stderr, "Failed to setup wvcrash handler for signal %d: %s\n",
@@ -301,11 +423,195 @@ void wvcrash_setup(const char *_argv0, const char *_desc)
     wvcrash_add_signal(SIGILL);
 }
 
+#elif defined(_WIN32)
+
+#include <windows.h>
+#include <stdio.h>
+#include <imagehlp.h>
+
+inline char* last_part(char* in)
+{
+    int len = strlen(in);
+    char* tmp = in+len;
+    while (tmp > in)
+    {
+        if (*tmp == '/' || *tmp == '\\')
+            return tmp+1;
+        tmp--;
+    }
+    return in;
+}
+
+
+/**
+ * Call this with a thread context to get a nice callstack.  You can get a 
+ * thread context either from an exception or by using this code:
+ *   CONTEXT ctx;
+ *   memset(&ctx, 0, sizeof(CONTEXT));
+ *   ctx.ContextFlags = CONTEXT_FULL;
+ *   GetThreadContext(hThread, &ctx);
+ */
+int backtrace(CONTEXT &ctx)
+{
+    HANDLE hProcess = (HANDLE)GetCurrentProcess();
+    HANDLE hThread = (HANDLE)GetCurrentThread();
+
+    SymInitialize(hProcess, NULL, TRUE);
+
+    STACKFRAME sf;
+    memset(&sf, 0, sizeof(STACKFRAME));
+
+    sf.AddrPC.Offset = ctx.Eip;
+    sf.AddrPC.Mode = AddrModeFlat;
+    sf.AddrFrame.Offset = ctx.Ebp;
+    sf.AddrFrame.Mode = AddrModeFlat;
+    sf.AddrStack.Offset = ctx.Esp;
+    sf.AddrStack.Mode = AddrModeFlat;
+
+    fprintf(stderr, "Generating stack trace......\n");
+    fprintf(stderr, "%3s  %16s:%-10s %32s:%3s %s\n", "Num", "Module", "Addr", "Filename", "Line", "Function Name");
+    int i = 0;
+    while (StackWalk(IMAGE_FILE_MACHINE_I386,
+        hProcess,
+        hThread,
+        &sf,
+        &ctx,
+        NULL,
+        SymFunctionTableAccess,
+        SymGetModuleBase,
+        NULL))
+    {
+        if (sf.AddrPC.Offset == 0)
+            break;
+
+        // info about module
+        IMAGEHLP_MODULE modinfo;
+        memset(&modinfo, 0, sizeof(IMAGEHLP_MODULE));
+        modinfo.SizeOfStruct = sizeof(IMAGEHLP_MODULE);
+        SymGetModuleInfo(hProcess, sf.AddrPC.Offset, &modinfo);
+
+        // get some symbols
+        BYTE buffer[1024];
+        DWORD disp = 0;
+        memset(buffer, 0, sizeof(buffer));
+        PIMAGEHLP_SYMBOL sym = (PIMAGEHLP_SYMBOL)buffer;
+        sym->SizeOfStruct = sizeof(IMAGEHLP_SYMBOL);
+        sym->MaxNameLength = sizeof(buffer) - sizeof(IMAGEHLP_SYMBOL) + 1;
+        SymGetSymFromAddr(hProcess, sf.AddrPC.Offset, &disp, sym);
+
+        // line numbers anyone?
+        IMAGEHLP_LINE line;
+        SymSetOptions(SYMOPT_LOAD_LINES);
+        DWORD disp2 = 0;
+        memset(&line, 0, sizeof(IMAGEHLP_LINE));
+        line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
+        SymGetLineFromAddr(hProcess, sf.AddrPC.Offset, &disp2, &line);
+
+        // output some info now then
+        fprintf(stderr, "%3d. %16s:0x%08X %32s:%-3d %s\n",
+                ++i,
+                modinfo.LoadedImageName[0]?modinfo.LoadedImageName:"unknown",
+                (DWORD)sf.AddrPC.Offset,
+                (line.FileName && line.FileName[0])?last_part(line.FileName):"unknown",
+                (line.FileName && line.FileName[0])?line.LineNumber:0,
+                sym->Name[0]?sym->Name:"unknown");
+    }
+
+    SymCleanup(hProcess);
+
+    return 1;
+}
+
+
+static void exception_desc(FILE *file, unsigned exception,
+        unsigned data1, unsigned data2)
+{
+
+    switch (exception)
+    {
+        case 0xC0000005:
+        {
+            switch (data1)
+            {
+                case 0:
+                    fprintf(file,
+                            "invalid memory read from address 0x%08X",
+                            data2);
+                    break;
+                case 1:
+                    fprintf(file,
+                            "invalid memory write to address 0x%08X",
+                            data2);
+                    break;
+                default:
+                    fprintf(file,
+                            "invalid memory access (unknown type %d) at address 0x%08X",
+                            data1, data2);
+                    break;
+            }
+        }
+        break;
+
+        case 0xC0000094:
+            fprintf(file, "integer division by zero");
+            break;
+
+        default:
+            fprintf(file, "unknown exception (data1=0x%08X, data2=0x%08X)");
+            break;
+    }
+}
+
+static LONG WINAPI ExceptionFilter( struct _EXCEPTION_POINTERS * pExceptionPointers )
+{
+    struct ExceptionInfo
+    {
+        unsigned exception;
+        unsigned unknown[2];
+        void *ip;
+        unsigned more_unknown;
+        unsigned data1;
+        unsigned data2;
+    };
+    ExceptionInfo *info = *(ExceptionInfo **)pExceptionPointers;
+
+    // handle a special exception.  Number 3 = forced breakpoint
+    // having __asm int 3; in code will cause windows to ask if
+    // you want to debug the application nicely.
+    if (info->exception==0x80000003)
+    {
+        fprintf(stderr, "Preparing to debug!\n");
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+    
+    fprintf(stderr, "--------------------------------------------------------\n");
+    fprintf(stderr, "Exception 0x%08X:\n  ", info->exception);
+    exception_desc(stderr, info->exception, info->data1, info->data2);
+    fprintf(stderr, "\n  at instruction 0x%08X in thread 0x%08X\n", info->ip, GetCurrentThreadId());
+    backtrace(*pExceptionPointers->ContextRecord);
+    fprintf(stderr, "--------------------------------------------------------\n");
+
+                
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
+static bool have_global_exception_handler = false;
+void setup_console_crash()
+{
+    if (!have_global_exception_handler)
+    {
+        SetUnhandledExceptionFilter(ExceptionFilter);
+        have_global_exception_handler = true;
+    }
+}
+
+void wvcrash(int sig) {}
+void wvcrash_setup(const char *_argv0, const char *_desc) {}
+
 #else // Not Linux
 
 void wvcrash(int sig) {}
 void wvcrash_add_signal(int sig) {}
-WvCrashCallback wvcrash_set_callback(WvCrashCallback cb) {}
 void wvcrash_setup(const char *_argv0, const char *_desc) {}
 
 #endif // Not Linux

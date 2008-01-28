@@ -211,44 +211,43 @@ void WvFdStream::maybe_autoclose()
 }
 
 
-bool WvFdStream::pre_select(SelectInfo &si)
+void WvFdStream::pre_select(SelectInfo &si)
 {
-    bool result = WvStream::pre_select(si);
+    WvStream::pre_select(si);
     
 #if 0
     fprintf(stderr, "%d/%d wr:%d ww:%d wx:%d inh:%d\n", rfd, wfd,
 	    si.wants.readable, si.wants.writable, si.wants.isexception,
 	    si.inherit_request);
 #endif
-    if (isselectable(rfd))
+    if (si.wants.readable && (rfd >= 0))
     {
-	if (si.wants.readable && (rfd >= 0))
+	if (isselectable(rfd))
 	    FD_SET(rfd, &si.read);
+	else
+	    si.msec_timeout = 0; // not selectable -> *always* readable
     } 
-    else
-	result |= si.wants.readable;
     
     // FIXME: outbuf flushing should really be in WvStream::pre_select()
     // instead!  But it's hard to get the equivalent behaviour there.
-    if (isselectable(wfd))
+    if ((si.wants.writable || outbuf.used() || autoclose_time) && (wfd >= 0))
     {
-	if ((si.wants.writable || outbuf.used() || autoclose_time) 
-	      && (wfd >= 0))
+	if (isselectable(wfd))
 	    FD_SET(wfd, &si.write);
+	else
+	    si.msec_timeout = 0; // not selectable -> *always* writable
     }
-    else
-	result |= si.wants.writable;
     
     if (si.wants.isexception)
     {
 	if (rfd >= 0 && isselectable(rfd)) FD_SET(rfd, &si.except);
 	if (wfd >= 0 && isselectable(wfd)) FD_SET(wfd, &si.except);
     }
+    
     if (si.max_fd < rfd)
 	si.max_fd = rfd;
     if (si.max_fd < wfd)
 	si.max_fd = wfd;
-    return result;
 }
 
 
@@ -264,13 +263,20 @@ bool WvFdStream::post_select(SelectInfo &si)
         flush_outbuf(0);
 	
 	// flush_outbuf() might have closed the file!
-	if (!isok()) return result;
+	if (!isok())
+	    return result;
     }
     
-    bool val = ((rfd >= 0 && FD_ISSET(rfd, &si.read)) ||
-	    (wfd >= 0 && FD_ISSET(wfd, &si.write)) ||
-	    (rfd >= 0 && FD_ISSET(rfd, &si.except)) ||
-	    (wfd >= 0 && FD_ISSET(wfd, &si.except)));
+    bool rforce = si.wants.readable && !isselectable(rfd),
+         wforce = si.wants.writable && !isselectable(wfd);
+    bool val = 
+	   (rfd >= 0 && (rforce || FD_ISSET(rfd, &si.read)))
+	|| (wfd >= 0 && (wforce || FD_ISSET(wfd, &si.write)))
+	|| (rfd >= 0 && (FD_ISSET(rfd, &si.except)))
+	|| (wfd >= 0 && (FD_ISSET(wfd, &si.except)));
+    
+    // fprintf(stderr, "fds_post_select: %d/%d %d/%d %d\n", 
+    //          rfd, wfd, rforce, wforce, val);
     
     if (val && si.wants.readable && read_requires_writable
       && read_requires_writable->isok()

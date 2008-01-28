@@ -21,7 +21,7 @@
 #include "uniclientconn.h"
 #include "unisecuregen.h"
 #include "unipermgen.h"
-#include "wvx509.h"
+#include "wvx509mgr.h"
 #include "uniconfroot.h"
 #include "wvstrutils.h"
 #include "wvfileutils.h"
@@ -82,7 +82,7 @@ class UniConfd : public WvStreamsDaemon
 	*ptr = 0;
 	moniker = ptr + 1;
 
-	namedgens.add(name, wvcreate<IUniConfGen>("temp:"), true);
+	namedgens.add(name, wvcreate<IUniConfGen>(moniker), true);
 	return true;
     }
 
@@ -205,7 +205,7 @@ class UniConfd : public WvStreamsDaemon
 public:
 
     UniConfd() :
-            WvStreamsDaemon("uniconfd", WVSTREAMS_RELEASE,
+            WvStreamsDaemon("uniconfd", VERBOSE_PACKAGE_VERSION,
                 WvStreamsDaemonCallback(this, &UniConfd::startup)),
             needauth(false),
             port(DEFAULT_UNICONF_DAEMON_TCP_PORT),
@@ -214,18 +214,8 @@ public:
             first_time(true),
             permgen(NULL)
     {
-        args.zap();
-        
-        daemonize = true;
-
-        args.add_reset_bool_option('f', "foreground",
-                "Run in foreground (non-forking)", daemonize);
-        args.add_option('d', "debug",
-                "Print debug messages (can be used multiple times)",
-                WvArgs::NoArgCallback(this, &UniConfd::inc_log_level));
-
         args.add_option(0, "pid-file",
-                "Specify the .pid file to use", "filename",
+                "Specify the .pid file to use (only applies with --daemonize)", "filename",
                 pid_file);
         args.add_set_bool_option('a', "need-auth",
                 "Require authentication on incoming connections", needauth);

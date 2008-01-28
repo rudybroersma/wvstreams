@@ -41,7 +41,9 @@ DIST=$(PACKAGE_TARNAME)-$(PACKAGE_VERSION)
 #ARFLAGS=rcS
 ARFLAGS=rc
 
+ifeq ("$(RANLIB)", "")
 RANLIB=ranlib
+endif
 
 CXXFLAGS+=-pipe -Iinclude
 

@@ -35,11 +35,16 @@ public:
     virtual  ~WvUnixDGSocket();
 
     virtual size_t uwrite(const void *buf, size_t count);
-    virtual bool pre_select(SelectInfo &si);
+    virtual void pre_select(SelectInfo &si);
     virtual bool post_select(SelectInfo &si);
    
 protected:
      WvString socketfile;
+     
+public:
+    const char *wstype() const { return "WvUnixDGSocket"; }
+
+    size_t bufsize;
 };
 
 /** 
@@ -54,7 +59,9 @@ public:
     WvUnixDGConn(WvStringParm filename)
         : WvUnixDGSocket(filename, false)
         {}
-
+        
+public:
+    const char *wstype() const { return "WvUnixDGConn"; }
 };
 
 /** 
@@ -72,6 +79,8 @@ public:
         : WvUnixDGSocket(filename, true, perms)
         {}
 
+public:
+    const char *wstype() const { return "WvUnixDGListener"; }
 };
 
 

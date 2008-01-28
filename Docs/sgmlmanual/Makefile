@@ -88,14 +88,14 @@ ALL_WVSGML=$(shell /bin/ls *.wvsgml 2>/dev/null)
 	$(MAKE) dirimages htmlimages
 	rm -f $@
 	jade -t rtf -o $*.rtf.tmp \
-		-d /usr/lib/sgml/stylesheet/dsssl/docbook/nwalsh/print/docbook.dsl $<
+		-d /usr/share/sgml/docbook/stylesheet/dsssl/modular/print/docbook.dsl $<
 	cat $*.rtf.tmp | sed 's,"img/\(.*\)\.[^.]*","img.tmp/\1.gif",g' >$@
 	rm -f $*.rtf.tmp
 
 %.tex: %.sgml
 	rm -f $@
 	jade -t tex -o $*.tex.tmp \
-		-d /usr/lib/sgml/stylesheet/dsssl/docbook/nwalsh/print/docbook.dsl $<
+		-d /usr/share/sgml/docbook/stylesheet/dsssl/modular/print/docbook.dsl $<
 	cat $*.tex.tmp | sed 's,{img/\(.*\)\.[^.]*},{img.tmp/\1.eps},g' >$@
 	rm -f $*.tex.tmp
 

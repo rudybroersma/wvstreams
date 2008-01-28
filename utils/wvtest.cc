@@ -8,15 +8,14 @@
 #include "wvautoconf.h"
 #include <stdio.h>
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <ctype.h>
 #ifdef _WIN32
-#include <io.h>
 #include <direct.h>
 #else
 #include <unistd.h>
+#include <sys/wait.h>
 #endif
-#include <wait.h>
 #include <errno.h>
 #include <signal.h>
 
@@ -33,6 +32,8 @@
 
 #define MAX_TEST_TIME 40     // max seconds for a single test to run
 #define MAX_TOTAL_TIME 120*60 // max seconds for the entire suite to run
+
+#define TEST_START_FORMAT "! %s:%-5d %-40s "
 
 static int memerrs()
 {
@@ -59,14 +60,15 @@ static int memleaks()
 // Passes if no rogue children were running, fails otherwise.
 // If your test gets a failure in here, either you're not killing all your
 // children, or you're not calling waitpid(2) on all of them.
-static int no_running_children()
+static bool no_running_children()
 {
-    int status = 0;
+#ifndef _WIN32
     pid_t wait_result;
 
     // Acknowledge and complain about any zombie children
     do 
     {
+	int status = 0;
         wait_result = waitpid(-1, &status, WNOHANG);
 
         if (wait_result > 0)
@@ -76,20 +78,21 @@ static int no_running_children()
             buf[sizeof(buf)-1] = '\0';
             WVFAILEQ("Unclaimed dead child process", buf);
         }
-    } 
-    while (wait_result > 0);
+    } while (wait_result > 0);
         
     // There should not be any running children, so waitpid should return -1
     WVPASSEQ(errno, ECHILD);
     WVPASSEQ(wait_result, -1);
     return (wait_result == -1 && errno == ECHILD);
+#endif
+    return true;
 }
 
 
 WvTest *WvTest::first, *WvTest::last;
 int WvTest::fails, WvTest::runs;
 time_t WvTest::start_time;
-
+bool WvTest::run_twice = false;
 
 void WvTest::alarm_handler(int)
 {
@@ -112,13 +115,13 @@ static const char *pathstrip(const char *filename)
 
 
 WvTest::WvTest(const char *_descr, const char *_idstr, MainFunc *_main,
-	       int _slowness)
+	       int _slowness) :
+    descr(_descr), 
+    idstr(pathstrip(_idstr)), 
+    main(_main), 
+    slowness(_slowness),
+    next(NULL)
 {
-    idstr = pathstrip(_idstr);
-    descr = _descr;
-    main = _main;
-    slowness = _slowness;
-    next = NULL;
     if (first)
 	last->next = this;
     else
@@ -166,10 +169,14 @@ int WvTest::run_all(const char * const *prefixes)
     if (slowstr1) min_slowness = atoi(slowstr1);
     if (slowstr2) max_slowness = atoi(slowstr2);
 
-    int run_twice = 0;
-    char *run_twice_str = getenv("WVTEST_PARALLEL");
-    if (run_twice_str) run_twice = atoi(run_twice_str);
-    
+#ifdef _WIN32
+    run_twice = false;
+#else
+    char *parallel_str = getenv("WVTEST_PARALLEL");
+    if (parallel_str) 
+        run_twice = atoi(parallel_str) > 0;
+#endif
+
     // there are lots of fflush() calls in here because stupid win32 doesn't
     // flush very often by itself.
     fails = runs = 0;
@@ -181,13 +188,15 @@ int WvTest::run_all(const char * const *prefixes)
 		|| prefix_match(cur->idstr, prefixes)
 		|| prefix_match(cur->descr, prefixes)))
 	{
-            pid_t child;
+#ifndef _WIN32
+            pid_t child = 0;
             if (run_twice)
             {
                 // I see everything twice!
                 printf("Running test in parallel.\n");
                 child = fork();
             }
+#endif
 
 	    printf("Testing \"%s\" in %s:\n", cur->descr, cur->idstr);
 	    fflush(stdout);
@@ -207,6 +216,7 @@ int WvTest::run_all(const char * const *prefixes)
 	    printf("\n");
 	    fflush(stdout);
 
+#ifndef _WIN32
             if (run_twice)
             {
                 if (!child)
@@ -224,6 +234,7 @@ int WvTest::run_all(const char * const *prefixes)
                         printf("Waitpid interrupted, retrying.\n");
                 }
             }
+#endif
 
             WVPASS(no_running_children());
 	}
@@ -243,21 +254,71 @@ int WvTest::run_all(const char * const *prefixes)
 }
 
 
-void WvTest::start(const char *file, int line, const char *condstr)
+// If we aren't running in parallel, we want to output the name of the test
+// before we run it, so we know what happened if it crashes.  If we are
+// running in parallel, outputting this information in multiple printf()s
+// can confuse parsers, so we want to output everything in one printf().
+//
+// This function gets called by both start() and check().  If we're not
+// running in parallel, just print the data.  If we're running in parallel,
+// and we're starting a test, save a copy of the file/line/description until
+// the test is done and we can output it all at once.
+//
+// Yes, this is probably the worst API of all time.
+void WvTest::print_result(bool start, const char *_file, int _line, 
+        const char *_condstr, bool result)
 {
-    const char *file2 = pathstrip(file);
+    static char *file;
+    static char *condstr;
+    static int line;
     
-    char *condstr2 = strdup(condstr);
-    for (char *cptr = condstr2; *cptr; cptr++)
+    if (start)
     {
-	if (!isprint((unsigned char)*cptr))
-	    *cptr = '!';
+        if (file) 
+            free(file);
+        if (condstr) 
+            free(condstr);
+        file = strdup(pathstrip(_file));
+        condstr = strdup(_condstr);
+        line = _line;
+
+        for (char *cptr = condstr; *cptr; cptr++)
+        {
+            if (!isprint((unsigned char)*cptr))
+                *cptr = '!';
+        }
     }
-    
-    printf("! %s:%-5d %-40s ", file2, line, condstr2);
+            
+    const char *result_str = result ? "ok\n" : "FAILED\n";
+    if (run_twice)
+    {
+        if (!start)
+            printf(TEST_START_FORMAT "%s", file, line, condstr, result_str);
+    }
+    else
+    {
+        if (start)
+            printf(TEST_START_FORMAT, file, line, condstr);
+        else
+            printf("%s", result_str);
+    }
     fflush(stdout);
 
-    free(condstr2);
+    if (!start)
+    {
+        if (file)
+            free(file);
+        if (condstr)
+            free(condstr);
+        file = condstr = NULL;
+    }
+}
+
+
+void WvTest::start(const char *file, int line, const char *condstr)
+{
+    // Either print the file, line, and condstr, or save them for later.
+    print_result(true, file, line, condstr, 0);
 }
 
 
@@ -277,16 +338,11 @@ void WvTest::check(bool cond)
     }
     
     runs++;
-    
-    if (cond)
+
+    print_result(false, NULL, 0, NULL, cond);
+
+    if (!cond)
     {
-	printf("ok\n");
-	fflush(stdout);
-    }
-    else
-    {
-	printf("FAILED\n");
-	fflush(stdout);
 	fails++;
 	
 	if (getenv("WVTEST_DIE_FAST"))
@@ -335,3 +391,35 @@ bool WvTest::start_check_eq(const char *file, int line,
     return cond;
 }
 
+bool WvTest::start_check_lt(const char *file, int line,
+			    const char *a, const char *b)
+{
+    if (!a) a = "";
+    if (!b) b = "";
+    
+    size_t len = strlen(a) + strlen(b) + 8 + 1;
+    char *str = new char[len];
+    sprintf(str, "[%s] < [%s]", a, b);
+    
+    start(file, line, str);
+    delete[] str;
+
+    bool cond = strcmp(a, b) < 0;
+    check(cond);
+    return cond;
+}
+
+
+bool WvTest::start_check_lt(const char *file, int line, int a, int b)
+{
+    size_t len = 128 + 128 + 8 + 1;
+    char *str = new char[len];
+    sprintf(str, "%d < %d", a, b);
+    
+    start(file, line, str);
+    delete[] str;
+    
+    bool cond = a < b;
+    check(cond);
+    return cond;
+}

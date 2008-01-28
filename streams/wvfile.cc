@@ -10,7 +10,6 @@
 WvFile::WvFile()
 {
     readable = writable = false;
-    skip_select = false;
 }
 
 #ifndef _WIN32 // meaningless to do this on win32
@@ -31,14 +30,15 @@ WvFile::WvFile(int rwfd) : WvFDStream(rwfd)
     }
     else
 	readable = writable = false;
-
-    skip_select = false;
 }
 #endif
 
 
 WvFile::WvFile(WvStringParm filename, int mode, int create_mode)
 {
+#ifdef _WIN32
+    mode |= O_BINARY; // WvStreams users aren't expecting crlf mangling
+#endif
     open(filename, mode, create_mode);
 }
 
@@ -62,6 +62,7 @@ static WvMoniker<IWvStream> reg0("infile", increator);
 static WvMoniker<IWvStream> reg1("outfile", outcreator);
 static WvMoniker<IWvStream> reg3("file", creator);
 
+
 bool WvFile::open(WvStringParm filename, int mode, int create_mode)
 {
     noerr();
@@ -72,8 +73,6 @@ bool WvFile::open(WvStringParm filename, int mode, int create_mode)
     readable = (xmode == O_RDONLY) || (xmode == O_RDWR);
     writable = (xmode == O_WRONLY) || (xmode == O_RDWR);
 
-    skip_select = false;
-    
     // don't do the default force_select of read if we're not readable!
     if (!readable)
 	undo_force_select(true, false, false);
@@ -96,8 +95,8 @@ bool WvFile::open(WvStringParm filename, int mode, int create_mode)
     return true;
 }
 
-#ifndef _WIN32  // since win32 doesn't support fcntl
 
+#ifndef _WIN32  // since win32 doesn't support fcntl
 bool WvFile::open(int _rwfd)
 {
     noerr();
@@ -112,8 +111,6 @@ bool WvFile::open(int _rwfd)
     readable = (xmode == O_RDONLY) || (xmode == O_RDWR);
     writable = (xmode == O_WRONLY) || (xmode == O_RDWR);
 
-    skip_select = false;
-    
     if (!readable)
 	undo_force_select(true, false, false);
 
@@ -124,29 +121,21 @@ bool WvFile::open(int _rwfd)
     closed = stop_read = stop_write = false;
     return true;
 }
-
 #endif 
+
 
 // files not open for read are never readable; files not open for write
 // are never writable.
-bool WvFile::pre_select(SelectInfo &si)
+void WvFile::pre_select(SelectInfo &si)
 {
-    bool ret;
-    
-    SelectRequest oldwant = si.wants;
-    
     if (!readable) si.wants.readable = false;
     if (!writable) si.wants.writable = false;
-    ret = WvFDStream::pre_select(si);
-    
-    si.wants = oldwant;
 
-    // Force select() to always return true by causing it to not wait and
-    // setting our pre_select() return value to true.
-    if (skip_select)
-    {
-	si.msec_timeout = 0;
-	ret = true;
-    }
-    return ret;
+    WvFDStream::pre_select(si);    
+}
+
+
+bool WvFile::post_select(SelectInfo &si)
+{
+    return WvFDStream::post_select(si);
 }

@@ -10,6 +10,7 @@
 ;; your stuff goes here...
 ;;(define %gentext-nav-use-ff% 1)
 (define %use-id-as-filename% 1)
+(define %html-ext% ".html")
 
 
 </style-specification-body>

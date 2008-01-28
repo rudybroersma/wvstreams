@@ -1,3 +1,19 @@
+wvstreams (4.4.1-0.1) unstable; urgency=low
+
+  * NMU.
+  * New upstream version.
+  * Renamed library packages (ldbl transition). Closes: #430320.
+  * Fix build failures with g++-4.3. Closes: #461671.
+  * debian/control: Build against db4.6. Closes: #421948.
+  * debian/control: Build-Conflict with valgrind. Closes: #387671.
+  * debian/control: libuniconf4.4: Conflict with libuniconf4.3, libuniconf4.2.
+  * Prevent WvModem from hanging if there's nothing on the other side.
+  * Define %html-ext% to ".html" while building HTML documentation,
+    since current docbook-dsssl appears to default to ".htm".
+  * Use new /usr/share/sgml location for docbook.dsl.
+
+ -- Matthias Klose <doko@debian.org>  Mon, 28 Jan 2008 01:01:46 +0100
+
 wvstreams (4.2.2-2.3) unstable; urgency=low
 
   * Non-maintainer upload.

@@ -9,18 +9,10 @@
 
 #include "iwvstream.h"
 #include "wvtimeutils.h"
+#include "wvhashtable.h"
+#include "wvstreamsdebugger.h"
 #include <errno.h>
 #include <limits.h>
-
-#ifdef _WIN32
-#include <time.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include "wvwin32-sanitize.h"
-#else
-#include <unistd.h> // not strictly necessary, but EVERYBODY uses this...
-#include <sys/time.h>
-#endif
 
 
 // parameters are: owning-stream, userdata
@@ -305,27 +297,26 @@ public:
      * pre_select() is allowed to reduce msec_timeout (or change it if it's
      * -1).  However, it's not allowed to _increase_ msec_timeout.
      */ 
-    virtual bool pre_select(SelectInfo &si);
+    virtual void pre_select(SelectInfo &si);
     
     /**
      * A more convenient version of pre_select() usable for overriding the
      * 'want' value temporarily.
      */
-    bool pre_select(SelectInfo &si, const SelectRequest &r)
+    void pre_select(SelectInfo &si, const SelectRequest &r)
     {
 	SelectRequest oldwant = si.wants;
 	si.wants = r;
-	bool val = pre_select(si);
+	pre_select(si);
 	si.wants = oldwant;
-	return val;
     }
     
     /**
      * Like pre_select(), but still exists even if you override the other
      * pre_select() in a subclass.  Sigh.
      */
-    bool xpre_select(SelectInfo &si, const SelectRequest &r)
-        { return pre_select(si, r); }
+    void xpre_select(SelectInfo &si, const SelectRequest &r)
+        { pre_select(si, r); }
     
     /**
      * post_select() is called after ::select(), and returns true if this
@@ -563,7 +554,7 @@ protected:
     //
     // all of the fields are filled in with new values
     // si.msec_timeout contains the time until the next alarm expires
-    bool _build_selectinfo(SelectInfo &si, time_t msec_timeout,
+    void _build_selectinfo(SelectInfo &si, time_t msec_timeout,
         bool readable, bool writable, bool isexcept,
         bool forceable);
 
@@ -661,6 +652,51 @@ private:
     /** Prevent accidental copying of WvStream.  These don't actually exist. */
     WvStream(const WvStream &s);
     WvStream& operator= (const WvStream &s);
+
+private:
+    WvString my_wsname;
+public:
+    const char *wsname() const
+        { return my_wsname; }
+    void set_wsname(WvStringParm wsname)
+        { my_wsname = wsname; }
+    void set_wsname(WVSTRING_FORMAT_DECL)
+        { set_wsname(WvString(WVSTRING_FORMAT_CALL)); }
+        
+public:
+    const char *wstype() const { return "WvStream"; }
+    
+private:
+    WSID my_wsid;
+public:
+    WSID wsid() const { return my_wsid; }
+    
+private:
+    static WvMap<WSID, WvStream *> *wsid_map;
+    static WSID next_wsid_to_try;
+public:
+    static IWvStream *find_by_wsid(WSID wsid);
+    
+private:
+    static void add_debugger_commands();
+protected:
+    static void debugger_streams_display_header(WvStringParm cmd,
+            WvStreamsDebugger::ResultCallback result_cb);
+    static void debugger_streams_display_one_stream(WvStream *s,
+            WvStringParm cmd,
+            WvStreamsDebugger::ResultCallback result_cb);
+    static void debugger_streams_maybe_display_one_stream(WvStream *s,
+            WvStringParm cmd,
+            const WvStringList &args,
+            WvStreamsDebugger::ResultCallback result_cb);
+private:
+    static WvString debugger_streams_run_cb(WvStringParm cmd,
+        WvStringList &args,
+        WvStreamsDebugger::ResultCallback result_cb, void *);
+    static WvString debugger_close_run_cb(WvStringParm cmd,
+        WvStringList &args,
+        WvStreamsDebugger::ResultCallback result_cb, void *);
+
 };
 
 /**

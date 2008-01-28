@@ -1,5 +1,6 @@
 WVSTREAMS=.
 WVSTREAMS_SRC= # Clear WVSTREAMS_SRC so wvrules.mk uses its WVSTREAMS_foo
+VPATH=$(libdir)
 include wvrules.mk
 override enable_efence=no
 
@@ -62,8 +63,6 @@ dist-hook: dist-hack-clean configure
 	    $(MAKE) -C .xplc clean patch && \
 	    cp -Lpr .xplc/build/xplc .; \
 	fi
-	@sed -e "s/@PKGVER@/$(PKGVER)$(SNAPDATE)/g" \
-	 redhat/wvstreams.spec.in > redhat/wvstreams.spec
 
 runconfigure: config.mk include/wvautoconf.h gnulib/Makefile
 
@@ -150,7 +149,11 @@ kdoc:
 doxygen:
 	doxygen
 
+ifeq ("$(with_readline)", "no")
 install: install-shared install-dev install-xplc install-uniconfd
+else
+install: install-shared install-dev install-xplc install-uniconfd install-wsd
+endif
 
 install-shared: $(TARGETS_SO)
 	$(INSTALL) -d $(DESTDIR)$(libdir)
@@ -173,6 +176,10 @@ install-dev: $(TARGETS_SO) $(TARGETS_A)
 	done
 	$(INSTALL) -d $(DESTDIR)$(libdir)/pkgconfig
 	$(INSTALL_DATA) $(filter-out %-uninstalled.pc, $(wildcard pkgconfig/*.pc)) $(DESTDIR)$(libdir)/pkgconfig
+	$(INSTALL) -d $(DESTDIR)$(bindir)
+	$(INSTALL) wvtesthelper wvtestmeter $(DESTDIR)$(bindir)
+	$(INSTALL) -d $(DESTDIR)$(libdir)/valgrind
+	$(INSTALL) wvstreams.supp $(DESTDIR)$(libdir)/valgrind
 
 uniconfd: uniconf/daemon/uniconfd uniconf/daemon/uniconfd.ini \
           uniconf/daemon/uniconfd.8
@@ -188,6 +195,10 @@ install-uniconfd: uniconfd uniconf/tests/uni uniconf/tests/uni.8
 	$(INSTALL_DATA) uniconf/daemon/uniconfd.8 $(DESTDIR)$(mandir)/man8
 	$(INSTALL_DATA) uniconf/tests/uni.8 $(DESTDIR)$(mandir)/man8
 
+install-wsd: ipstreams/tests/wsd
+	$(INSTALL) -d $(DESTDIR)$(bindir)
+	$(INSTALL_PROGRAM) ipstreams/tests/wsd $(DESTDIR)$(bindir)/
+
 uninstall:
 	$(tbd)
 
@@ -199,7 +210,9 @@ include $(filter-out xplc%,$(wildcard */rules.mk */*/rules.mk)) /dev/null
 
 -include $(shell find . -name '.*.d') /dev/null
 
-test: runconfigure all tests wvtestmain
+test: runconfigure all tests qtest
+
+qtest: runconfigure all wvtestmain
 	LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(WVSTREAMS_LIB)" $(WVTESTRUN) $(MAKE) runtests
 
 runtests:

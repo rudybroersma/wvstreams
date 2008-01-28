@@ -7,6 +7,8 @@ WvUnixDGSocket::WvUnixDGSocket(WvStringParm filename, bool _server, int perms)
     server = _server;
     backoff = 10;
 
+    bufsize = 0;
+
     // open a datagram unix domain socket
     setfd(socket(PF_UNIX, SOCK_DGRAM, 0));
 
@@ -76,12 +78,13 @@ size_t WvUnixDGSocket::uwrite(const void *buf, size_t count)
         WvDynBuf *b = new WvDynBuf;
         b->put(buf, count);
         bufs.append(b, true);
+	bufsize += count;
     }
 
     return count;
 }
 
-bool WvUnixDGSocket::pre_select(SelectInfo &si)
+void WvUnixDGSocket::pre_select(SelectInfo &si)
 {
     SelectRequest oldwant = si.wants;
     if (!bufs.isempty())
@@ -99,10 +102,9 @@ bool WvUnixDGSocket::pre_select(SelectInfo &si)
             si.msec_timeout = alarm_remaining();
     }
 
-    bool sure = WvFDStream::pre_select(si);
+    WvFDStream::pre_select(si);
 
     si.wants = oldwant;
-    return sure;
 }
 
 bool WvUnixDGSocket::post_select(SelectInfo &si)
@@ -133,6 +135,7 @@ bool WvUnixDGSocket::post_select(SelectInfo &si)
             }
             else
             {
+		bufsize -= used;
                 i.xunlink(); // done with that one
                 backoff = 10;
             }

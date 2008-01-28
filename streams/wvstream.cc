@@ -15,6 +15,8 @@
 #include "wvstream.h"
 #include "wvtimeutils.h"
 #include "wvcont.h"
+#include "wvstreamsdebugger.h"
+#include "wvstrutils.h"
 
 #ifdef _WIN32
 #define ENOBUFS WSAENOBUFS
@@ -52,11 +54,170 @@ UUID_MAP_BEGIN(WvStream)
   UUID_MAP_END
 
 
+WvMap<WSID, WvStream *> *WvStream::wsid_map;
+WSID WvStream::next_wsid_to_try = 0;
+
+
+static bool is_prefix_insensitive(const char *str, const char *prefix)
+{
+    size_t len = strlen(prefix);
+    return strlen(str) >= len && strncasecmp(str, prefix, len) == 0;
+}
+
+
+static const char *strstr_insensitive(const char *haystack, const char *needle)
+{
+    while (*haystack != '\0')
+    {
+        if (is_prefix_insensitive(haystack, needle))
+            return haystack;
+        ++haystack;
+    }
+    return NULL;
+}
+
+
+static bool contains_insensitive(const char *haystack, const char *needle)
+{
+    return strstr_insensitive(haystack, needle) != NULL;
+}
+
+
+static const char *list_format = "%6s%s%2s%s%3s%s%3s%s%6s%s%20s%s%s";
+static inline const char *Yes_No(bool val)
+{
+    return val? "Yes": "No";
+}
+
+
+void WvStream::debugger_streams_display_header(WvStringParm cmd,
+        WvStreamsDebugger::ResultCallback result_cb)
+{
+    WvStringList result;
+    result.append(list_format, "--WSID", "-", "RC", "-", "-Ok", "-", "-Cs", "-", "-AlRem", "-",
+            "----------------Type", "-", "Name--------------------");
+    result_cb(cmd, result);
+}
+
+
+// Set to fit in 6 chars
+static WvString friendly_ms(time_t ms)
+{
+    if (ms <= 0)
+        return WvString("(%s)", ms);
+    else if (ms < 1000)
+        return WvString("%sms", ms);
+    else if (ms < 60*1000)
+        return WvString("%ss", ms/1000);
+    else if (ms < 60*60*1000)
+        return WvString("%sm", ms/(60*1000));
+    else if (ms <= 24*60*60*1000)
+        return WvString("%sh", ms/(60*60*1000));
+    else
+        return WvString("%sd", ms/(24*60*60*1000));
+}
+
+void WvStream::debugger_streams_display_one_stream(WvStream *s,
+        WvStringParm cmd,
+        WvStreamsDebugger::ResultCallback result_cb)
+{
+    WvStringList result;
+    s->addRef();
+    unsigned refcount = s->release();
+    result.append(list_format,
+            s->wsid(), " ",
+            refcount, " ",
+            Yes_No(s->isok()), " ",
+            Yes_No(s->uses_continue_select), " ",
+            friendly_ms(s->alarm_remaining()), " ",
+            s->wstype(), " ",
+            s->wsname());
+    result_cb(cmd, result);
+}
+
+
+void WvStream::debugger_streams_maybe_display_one_stream(WvStream *s,
+        WvStringParm cmd,
+        const WvStringList &args,
+        WvStreamsDebugger::ResultCallback result_cb)
+{
+    bool show = args.isempty();
+    WvStringList::Iter arg(args);
+    for (arg.rewind(); arg.next(); )
+    {
+        WSID wsid;
+        bool is_num = wvstring_to_num(*arg, wsid);
+        
+        if (is_num)
+        {
+            if (s->wsid() == wsid)
+            {
+                show = true;
+                break;
+            }
+        }
+        else
+        {
+            if (s->wsname() && contains_insensitive(s->wsname(), *arg)
+                    || s->wstype() && contains_insensitive(s->wstype(), *arg))
+            {
+                show = true;
+                break;
+            }
+        }
+    }
+    if (show)
+        debugger_streams_display_one_stream(s, cmd, result_cb);
+}
+
+
+WvString WvStream::debugger_streams_run_cb(WvStringParm cmd,
+        WvStringList &args,
+        WvStreamsDebugger::ResultCallback result_cb, void *)
+{
+    debugger_streams_display_header(cmd, result_cb);
+    if (WvStream::wsid_map)
+    {
+        WvMap<WSID, WvStream *>::Iter i(*WvStream::wsid_map);
+        for (i.rewind(); i.next(); )
+            debugger_streams_maybe_display_one_stream(i->data,
+                    cmd, args, result_cb);
+    }
+    
+    return WvString::null;
+}
+
+
+WvString WvStream::debugger_close_run_cb(WvStringParm cmd,
+        WvStringList &args,
+        WvStreamsDebugger::ResultCallback result_cb, void *)
+{
+    if (args.isempty())
+        return WvString("Usage: %s <WSID>", cmd);
+    WSID wsid;
+    WvString wsid_str = args.popstr();
+    if (!wvstring_to_num(wsid_str, wsid))
+        return WvString("Invalid WSID '%s'", wsid_str);
+    IWvStream *s = WvStream::find_by_wsid(wsid);
+    if (!s)
+        return WvString("No such stream");
+    s->close();
+    return WvString::null;
+}
+
+
+void WvStream::add_debugger_commands()
+{
+    WvStreamsDebugger::add_command("streams", 0, debugger_streams_run_cb, 0);
+    WvStreamsDebugger::add_command("close", 0, debugger_close_run_cb, 0);
+}
+
+
 WvStream::WvStream():
     read_requires_writable(NULL),
     write_requires_readable(NULL),
     uses_continue_select(false),
-    personal_stack_size(65536),
+    personal_stack_size(131072),
     alarm_was_ticking(false),
     stop_read(false),
     stop_write(false),
@@ -74,6 +235,27 @@ WvStream::WvStream():
     last_alarm_check(wvtime_zero)
 {
     TRACE("Creating wvstream %p\n", this);
+    
+    static bool first = true;
+    if (first)
+    {
+        first = false;
+        WvStream::add_debugger_commands();
+    }
+    
+    // Choose a wsid;
+    if (!wsid_map)
+        wsid_map = new WvMap<WSID, WvStream *>(256);
+    WSID first_wsid_tried = next_wsid_to_try;
+    do
+    {
+        if (!wsid_map->exists(next_wsid_to_try))
+            break;
+        ++next_wsid_to_try;
+    } while (next_wsid_to_try != first_wsid_tried);
+    my_wsid = next_wsid_to_try++;
+    assert(!wsid_map->exists(my_wsid));
+    wsid_map->add(my_wsid, this);
     
 #ifdef _WIN32
     WSAData wsaData;
@@ -105,6 +287,15 @@ WvStream::~WvStream()
     assert(!uses_continue_select || !call_ctx);
     
     call_ctx = 0; // finish running the suspended callback, if any
+
+    assert(wsid_map);
+    wsid_map->remove(my_wsid);
+    if (wsid_map->isempty())
+    {
+        delete wsid_map;
+        wsid_map = NULL;
+    }
+    
     TRACE("done destroying %p\n", this);
 }
 
@@ -381,7 +572,7 @@ char *WvStream::blocking_getline(time_t wait_msec, int separator,
     
     //assert(uses_continue_select || wait_msec == 0);
 
-    struct timeval timeout_time;
+    WvTime timeout_time(0);
     if (wait_msec > 0)
         timeout_time = msecadd(wvtime(), wait_msec);
     
@@ -430,8 +621,7 @@ char *WvStream::blocking_getline(time_t wait_msec, int separator,
 	    assert(buf);
             size_t len = uread(buf, readahead);
             tmp.unalloc(readahead - len);
-	    size_t tmp_size = tmp.used();
-	    inbuf.put(tmp.get(tmp_size), tmp_size);
+	    inbuf.put(tmp.get(len), len);
             hasdata = len > 0; // enough?
         }
 
@@ -449,7 +639,7 @@ char *WvStream::blocking_getline(time_t wait_msec, int separator,
     i = inbuf.strchr(separator);
     if (i > 0) {
 	char *eol = (char *)inbuf.mutablepeek(i - 1, 1);
-	assert(eol);
+	assert(eol && *eol == separator);
 	*eol = 0;
 	return const_cast<char*>((const char *)inbuf.get(i));
     } else {
@@ -616,14 +806,17 @@ void WvStream::flush_then_close(int msec_timeout)
 }
 
 
-bool WvStream::pre_select(SelectInfo &si)
+void WvStream::pre_select(SelectInfo &si)
 {
     maybe_autoclose();
     
     time_t alarmleft = alarm_remaining();
     
     if (!si.inherit_request && alarmleft == 0)
-	return true; // alarm has rung
+    {
+	si.msec_timeout = 0;
+	return; // alarm has rung
+    }
 
     if (!si.inherit_request)
     {
@@ -634,16 +827,25 @@ bool WvStream::pre_select(SelectInfo &si)
     
     // handle read-ahead buffering
     if (si.wants.readable && inbuf.used() && inbuf.used() >= queue_min)
-	return true; // already ready
+    {
+	si.msec_timeout = 0; // already ready
+	return;
+    }
     if (alarmleft >= 0
       && (alarmleft < si.msec_timeout || si.msec_timeout < 0))
 	si.msec_timeout = alarmleft + 10;
-    return false;
 }
 
 
 bool WvStream::post_select(SelectInfo &si)
 {
+    if (!si.inherit_request)
+    {
+	si.wants.readable |= readcb;
+	si.wants.writable |= writecb;
+	si.wants.isexception |= exceptcb;
+    }
+    
     // FIXME: need sane buffer flush support for non FD-based streams
     // FIXME: need read_requires_writable and write_requires_readable
     //        support for non FD-based streams
@@ -654,11 +856,14 @@ bool WvStream::post_select(SelectInfo &si)
 	flush(0);
     if (!si.inherit_request && alarm_remaining() == 0)
 	return true; // alarm ticked
+    if ((si.wants.readable || (!si.inherit_request && readcb))
+	&& inbuf.used() && inbuf.used() >= queue_min)
+	return true; // already ready
     return false;
 }
 
 
-bool WvStream::_build_selectinfo(SelectInfo &si, time_t msec_timeout,
+void WvStream::_build_selectinfo(SelectInfo &si, time_t msec_timeout,
     bool readable, bool writable, bool isexcept, bool forceable)
 {
     FD_ZERO(&si.read);
@@ -683,19 +888,18 @@ bool WvStream::_build_selectinfo(SelectInfo &si, time_t msec_timeout,
     si.inherit_request = ! forceable;
     si.global_sure = false;
 
-    if (!isok()) return false;
+    if (!isok()) return;
 
-    bool sure = pre_select(si);
+    wvstime_sync();
+
+    pre_select(si);
     if (globalstream && forceable && (globalstream != this))
     {
 	WvStream *s = globalstream;
 	globalstream = NULL; // prevent recursion
-	si.global_sure = s->xpre_select(si, SelectRequest(false, false, false));
+	s->xpre_select(si, SelectRequest(false, false, false));
 	globalstream = s;
     }
-    if (sure || si.global_sure)
-        si.msec_timeout = 0;
-    return sure;
 }
 
 
@@ -740,7 +944,14 @@ int WvStream::_do_select(SelectInfo &si)
 bool WvStream::_process_selectinfo(SelectInfo &si, bool forceable)
 {
     if (!isok()) return false;
-    
+
+    // We cannot move the clock backward here, because timers that
+    // were expired in pre_select could then not be expired anymore,
+    // and while time going backward is rather unsettling in general,
+    // for it to be happening between pre_select and post_select is
+    // just outright insanity.
+    wvstime_sync_forward();
+        
     bool sure = post_select(si);
     if (globalstream && forceable && (globalstream != this))
     {
@@ -757,26 +968,22 @@ bool WvStream::_process_selectinfo(SelectInfo &si, bool forceable)
 bool WvStream::_select(time_t msec_timeout,
     bool readable, bool writable, bool isexcept, bool forceable)
 {
+    assert(wsid_map && wsid_map->exists(my_wsid)); // Detect use of deleted stream
+        
     SelectInfo si;
-    bool sure = _build_selectinfo(si, msec_timeout,
-				  readable, writable, isexcept, forceable);
+    _build_selectinfo(si, msec_timeout,
+                      readable, writable, isexcept, forceable);
     
     if (!isok())
 	return false;
     
-    // the eternal question: if 'sure' is true already, do we need to do the
-    // rest of this stuff?  If we do, it might increase fairness a bit, but
-    // it encourages select()ing when we know something fishy has happened -
-    // when a stream is !isok() in a list, for example, pre_select() returns
-    // true.  If that's the case, our SelectInfo structure might not be
-    // quite right (eg. it might be selecting on invalid fds).  That doesn't
-    // sound *too* bad, so let's go for the fairness.
-
+    bool sure = false;
     int sel = _do_select(si);
     if (sel >= 0)
-        sure = _process_selectinfo(si, forceable) || sure; // note the order
+        sure = _process_selectinfo(si, forceable); 
     if (si.global_sure && globalstream && forceable && (globalstream != this))
 	globalstream->callback();
+
     return sure;
 }
 
@@ -812,7 +1019,7 @@ void WvStream::undo_force_select(bool readable, bool writable, bool isexception)
 void WvStream::alarm(time_t msec_timeout)
 {
     if (msec_timeout >= 0)
-        alarm_time = msecadd(wvtime(), msec_timeout);
+        alarm_time = msecadd(wvstime(), msec_timeout);
     else
 	alarm_time = wvtime_zero;
 }
@@ -822,7 +1029,7 @@ time_t WvStream::alarm_remaining()
 {
     if (alarm_time.tv_sec)
     {
-	WvTime now = wvtime();
+	WvTime now = wvstime();
 
 	// Time is going backward!
 	if (now < last_alarm_check)
@@ -957,4 +1164,14 @@ void WvStream::unread(WvBuf &unreadbuf, size_t count)
     tmp.merge(inbuf);
     inbuf.zap();
     inbuf.merge(tmp);
+}
+
+
+IWvStream *WvStream::find_by_wsid(WSID wsid)
+{
+    WvStream **presult = wsid_map? wsid_map->find(wsid): NULL;
+    if (presult)
+        return *presult;
+    else
+        return NULL;   
 }
