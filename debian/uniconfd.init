@@ -2,12 +2,10 @@
 #
 ### BEGIN INIT INFO
 # Provides:          uniconfd
-# Required-Start:    $local_fs 
-# Required-Stop:     $local_fs
-# Should-Start:      $local_fs
-# Should-Stop:       $local_fs
+# Required-Start:    $remote_fs 
+# Required-Stop:     $remote_fs
 # Default-Start:     2 3 4 5
-# Default-Stop:      S 0 1 6
+# Default-Stop:      0 1 6
 # Short-Description: Server that manages UniConf elements
 # Description:       A server that accepts incoming TCP or Unix
 #                    connections, and gets or sets UniConf elements 
