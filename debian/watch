@@ -1,0 +1,5 @@
+version=3
+
+http://code.google.com/p/wvstreams/downloads/list \
+http:\/\/wvstreams.googlecode.com\/files\/wvstreams-([\d.]+)\.tar\.gz 
+

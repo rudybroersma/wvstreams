@@ -1,12 +1,10 @@
 Source: wvstreams
 Section: libs
 Priority: optional
-Maintainer: Simon Law <sfllaw@debian.org>
-Uploaders: James Morrison <phython@debian.org>, Patrick Patterson <ppatters@debian.org>
-Build-Depends: debhelper (>> 4.1.0), libdb-dev, libpam0g-dev, libqt3-mt-dev, libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen
-Build-Depends-Indep: doxygen
+Maintainer: Debian QA Group <packages@qa.debian.org>
+Build-Depends: debhelper (>> 5.0.0), libdb-dev, libpam0g-dev, libqt3-mt-dev, libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen
 Build-Conflicts: valgrind
-Standards-Version: 3.6.2.1
+Standards-Version: 3.8.0
 
 Package: libwvstreams4.4-base
 Architecture: any
@@ -56,7 +54,7 @@ Description: C++ network libraries for rapid application development
 Package: libwvstreams4.4-doc
 Architecture: all
 Section: doc
-Suggests: libwvstreams-dev (= ${Source-Version})
+Suggests: libwvstreams-dev (= ${binary:Version})
 Description: Documentation for WvStreams
  Contains all the documentation available to program with WvStreams.
   .
@@ -76,6 +74,7 @@ Package: libwvstreams-dev
 Architecture: any
 Section: libdevel
 Depends: libwvstreams4.4-base, libwvstreams4.4-extras, libuniconf4.4, libwvstreams4.4-qt, libxplc0.3.13-dev, ${misc:Depends}
+Suggests: tk8.4 | wish
 Provides: libwvstreams4.4-dev
 Description: Development libraries and header files for libwvstreams4.4
  Contains the header files and static libraries for use in rapid 

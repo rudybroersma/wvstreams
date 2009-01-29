@@ -80,10 +80,10 @@ clean:
 	rm -f build-stamp build-stamp-indep #CONFIGURE-STAMP#
 
 	# Add here commands to clean up after the build process.
-	-$(MAKE) -C Docs/sgmlmanual clean
+	[ ! -f Docs/sgmlmanual/Makefile ] || $(MAKE) -C Docs/sgmlmanual clean
 	-rm -rf Docs/doxy-html
-	-$(MAKE) -C xplc distclean
-	-$(MAKE) distclean
+	[ ! -f xplc/Makefile ] || $(MAKE) -C xplc distclean
+	[ ! -f Makefile ] || $(MAKE) distclean
 
 ifneq "$(wildcard /usr/share/misc/config.sub)" ""
 	cp -f /usr/share/misc/config.sub config.sub
@@ -176,6 +176,8 @@ binary-common:
 	dh_strip --exclude=libwvtest.a
 	dh_compress
 	dh_fixperms
+	#Fix other permissions
+	chmod -x $(CURDIR)/debian/libwvstreams-dev/usr/lib/valgrind/wvstreams.supp
 #       dh_perl
 #       dh_python
 	dh_makeshlibs -plibwvstreams$(version)-base \

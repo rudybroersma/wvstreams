@@ -1,3 +1,19 @@
+wvstreams (4.4.1-1) unstable; urgency=low
+
+  * QA upload.
+    + Set maintainer to Debian QA Group <packages@qa.debian.org>.
+    + Remove Simon Law. (Closes: #487140).
+  * Acknowledge NMUs. (Closes: #440245).
+  * Remove duplicate build-dep on doxygen.
+  * Update {Source-Version} to ${binary:Version}.
+  * Make clean not ignore errors.
+  * Add suggests on tk8.4 || wish to libwvstreams-dev package.
+  * Add watch file.
+  * Bump debhelper build-dep and compat to 5.
+  * Bump Standards Version to 3.8.0.
+
+ -- Barry deFreese <bdefreese@debian.org>  Wed, 28 Jan 2009 21:37:43 -0500
+
 wvstreams (4.4.1-0.2) unstable; urgency=low
 
   * Non-maintainer upload.
