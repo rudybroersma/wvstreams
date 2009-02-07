@@ -285,7 +285,7 @@ WvString WvX509::certreq(WvStringParm subject, const WvRSAKey &rsa)
     }
 
     int verify_result = X509_REQ_verify(certreq, pk);
-    if (verify_result == 0)
+    if (verify_result == 0 || verify_result == -1)
     {
 	debug(WvLog::Warning, "Self signed request failed");
 	X509_REQ_free(certreq);

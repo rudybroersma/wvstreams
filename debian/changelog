@@ -1,3 +1,10 @@
+wvstreams (4.4.1-1.1) unstable; urgency=high
+
+  * Non-maintainer upload.
+  * Fix return type checking of X509_REQ_verify (Closes: #513539)
+
+ -- Moritz Mühlenhoff <jmm@debian.org>  Sat, 07 Feb 2009 13:34:04 +0100
+
 wvstreams (4.4.1-1) unstable; urgency=low
 
   * QA upload.
