@@ -39,8 +39,12 @@ char *alloca ();
 
 #ifdef HAVE_VALGRIND_MEMCHECK_H
 #include <valgrind/memcheck.h>
+// Compatibility for Valgrind 3.1 and previous
+#ifndef VALGRIND_MAKE_MEM_DEFINED
+#define VALGRIND_MAKE_MEM_DEFINED VALGRIND_MAKE_READABLE 
+#endif
 #else
-#define VALGRIND_MAKE_READABLE(x, y)
+#define VALGRIND_MAKE_MEM_DEFINED(x, y)
 #define RUNNING_ON_VALGRIND 0
 #endif
 
@@ -77,7 +81,7 @@ static void valgrind_fix(char *stacktop)
     //printf("valgrind fix: %p-%p\n", &val, stacktop);
     assert(stacktop > &val);
 #endif
-    VALGRIND_MAKE_READABLE(&val, stacktop - &val);
+    VALGRIND_MAKE_MEM_DEFINED(&val, stacktop - &val);
 }
 
 
@@ -273,7 +277,7 @@ int WvTaskMan::run(WvTask &task, int val)
     else
     {
         // need to make state readable to see if we need to make more readable..
-        VALGRIND_MAKE_READABLE(&state, sizeof(state));
+        VALGRIND_MAKE_MEM_DEFINED(&state, sizeof(state));
 	// someone did yield() (if toplevel) or run() on our old task; done.
 	if (state != &toplevel)
 	    valgrind_fix(stacktop);
@@ -294,7 +298,7 @@ int WvTaskMan::yield(int val)
     assert(current_task->stack_magic);
     
     // if this fails, this task overflowed its stack.  Make it bigger!
-    VALGRIND_MAKE_READABLE(current_task->stack_magic,
+    VALGRIND_MAKE_MEM_DEFINED(current_task->stack_magic,
                            sizeof(current_task->stack_magic));
     assert(*current_task->stack_magic == WVTASK_MAGIC);
 
@@ -356,7 +360,11 @@ void WvTaskMan::get_stack(WvTask &task, size_t size)
         
             task.stack = mmap(next_stack_addr, task.stacksize,
                 PROT_READ | PROT_WRITE,
+#ifndef MACOS 
                 MAP_PRIVATE | MAP_ANONYMOUS,
+#else
+                MAP_PRIVATE,
+#endif
                 -1, 0);
         }
 	
@@ -531,11 +539,15 @@ void WvTaskMan::do_task()
 
 const void *WvTaskMan::current_top_of_stack()
 {
+#ifdef HAVE_LIBC_STACK_END
     extern const void *__libc_stack_end;
     if (use_shared_stack() || current_task == NULL)
         return __libc_stack_end;
     else
         return (const char *)current_task->stack + current_task->stacksize;
+#else
+    return 0;
+#endif
 }
 
 

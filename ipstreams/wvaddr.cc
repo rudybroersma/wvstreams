@@ -10,6 +10,9 @@
 #include <netdb.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#ifdef MACOS
+#include <sys/types.h>
+#endif
 #include <net/if_arp.h>
 #endif
 
@@ -368,8 +371,9 @@ size_t WvARCnetAddr::sockaddr_len() const
 
 #endif //_WIN32
 
-/* create an IP address from a dotted-quad string.  Maybe someday we'll
- * support hostnames too with gethostbyname, but not yet.
+/* create an IP address from a dotted-quad string.  We don't support
+ * gethostname()-style lookups here, because they happen only synchronously.
+ * Streams that need hostname lookups will have to do it themselves.
  */
 void WvIPAddr::string_init(const char string[])
 {
@@ -537,7 +541,7 @@ WvIPNet::WvIPNet(const WvIPNet &_net)
 // If the netmask is not specified, it will default to all 1's.
 void WvIPNet::string_init(const char string[])
 {
-    char *maskptr;
+    const char *maskptr;
     int bits;
     uint32_t imask;
 
@@ -664,11 +668,27 @@ WvIPPortAddr::WvIPPortAddr(const WvIPAddr &_ipaddr, uint16_t _port)
 }
 
 
+static bool all_digits(const char *s)
+{
+    for (; *s; s++)
+	if (!isdigit((unsigned char)*s))
+	    return false;
+    return true;
+}
+
+
 // If no port is specified (after a ':' or a space or a tab) it defaults to 0.
 void WvIPPortAddr::string_init(const char string[]) 
 {
-    struct servent* serv;
-
+    // special case for an all-numeric string: it must be just a port,
+    // with default address 0.0.0.0.
+    if (all_digits(string))
+    {
+	*this = WvIPAddr();
+	port = atoi(string);
+	return;
+    }
+    
     const char *cptr = strchr(string, ':');
     if (!cptr)
 	cptr = strchr(string, ' ');
@@ -682,7 +702,7 @@ void WvIPPortAddr::string_init(const char string[])
 	port = atoi(cptr+1);
 	if (!port)
 	{
-	    serv = getservbyname(cptr+1, NULL);
+	    struct servent *serv = getservbyname(cptr+1, NULL);
 	    if (serv)
 		port = ntohs(serv->s_port);
 	}
@@ -751,14 +771,16 @@ bool WvIPPortAddr::comparator(const WvAddr *a2, bool first_pass) const
 WvUnixAddr::WvUnixAddr(const char *_sockname)
     : sockname(_sockname)
 {
-    assert(!!sockname);
+    if (!sockname)
+	sockname = "/";
 }
 
 
 WvUnixAddr::WvUnixAddr(WvStringParm _sockname)
     : sockname(_sockname)
 {
-    assert(!!sockname);
+    if (!sockname)
+	sockname = "/";
 }
 
 
@@ -798,13 +820,20 @@ sockaddr_bin *WvUnixAddr::sockaddr() const
     if (max > sizeof(addr->sun_path) - 2) // appease valgrind
 	max = sizeof(addr->sun_path) - 2;
     strncpy(addr->sun_path, sockname, max);
+    if (addr->sun_path[0] == '@') // user wants an "abstract" socket
+	addr->sun_path[0] = 0; // leading byte should be nul
     return (sockaddr_bin *)addr;
 }
 
 
 size_t WvUnixAddr::sockaddr_len() const
 {
-    return sizeof(sockaddr_un);
+    sockaddr_un *fake;
+    size_t max = sizeof(fake->sun_path);
+    size_t val = strlen(sockname);
+    if (val > max)
+	val = max;
+    return sizeof(fake->sun_family) + val;
 }
 
 

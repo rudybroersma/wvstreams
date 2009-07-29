@@ -1,4 +1,5 @@
 #include "wvtcp.h"
+#include "wvtcplistener.h"
 #include "wvtest.h"
 #include <errno.h>
 
@@ -25,27 +26,44 @@ WVTEST_MAIN("tcp connection")
     WVPASS(6);
     listen.runonce(100);
     WVPASS(7);
-    WvTCPConn *in = listen.accept();
+    IWvStream *_in = listen.accept();
     WVPASS(8);
-    WVPASS(in);
-    if (!in) return; // forget it...
+    WVPASS(_in);
+    if (!_in) return; // forget it...
     
-    WVPASS(in->isok());
+    WVPASS(_in->isok());
+    WvStreamClone in(_in);
+    WVPASS(in.isok());
     
     tcp.runonce(100);
     tcp.runonce(100);
     tcp.runonce(100);
     
-    WVPASS(in->isreadable());
+    WVPASS(in.isreadable());
     
-    WvString line = in->blocking_getline(100);
+    WvString line = in.blocking_getline(100);
     WVPASSEQ(line, "foo");
-    
-    in->release();
 }
 
 
-WVTEST_MAIN("connection refused")
+WVTEST_MAIN("connection refused 1")
+{
+    // hopefully nobody has a service here.  If we get connection refused as
+    // expected, this test should *not* time out.  But a bug that happened
+    // at least once in WvTCPConn causes a timeout in this test.
+    WvTCPConn tcp(WvString("0.0.0.0:105"));
+    printf("ok: %d\n", tcp.isok());
+    tcp.runonce(-1);
+    printf("ok: %d\n", tcp.isok());
+    tcp.runonce(-1);
+    printf("ok: %d\n", tcp.isok());
+    tcp.runonce(-1);
+    printf("ok: %d\n", tcp.isok());
+    WVFAIL(tcp.isok());
+}
+
+
+WVTEST_MAIN("connection refused 2")
 {
     char buf[1024];
     size_t len;
@@ -70,18 +88,15 @@ WVTEST_MAIN("connection refused")
     WVFAIL(tcp.isok());
     WVPASSEQ(tcp.geterr(), ECONNREFUSED);
     printf("Error string is '%s'\n", tcp.errstr().cstr());
-//    WVPASSEQ(tcp.errstr(), strerror(ECONNREFUSED)); // wrong in win32
     
     len = tcp.read(buf, sizeof(buf));
     WVPASSEQ(len, 0);
     WVFAIL(tcp.isok());
     WVPASSEQ(tcp.geterr(), ECONNREFUSED);
     printf("Error string is '%s'\n", tcp.errstr().cstr());
-//    WVPASSEQ(tcp.errstr(), strerror(ECONNREFUSED)); // wrong in win32
     
     tcp.write("foo\n");
     WVFAIL(tcp.isok());
     WVPASSEQ(tcp.geterr(), ECONNREFUSED);
     printf("Error string is '%s'\n", tcp.errstr().cstr());
-//    WVPASSEQ(tcp.errstr(), strerror(ECONNREFUSED)); // wrong in win32
 }

@@ -16,10 +16,10 @@ typedef int pid_t;
 #endif
 
 #include "wvscatterhash.h"
-#include "wvcallback.h"
+#include "wvtr1.h"
 
 DeclareWvScatterTable(int);
-typedef WvCallback<void, pid_t> WvForkCallback;
+typedef wv::function<void(pid_t)> WvForkCallback;
 
 /**
  * Register a callback to be called during wvfork.

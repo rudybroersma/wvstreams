@@ -11,6 +11,7 @@
 #include "wvstringlist.h"
 #include "wvbase64.h"
 #include "wvstrutils.h"
+#include "wvautoconf.h"
 
 #include <openssl/pem.h>
 #include <openssl/x509v3.h>
@@ -32,8 +33,10 @@
 
 // helper method to let us return and warn gracefully when getting/setting an 
 // element in a null certificate
-static const char * warning_str_set = "Tried to set %s, but certificate not ok.\n";
-static const char * warning_str_get = "Tried to set %s, but certificate not ok.\n";
+static const char * warning_str_set 
+    = "Tried to set %s, but certificate not ok.\n";
+static const char * warning_str_get 
+    = "Tried to get %s, but certificate not ok.\n";
 #define CHECK_CERT_EXISTS_SET(x)                                        \
     if (!cert) {                                                        \
         debug(WvLog::Warning, warning_str_set, x);                      \
@@ -51,6 +54,30 @@ UUID_MAP_BEGIN(WvX509)
   UUID_MAP_END
 
 static int ssl_init_count = 0;
+
+#if !HAVE_OPENSSL_POLICY_MAPPING
+
+// HACK: old versions of OpenSSL can't handle ERR_free_strings() being called
+// more than once in the same process; the next wvssl_init won't work.  So
+// let's make sure to make a global variable that holds the refcount at 1
+// even when all the objects go away, then clean it up at exit.
+class WvSSL_Stupid_Refcount
+{
+public:
+   WvSSL_Stupid_Refcount()
+   {
+       wvssl_init();
+   }
+   
+   ~WvSSL_Stupid_Refcount()
+   {
+       wvssl_free();
+   }
+};
+
+WvSSL_Stupid_Refcount wvssl_stupid_refcount;
+
+#endif // !HAVE_OPENSSL_POLICY_MAPPING
 
 
 void wvssl_init()
@@ -72,6 +99,7 @@ void wvssl_init()
 
 void wvssl_free()
 {
+    assert(ssl_init_count >= 1);
     if (ssl_init_count >= 1)
 	ssl_init_count--;
 
@@ -105,6 +133,17 @@ WvX509::WvX509()
 {
     wvssl_init();
     cert = NULL;
+}
+
+
+WvX509::WvX509(const WvX509 &x509)
+    : debug("X509", WvLog::Debug5)
+{
+    wvssl_init();
+    if (x509.cert)
+        cert = X509_dup(x509.cert);
+    else
+        cert = NULL;
 }
 
 
@@ -154,7 +193,7 @@ static WvString set_name_entry(X509_NAME *name, WvStringParm dn)
 	if (value)
 	    *value++ = 0;
 	else
-	    value = "NULL";
+	    value = (char*)"NULL";
 	
 	sid = strlwr(trim_string(cptr));
 	
@@ -243,7 +282,8 @@ WvString WvX509::certreq(WvStringParm subject, const WvRSAKey &rsa)
 
     if ((pk=EVP_PKEY_new()) == NULL)
     {
-        debug(WvLog::Warning, "Error creating key handler for new certificate");
+        debug(WvLog::Warning,
+	      "Error creating key handler for new certificate");
         return WvString::null;
     }
     
@@ -285,7 +325,7 @@ WvString WvX509::certreq(WvStringParm subject, const WvRSAKey &rsa)
     }
 
     int verify_result = X509_REQ_verify(certreq, pk);
-    if (verify_result == 0 || verify_result == -1)
+    if (verify_result == 0)
     {
 	debug(WvLog::Warning, "Self signed request failed");
 	X509_REQ_free(certreq);
@@ -366,8 +406,8 @@ bool WvX509::signedbyca(WvX509 &cacert) const
 
     if (result < 0)
     {
-        debug("There was an error determining whether or not we were signed by "
-              "CA '%s'.\n", cacert.get_subject());
+        debug("Can't determine if we were signed by CA %s: %s\n",
+              cacert.get_subject(), wvssl_errstr());
         return false;
     }
     bool issigned = (result > 0);
@@ -543,7 +583,7 @@ void WvX509::decode(const DumpMode mode, WvBuf &encoded)
         else if (mode == CertDER)
             cert = d2i_X509_bio(membuf, NULL);
         else
-            debug(WvLog::Warning, "Tried to encode certificate with unknown "
+            debug(WvLog::Warning, "Tried to decode certificate with unknown "
                   "mode!\n");
 
         BIO_free_all(membuf);
@@ -661,13 +701,17 @@ WvString WvX509::get_nsserver() const
 }
 
 
-WvString WvX509::get_serial() const
+WvString WvX509::get_serial(bool hex) const
 {
     CHECK_CERT_EXISTS_GET("serial", WvString::null);
 
     BIGNUM *bn = BN_new();
     bn = ASN1_INTEGER_to_BN(X509_get_serialNumber(cert), bn);
-    char * c = BN_bn2dec(bn);
+    char * c;
+    if (hex)
+        c = BN_bn2hex(bn);
+    else
+        c = BN_bn2dec(bn);
     WvString ret("%s", c);
     OPENSSL_free(c);
     BN_free(bn);
@@ -748,9 +792,8 @@ bool WvX509::get_basic_constraints(bool &ca, int &pathlen) const
     BASIC_CONSTRAINTS *constraints = NULL;
     int i;
 
-    constraints = static_cast<BASIC_CONSTRAINTS *>(X509_get_ext_d2i(
-                                                       cert, NID_basic_constraints,
-                                                       &i, NULL));
+    constraints = static_cast<BASIC_CONSTRAINTS *>
+	(X509_get_ext_d2i(cert, NID_basic_constraints, &i, NULL));
     if (constraints)
     {
         ca = constraints->ca;
@@ -807,6 +850,12 @@ void WvX509::set_basic_constraints(bool ca, int pathlen)
     BASIC_CONSTRAINTS_free(constraints);
 }
 
+
+/*
+ * These functions are optional to the API.  If OpenSSL doesn't support them,
+ * we simply won't include them here, and apps that need them won't compile.
+ */
+#ifdef HAVE_OPENSSL_POLICY_MAPPING
 
 bool WvX509::get_policy_constraints(int &require_explicit_policy, 
                                     int &inhibit_policy_mapping) const
@@ -915,15 +964,19 @@ void WvX509::set_policy_mapping(PolicyMapList &list)
     sk_POLICY_MAPPING_pop_free(maps, POLICY_MAPPING_free);
 }
 
+#endif // HAVE_OPENSSL_POLICY_MAPPING
 
-static void add_aia(WvStringParm type, WvString identifier, AUTHORITY_INFO_ACCESS *ainfo)
+
+static void add_aia(WvStringParm type, WvString identifier,
+		    AUTHORITY_INFO_ACCESS *ainfo)
 {
     ACCESS_DESCRIPTION *acc = ACCESS_DESCRIPTION_new();
     sk_ACCESS_DESCRIPTION_push(ainfo, acc);
     acc->method = OBJ_txt2obj(type.cstr(), 0);
     acc->location->type = GEN_URI;
     acc->location->d.ia5 = M_ASN1_IA5STRING_new();
-    unsigned char *cident = reinterpret_cast<unsigned char *>(identifier.edit());
+    unsigned char *cident 
+	= reinterpret_cast<unsigned char *>(identifier.edit());
     ASN1_STRING_set(acc->location->d.ia5, cident, identifier.len());
 }
 
@@ -956,7 +1009,8 @@ WvString WvX509::get_aia() const
 }
 
 
-static void parse_stack(WvStringParm ext, WvStringList &list, WvStringParm prefix)
+static void parse_stack(WvStringParm ext, WvStringList &list,
+			WvStringParm prefix)
 {
     WvStringList stack;
     stack.split(ext, ";\n");
@@ -1006,7 +1060,8 @@ void WvX509::set_crl_urls(WvStringList &urls)
         GENERAL_NAME *uri = GENERAL_NAME_new();
         uri->type = GEN_URI;
         uri->d.ia5 = M_ASN1_IA5STRING_new();
-        unsigned char *cident = reinterpret_cast<unsigned char *>(i().edit());    
+        unsigned char *cident
+	    = reinterpret_cast<unsigned char *>(i().edit());    
         ASN1_STRING_set(uri->d.ia5, cident, i().len());
         sk_GENERAL_NAME_push(uris, uri);
 
@@ -1208,6 +1263,16 @@ void WvX509::set_extension(int nid, WvStringParm _values)
 {
     CHECK_CERT_EXISTS_SET("extension");
 
+    // first we check to see if the extension already exists, if so we need to
+    // kill it
+    int index = X509_get_ext_by_NID(cert, nid, -1);
+    if (index >= 0)
+    {
+        X509_EXTENSION *ex = X509_delete_ext(cert, index);
+        X509_EXTENSION_free(ex);
+    }    
+
+    // now set the extension
     WvString values(_values);
     X509_EXTENSION *ex = NULL;
     ex = X509V3_EXT_conf_nid(NULL, NULL, nid, values.edit());
@@ -1219,6 +1284,12 @@ void WvX509::set_extension(int nid, WvStringParm _values)
 bool WvX509::isok() const
 {
     return cert;
+}
+
+
+bool WvX509::operator! () const
+{
+    return !isok();
 }
 
 
@@ -1252,7 +1323,8 @@ bool WvX509::verify(WvBuf &original, WvStringParm signature) const
     /* Verify the signature */
     EVP_MD_CTX sig_ctx;
     EVP_VerifyInit(&sig_ctx, EVP_sha1());
-    EVP_VerifyUpdate(&sig_ctx, original.peek(0, original.used()), original.used());
+    EVP_VerifyUpdate(&sig_ctx, original.peek(0, original.used()),
+		     original.used());
     int sig_err = EVP_VerifyFinal(&sig_ctx, sig_buf, sig_size, pk);
     EVP_PKEY_free(pk);
     EVP_MD_CTX_cleanup(&sig_ctx); // Again, not my fault... 
@@ -1266,7 +1338,7 @@ bool WvX509::verify(WvBuf &original, WvStringParm signature) const
 }
 
 
-time_t ASN1_TIME_to_time_t(ASN1_TIME *t)
+static time_t ASN1_TIME_to_time_t(ASN1_TIME *t)
 {
     struct tm newtime;
     char *p = NULL;
@@ -1331,11 +1403,42 @@ WvString WvX509::get_aki() const
     CHECK_CERT_EXISTS_GET("aki", WvString::null);
 
     WvStringList aki_list;
-    parse_stack(get_extension(NID_authority_key_identifier), aki_list, "keyid:");
+    parse_stack(get_extension(NID_authority_key_identifier), aki_list,
+		"keyid:");
     if (aki_list.count())
         return aki_list.popstr();
 
     return WvString::null;
+}
+
+
+WvString WvX509::get_fingerprint(const FprintMode mode) const
+{
+    CHECK_CERT_EXISTS_GET("fingerprint", WvString::null);
+   
+    /* Default to SHA-1 because OpenSSL does too */
+    const EVP_MD *digest = EVP_sha1();
+    if (mode == FingerMD5)
+	digest = EVP_md5();
+
+    unsigned char md[EVP_MAX_MD_SIZE];
+    unsigned int n;
+    if (!X509_digest(cert, digest, md, &n))
+    {
+	errno = -ENOMEM;
+	debug("get_fingerprint: Out of memory\n");
+	return WvString::null;
+    }
+
+    WvDynBuf store;
+    char buf[3];
+    unsigned int i = 0;
+    do {
+	sprintf(buf, "%02X", md[i]);
+	store.putstr(buf);
+    } while (++i < n && (store.putch(':'), 1));
+
+    return store.getstr();
 }
 
 

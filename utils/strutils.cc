@@ -151,7 +151,7 @@ WvString spacecat(WvStringParm a, WvStringParm b, char sep, bool onesep)
 
 
 // Replaces whitespace characters with nonbreaking spaces.
-char *non_breaking(char * string)
+char *non_breaking(const char * string)
 {
     if (string == NULL)
         return (NULL);
@@ -283,9 +283,15 @@ WvString hexdump_buffer(const void *_buf, size_t len, bool charRep)
 	
 	// dump character representation
 	if (charRep)
+	{
 	    for (count2 = 0; count2 < top; count2++)
+	    {
+		if (!(count2 % 4))
+		    *cptr++ = ' ';
 	        *cptr++ = (isprint(buf[count+count2])
 			   ? buf[count+count2] : '.');
+	    }
+	}
 
 	*cptr++ = '\n';
     }
@@ -300,15 +306,19 @@ bool isnewline(char c)
     return c=='\n' || c=='\r';
 }
 
-// ex: WvString foo = web_unescape("I+am+text.%0D%0A");
-WvString web_unescape(const char *str, bool no_space)
+
+// ex: WvString foo = url_decode("I+am+text.%0D%0A");
+WvString url_decode(WvStringParm str, bool no_space)
 {
+    if (!str)
+        return str;
+ 
     const char *iptr;
     char *optr;
-    char *idx1, *idx2;
+    const char *idx1, *idx2;
     static const char hex[] = "0123456789ABCDEF";
     WvString in, intmp(str), out;
- 
+
     in = trim_string(intmp.edit());
     out.setsize(strlen(in) + 1);
 
@@ -337,27 +347,31 @@ WvString web_unescape(const char *str, bool no_space)
 }
 
 
-// And it's magic companion: url_encode
-WvString url_encode(WvStringParm stuff)
+// And its magic companion: url_encode
+WvString url_encode(WvStringParm str, WvStringParm unsafe)
 {
     unsigned int i;
     WvDynBuf retval;
 
-    for (i=0; i < stuff.len(); i++)
+    for (i=0; i < str.len(); i++)
     {
-        if (isalnum(stuff[i]) || strchr("/_.-~", stuff[i]))
+        if (((!!unsafe && !strchr(unsafe, str[i])) ||
+             (!unsafe && (isalnum(str[i]) || strchr("_.!~*'()-", str[i])))) &&
+            str[i] != '%')
         {
-            retval.put(&stuff[i], 1);
-        }               
-        else            
+            retval.put(&str[i], 1);
+        }
+        else
         {               
             char buf[4];
-            sprintf(buf, "%%%02x", stuff[i] & 0xff);
+            sprintf(buf, "%%%02X", str[i] & 0xff);
             retval.put(&buf, 3);
         }
     }
+
     return retval.getstr();
 }
+
 
 WvString diff_dates(time_t t1, time_t t2)
 {
@@ -376,6 +390,7 @@ WvString diff_dates(time_t t1, time_t t2)
         sprintf(out, "%.0f second(s)", diff);
     return out;
 }
+
 
 WvString rfc822_date(time_t when)
 {
@@ -952,7 +967,7 @@ WvString afterstr(WvStringParm line, WvStringParm a)
     if (!line || !a)
 	return WvString::null;
 
-    char *loc = strstr(line, a);
+    const char *loc = strstr(line, a);
     if (loc == 0)
 	return "";
 
@@ -969,8 +984,8 @@ WvString beforestr(WvStringParm line, WvStringParm a)
 	return WvString::null;
 
     WvString ret = line;
-    ret.unique();     
-    char *loc = strstr(ret, a);
+    ret.unique();
+    char *loc = strstr(ret.edit(), a);
 
     if (loc == 0)
 	return line;
@@ -1311,30 +1326,3 @@ WvString ptr2str(void* ptr)
 
     return buf;
 }
-
-
-// Reads the contents of a symlink.  Returns WvString::null on error.
-WvString wvreadlink(WvStringParm path)
-{
-#ifdef _WIN32
-    return WvString::null; // no such thing as a symlink on Windows
-#else
-    WvString result;
-    int size = 64;
-    for (;;)
-    {
-        result.setsize(size);
-        int readlink_result = readlink(path, result.edit(), size);
-        if (readlink_result == -1)
-            return WvString::null;
-        if (readlink_result < size)
-        {
-            result.edit()[readlink_result] = '\0';
-            break;
-        }
-        size = 2*size; // increase buffer size
-    }
-    return result;
-#endif
-}
-

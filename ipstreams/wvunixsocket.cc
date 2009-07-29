@@ -5,8 +5,11 @@
  * WvStream-based Unix domain socket connection class.  See wvunixsocket.h.
  */
 #include "wvistreamlist.h"
+#include "wvunixlistener.h"
 #include "wvunixsocket.h"
+#include "wvstringmask.h"
 #include "wvmoniker.h"
+#include "wvlinkerhack.h"
 
 #if HAVE_ERRNO_H
 # include <errno.h>
@@ -48,12 +51,46 @@
 #include <fcntl.h>
 #include <sys/un.h>
 
-static IWvStream *creator(WvStringParm s)
+WV_LINK(WvUnixConn);
+WV_LINK(WvUnixListener);
+
+static IWvStream *creator(WvStringParm s, IObject*)
 {
     return new WvUnixConn(s);
 }
 
 static WvMoniker<IWvStream> reg("unix", creator);
+
+
+static IWvListener *listener(WvStringParm s, IObject *)
+{
+    WvConstStringBuffer b(s);
+    WvString path = wvtcl_getword(b);
+    WvString wrapper = b.getstr();
+    IWvListener *l = new WvUnixListener(path, 0777);
+    if (l && !!wrapper)
+	l->addwrap(wv::bind(&IWvStream::create, wrapper, _1));
+    return l;
+}
+
+static IWvListener *modelistener(WvStringParm s, IObject *)
+{
+    WvConstStringBuffer b(s);
+    
+    // strtoul knows how to interpret octal if it starts with '0'
+    int mode = strtoul(wvtcl_getword(b, WvStringMask(":")), NULL, 0);
+    if (b.peekch() == ':')
+	b.get(1);
+    WvString path = wvtcl_getword(b);
+    WvString wrapper = b.getstr();
+    IWvListener *l = new WvUnixListener(path, mode);
+    if (l && !!wrapper)
+	l->addwrap(wv::bind(&IWvStream::create, wrapper, _1));
+    return l;
+}
+
+static WvMoniker<IWvListener> lreg("unix", listener);
+static WvMoniker<IWvListener> lmodereg("unixmode", modelistener);
 
 
 WvUnixConn::WvUnixConn(int _fd, const WvUnixAddr &_addr)
@@ -107,21 +144,23 @@ const WvUnixAddr *WvUnixConn::src() const
 
 
 WvUnixListener::WvUnixListener(const WvUnixAddr &_addr, int create_mode)
-	: addr(_addr)
+	: WvListener(new WvFdStream(socket(PF_UNIX, SOCK_STREAM, 0))),
+          addr(_addr)
 {
-    mode_t oldmask;
+    WvFdStream *fds = (WvFdStream *)cloned;
     
-    auto_list = NULL;
-    auto_userdata = NULL;
+    mode_t oldmask;
     bound_okay = false;
     
-    setfd(socket(PF_UNIX, SOCK_STREAM, 0));
-    if (getfd() < 0 || fcntl(getfd(), F_SETFD, 1))
+    if (getfd() < 0)
     {
-	seterr(errno);
+	// error inherited from substream
 	return;
     }
     
+    fds->set_close_on_exec(true);
+    fds->set_nonblock(true);
+
     sockaddr *sa = addr.sockaddr();
     size_t salen = addr.sockaddr_len();
     
@@ -133,7 +172,7 @@ WvUnixListener::WvUnixListener(const WvUnixAddr &_addr, int create_mode)
 	// create_mode work, because bind() doesn't take extra arguments
 	// like open() does. However, we don't actually want to _cancel_
 	// the effects of umask, only add to them; so the original umask is
-	// or'ed into ~create_mode.
+	// or'ed into ~create_mode.  This way it acts like open().
 	oldmask = umask(0777); // really just reading the old umask here
 	umask(oldmask | ((~create_mode) & 0777));
 	
@@ -168,52 +207,37 @@ void WvUnixListener::close()
 	::unlink(filename);
     }
     
-    WvFDStream::close();
+    WvListener::close();
 }
 
 
-WvUnixConn *WvUnixListener::accept()
+IWvStream *WvUnixListener::accept()
 {
     struct sockaddr_un saun;
     socklen_t len = sizeof(saun);
-    int newfd;
-    WvUnixConn *ret;
-
-    newfd = ::accept(getfd(), (struct sockaddr *)&saun, &len);
-    ret = new WvUnixConn(newfd, addr);
-    return ret;
+    
+    if (!isok()) return NULL;
+    
+    int newfd = ::accept(getfd(), (struct sockaddr *)&saun, &len);
+    if (newfd >= 0)
+	return wrap(new WvUnixConn(newfd, addr));
+    else if (errno == EAGAIN || errno == EINTR)
+	return NULL; // this listener is doing weird stuff
+    else
+    {
+	seterr(errno);
+	return NULL;
+    }
 }
 
 
-void WvUnixListener::auto_accept(WvIStreamList *list,
-				 WvStreamCallback callfunc, void *userdata)
+void WvUnixListener::accept_callback(WvIStreamList *list,
+				    wv::function<void(IWvStream*)> cb,
+				    IWvStream *_conn)
 {
-    auto_list = list;
-    auto_callback = callfunc;
-    auto_userdata = userdata;
-    setcallback(accept_callback, this);
-}
-
-
-void WvUnixListener::accept_callback(WvStream &, void *userdata)
-{
-    WvUnixListener &l = *(WvUnixListener *)userdata;
-
-    WvUnixConn *connection = l.accept();
-    connection->setcallback(l.auto_callback, l.auto_userdata);
-    l.auto_list->append(connection, true, "WvUnixConn");
-}
-
-
-size_t WvUnixListener::uread(void *, size_t)
-{
-    return 0;
-}
-
-
-size_t WvUnixListener::uwrite(const void *, size_t)
-{
-    return 0;
+    WvStreamClone *conn = new WvStreamClone(_conn);
+    conn->setcallback(wv::bind(cb, conn));
+    list->append(conn, true, "WvUnixConn");
 }
 
 

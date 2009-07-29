@@ -1,16 +1,19 @@
 #include "wvtest.h"
 #include "wvhttppool.h"
+#include "wvtcplistener.h"
 #include <stdio.h>
 
 #ifndef _WIN32
 #include <netdb.h>
 #endif
 
+
 static void close_callback(WvStream& s)
 {
     if (!s.isok())
         printf("%d", s.geterr());
 }
+
 
 WVTEST_MAIN("WvHttpPool GET")
 {
@@ -25,7 +28,7 @@ WVTEST_MAIN("WvHttpPool GET")
 	WVPASS(buf = pool.addurl("http://www.google.com"));
 	WVPASS(buf->isok());
 	buf->autoforward(*wvcon);
-	buf->setclosecallback(close_callback);
+	buf->setclosecallback(wv::bind(close_callback, wv::ref(*buf)));
 	l.append(buf, true, "buf stream");
 	while (buf->isok() && (wvcon->isok() || !pool.idle()))
 	    l.runonce();
@@ -50,7 +53,7 @@ WVTEST_MAIN("WvHttpPool HEAD")
 	WVPASS(buf = pool.addurl("http://www.google.com", "HEAD"));
 	WVPASS(buf->isok());
 	buf->autoforward(*wvcon);
-	buf->setclosecallback(close_callback);
+	buf->setclosecallback(wv::bind(close_callback, wv::ref(*buf)));
 	l.append(buf, true, "buf stream");
 	while (buf->isok() && (wvcon->isok() || !pool.idle()))
 	{
@@ -65,12 +68,34 @@ WVTEST_MAIN("WvHttpPool HEAD")
 	printf("Can't find www.google.com.  SKIPPED.\n");
 }
 
+
+WVTEST_MAIN("wvhttppool can't connect")
+{
+    unsigned int port = 4200;
+    WvHttpPool pool;
+    
+    WvIStreamList l;
+    l.append(&pool, false, "WvHttpPool");
+    
+    WvStream *buf;
+    WVPASS(buf = pool.addurl(WvString("http://joeyjoejoejuniorshabadoo.fi",
+                                      port), "HEAD"));
+    WVPASS(buf->isok());
+    buf->autoforward(*wvcon);
+    l.append(buf, true, "buf stream");
+    while (buf->isok() && (wvcon->isok() || !pool.idle()))
+        l.runonce();
+
+    WVFAIL(buf->isok());
+}
+
+
 bool pipelining_enabled = true;
 bool expecting_request = false;
 bool break_connection = false;
 unsigned int http_conns = 0;
 
-void tcp_callback(WvStream &s, void*)
+void tcp_callback(WvStream &s)
 {
     bool last_was_pipeline_check = false;
     WvString buf("");
@@ -125,15 +150,13 @@ void tcp_callback(WvStream &s, void*)
 }
 
 
-void listener_callback(WvStream &s, void *userdata)
+static void listener_callback(WvIStreamList *list, IWvStream *_newconn)
 {
-    WvIStreamList &list = *(WvIStreamList *)userdata;
-    WvTCPListener &l = (WvTCPListener &)s;
     http_conns++;
-    WvTCPConn *newconn = l.accept();
     printf("Incoming connection (%u)\n", http_conns);
-    newconn->setcallback(tcp_callback, NULL);
-    list.append(newconn, true, "incoming http conn");
+    WvStreamClone *newconn = new WvStreamClone(_newconn);
+    newconn->setcallback(wv::bind(tcp_callback, wv::ref(*newconn)));
+    list->append(newconn, true, "incoming http conn");
     expecting_request = true;
 }
 
@@ -141,7 +164,7 @@ void listener_callback(WvStream &s, void *userdata)
 static void do_test(WvIStreamList &l, unsigned int port,
 		    unsigned int num_requests)
 {
-    printf("pipelining [%d] requusts [%u]\n", pipelining_enabled,
+    printf("pipelining [%d] requests [%u]\n", pipelining_enabled,
            num_requests);
     WvHttpPool pool;
     WvIStreamList bufs;
@@ -156,7 +179,7 @@ static void do_test(WvIStreamList &l, unsigned int port,
 									 i)));
         WVPASS(buf->isok());
         buf->autoforward(*wvcon);
-        buf->setclosecallback(close_callback);
+        buf->setclosecallback(wv::bind(close_callback, wv::ref(*buf)));
         bufs.append(buf, true, "poolbuf");
     }
 
@@ -201,7 +224,7 @@ WVTEST_MAIN("WvHttpPool pipelining")
 	    ++port;
 	}
     }
-    listener->setcallback(listener_callback, &l);
+    listener->onaccept(wv::bind(listener_callback, &l, _1));
     l.append(listener, true, "http listener");
 
     // Pipelining-enabled tests share one connection for the pipeline test

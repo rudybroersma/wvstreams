@@ -4,6 +4,7 @@
 #include "wvx509mgr.h"
 #include "wvrsa.h"
 #include "wvtcp.h"
+#include "wvtcplistener.h"
 #include "wvistreamlist.h"
 #include "wvstrutils.h"
 #include <signal.h>
@@ -14,6 +15,7 @@ static bool gotmessage = false;
 static WvX509Mgr *x509 = NULL;
 static WvSSLStream *singleconn = NULL;
 static size_t tlen = 0;
+
 
 static void run(WvStream &list, WvStream *s1, WvStream *s2)
 {
@@ -210,19 +212,17 @@ WVTEST_MAIN("ssl inbuf after read error")
 #endif
 
 
-static void do_transfer(WvStream&, void *userdata)
+static void do_transfer(WvSSLStream *ssl)
 {
-    WvSSLStream *ssl = (WvSSLStream *)userdata;
     char buf[1024];
     int rlen = ssl->read(buf, sizeof(buf));
     tlen += rlen;
-    printf("Read %d bytes (%d total)\n", rlen, tlen);
+    printf("Read %d bytes (%zd total)\n", rlen, tlen);
 }
 
 
-static void getmessage(WvStream&, void *userdata)
+static void getmessage(WvSSLStream *ssl)
 {
-    WvSSLStream *ssl = (WvSSLStream *)userdata;
     singleconn = ssl;
     WvString msg = ssl->getline(0);
     if (msg == MSG)
@@ -230,12 +230,10 @@ static void getmessage(WvStream&, void *userdata)
 }
 
 
-static void lcallback(WvStream&, void *userdata)
+static void lcallback(IWvStream *conn)
 {
-    WvTCPListener *l = (WvTCPListener *)userdata;
-    WvTCPConn *conn = l->accept();
     WvSSLStream *ssl = new WvSSLStream(conn, x509, 0, true);
-    ssl->setcallback(getmessage, ssl);
+    ssl->setcallback(wv::bind(getmessage, ssl));
     WvIStreamList::globallist.append(ssl, true, "ssl stream");
 }
 
@@ -255,7 +253,7 @@ WVTEST_MAIN("ssl establish connection")
     WvString laddrstr("0.0.0.0:%s", port);
     WvIPPortAddr laddr(laddrstr);
     WvTCPListener l(laddr);
-    l.setcallback(lcallback, &l);
+    l.onaccept(lcallback);
 
     WvIStreamList::globallist.append(&l, false, "listener");
 
@@ -300,9 +298,10 @@ WVTEST_MAIN("ssl establish connection")
     char data[20000];
     size_t wlen = ssl->write(data, sizeof(data));
 
-    printf("Wrote %d bytes\n", wlen);
+    printf("Wrote %zd bytes\n", wlen);
 
-    singleconn->setcallback(do_transfer, singleconn); // setup for next test
+    // setup for next test
+    singleconn->setcallback(wv::bind(do_transfer, singleconn));
     WVPASS(singleconn->select(0));
 
     // read until we get all the data, or die if there's ever none
@@ -333,4 +332,26 @@ WVTEST_MAIN("x509 refcounting")
     s2->write("Yellow\n");
     run(list, s1, s2);
     WVPASSEQ(s1->getline(-1), "Yellow");
+}
+
+
+WVTEST_MAIN("sslcert moniker creation")
+{
+    WvX509Mgr foo("cn=random_stupid_dn,dn=foo", 1024, false);
+    WvList<WvString> l;
+    
+    WvString certpem = foo.encode(WvX509::CertPEM);
+    WvString rsapem = foo.encode(WvRSAKey::RsaPEM);
+    WvString connmoniker("tcp:127.0.0.1:2222");
+
+    l.append(&certpem, false);
+    l.append(&rsapem, false);
+    l.append(&connmoniker, false);
+
+    IWvStream *dumb = IWvStream::create(WvString("%s%s", "sslcert:", wvtcl_encode(l)));
+    WVPASS(dumb != NULL);
+    if (dumb)
+	WVPASSEQ(dumb->wstype(), "WvSSLStream");
+
+    WVRELEASE(dumb);
 }

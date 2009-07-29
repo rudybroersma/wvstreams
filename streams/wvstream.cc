@@ -17,6 +17,9 @@
 #include "wvcont.h"
 #include "wvstreamsdebugger.h"
 #include "wvstrutils.h"
+#include "wvistreamlist.h"
+#include "wvlinkerhack.h"
+#include "wvmoniker.h"
 
 #ifdef _WIN32
 #define ENOBUFS WSAENOBUFS
@@ -29,6 +32,12 @@
 #else
 #include <errno.h>
 #endif
+
+#include <map>
+
+using std::make_pair;
+using std::map;
+
 
 // enable this to add some read/write trace messages (this can be VERY
 // verbose)
@@ -54,8 +63,31 @@ UUID_MAP_BEGIN(WvStream)
   UUID_MAP_END
 
 
-WvMap<WSID, WvStream *> *WvStream::wsid_map;
-WSID WvStream::next_wsid_to_try = 0;
+static map<WSID, WvStream*> *wsid_map;
+static WSID next_wsid_to_try;
+
+
+WV_LINK(WvStream);
+
+static IWvStream *create_null(WvStringParm, IObject *)
+{
+    return new WvStream();
+}
+
+static WvMoniker<IWvStream> reg("null",  create_null);
+
+
+IWvStream *IWvStream::create(WvStringParm moniker, IObject *obj)
+{
+    IWvStream *s = wvcreate<IWvStream>(moniker, obj);
+    if (!s)
+    {
+	s = new WvStream();
+	s->seterr_both(EINVAL, "Unknown moniker '%s'", moniker);
+	WVRELEASE(obj); // we're not going to use it after all
+    }
+    return s;
+}
 
 
 static bool is_prefix_insensitive(const char *str, const char *prefix)
@@ -158,8 +190,8 @@ void WvStream::debugger_streams_maybe_display_one_stream(WvStream *s,
         }
         else
         {
-            if (s->wsname() && contains_insensitive(s->wsname(), *arg)
-                    || s->wstype() && contains_insensitive(s->wstype(), *arg))
+            if ((s->wsname() && contains_insensitive(s->wsname(), *arg))
+	     || (s->wstype() && contains_insensitive(s->wstype(), *arg)))
             {
                 show = true;
                 break;
@@ -176,12 +208,13 @@ WvString WvStream::debugger_streams_run_cb(WvStringParm cmd,
         WvStreamsDebugger::ResultCallback result_cb, void *)
 {
     debugger_streams_display_header(cmd, result_cb);
-    if (WvStream::wsid_map)
+    if (wsid_map)
     {
-        WvMap<WSID, WvStream *>::Iter i(*WvStream::wsid_map);
-        for (i.rewind(); i.next(); )
-            debugger_streams_maybe_display_one_stream(i->data,
-                    cmd, args, result_cb);
+	map<WSID, WvStream*>::iterator it;
+
+	for (it = wsid_map->begin(); it != wsid_map->end(); ++it)
+            debugger_streams_maybe_display_one_stream(it->second, cmd, args,
+						      result_cb);
     }
     
     return WvString::null;
@@ -222,8 +255,7 @@ WvStream::WvStream():
     stop_read(false),
     stop_write(false),
     closed(false),
-    userdata(NULL),
-    readcb(this, &WvStream::legacy_callback),
+    readcb(wv::bind(&WvStream::legacy_callback, this)),
     max_outbuf_size(0),
     outbuf_delayed_flush(false),
     is_auto_flush(true),
@@ -245,17 +277,17 @@ WvStream::WvStream():
     
     // Choose a wsid;
     if (!wsid_map)
-        wsid_map = new WvMap<WSID, WvStream *>(256);
+        wsid_map = new map<WSID, WvStream*>;
     WSID first_wsid_tried = next_wsid_to_try;
     do
     {
-        if (!wsid_map->exists(next_wsid_to_try))
+        if (wsid_map->find(next_wsid_to_try) == wsid_map->end())
             break;
         ++next_wsid_to_try;
     } while (next_wsid_to_try != first_wsid_tried);
     my_wsid = next_wsid_to_try++;
-    assert(!wsid_map->exists(my_wsid));
-    wsid_map->add(my_wsid, this);
+    bool inserted = wsid_map->insert(make_pair(my_wsid, this)).second;
+    assert(inserted);
     
 #ifdef _WIN32
     WSAData wsaData;
@@ -289,12 +321,18 @@ WvStream::~WvStream()
     call_ctx = 0; // finish running the suspended callback, if any
 
     assert(wsid_map);
-    wsid_map->remove(my_wsid);
-    if (wsid_map->isempty())
+    wsid_map->erase(my_wsid);
+    if (wsid_map->empty())
     {
         delete wsid_map;
         wsid_map = NULL;
     }
+    
+    // eventually, streams will auto-add themselves to the globallist.  But
+    // even before then, it'll never be useful for them to be on the
+    // globallist *after* they get destroyed, so we might as well auto-remove
+    // them already.  It's harmless for people to try to remove them twice.
+    WvIStreamList::globallist.unlink(this);
     
     TRACE("done destroying %p\n", this);
 }
@@ -312,7 +350,7 @@ void WvStream::close()
     {
         IWvStreamCallback cb = closecb;
         closecb = 0; // ensure callback is only called once
-        cb(*this);
+        cb();
     }
     
     // I would like to delete call_ctx here, but then if someone calls
@@ -323,35 +361,33 @@ void WvStream::close()
 
 void WvStream::autoforward(WvStream &s)
 {
-    setcallback(autoforward_callback, &s);
+    setcallback(wv::bind(autoforward_callback, wv::ref(*this), wv::ref(s)));
     read_requires_writable = &s;
 }
 
 
 void WvStream::noautoforward()
 {
-    setcallback(0, NULL);
+    setcallback(0);
     read_requires_writable = NULL;
 }
 
 
-void WvStream::autoforward_callback(WvStream &s, void *userdata)
+void WvStream::autoforward_callback(WvStream &input, WvStream &output)
 {
-    WvStream &s2 = *(WvStream *)userdata;
     char buf[1024];
     size_t len;
     
-    len = s.read(buf, sizeof(buf));
-    // fprintf(stderr, "autoforward read %d bytes\n", (int)len);
-    s2.write(buf, len);
+    len = input.read(buf, sizeof(buf));
+    output.write(buf, len);
 }
 
 
 void WvStream::_callback()
 {
     execute();
-    if (!! callfunc)
-	callfunc(*this, userdata);
+    if (!!callfunc)
+	callfunc();
 }
 
 
@@ -389,8 +425,7 @@ void WvStream::callback()
     {
 	if (!call_ctx) // no context exists yet!
 	{
-	    call_ctx = WvCont(WvCallback<void*,void*>
-			      (this, &WvStream::_callwrap),
+	    call_ctx = WvCont(wv::bind(&WvStream::_callwrap, this, _1),
 			      personal_stack_size);
 	}
 	
@@ -812,7 +847,7 @@ void WvStream::pre_select(SelectInfo &si)
     
     time_t alarmleft = alarm_remaining();
     
-    if (!si.inherit_request && alarmleft == 0)
+    if (!isok() || (!si.inherit_request && alarmleft == 0))
     {
 	si.msec_timeout = 0;
 	return; // alarm has rung
@@ -820,9 +855,9 @@ void WvStream::pre_select(SelectInfo &si)
 
     if (!si.inherit_request)
     {
-	si.wants.readable |= readcb;
-	si.wants.writable |= writecb;
-	si.wants.isexception |= exceptcb;
+	si.wants.readable |= static_cast<bool>(readcb);
+	si.wants.writable |= static_cast<bool>(writecb);
+	si.wants.isexception |= static_cast<bool>(exceptcb);
     }
     
     // handle read-ahead buffering
@@ -841,9 +876,9 @@ bool WvStream::post_select(SelectInfo &si)
 {
     if (!si.inherit_request)
     {
-	si.wants.readable |= readcb;
-	si.wants.writable |= writecb;
-	si.wants.isexception |= exceptcb;
+	si.wants.readable |= static_cast<bool>(readcb);
+	si.wants.writable |= static_cast<bool>(writecb);
+	si.wants.isexception |= static_cast<bool>(exceptcb);
     }
     
     // FIXME: need sane buffer flush support for non FD-based streams
@@ -887,8 +922,6 @@ void WvStream::_build_selectinfo(SelectInfo &si, time_t msec_timeout,
     si.msec_timeout = msec_timeout;
     si.inherit_request = ! forceable;
     si.global_sure = false;
-
-    if (!isok()) return;
 
     wvstime_sync();
 
@@ -943,8 +976,6 @@ int WvStream::_do_select(SelectInfo &si)
 
 bool WvStream::_process_selectinfo(SelectInfo &si, bool forceable)
 {
-    if (!isok()) return false;
-
     // We cannot move the clock backward here, because timers that
     // were expired in pre_select could then not be expired anymore,
     // and while time going backward is rather unsettling in general,
@@ -965,17 +996,15 @@ bool WvStream::_process_selectinfo(SelectInfo &si, bool forceable)
 }
 
 
-bool WvStream::_select(time_t msec_timeout,
-    bool readable, bool writable, bool isexcept, bool forceable)
+bool WvStream::_select(time_t msec_timeout, bool readable, bool writable,
+		       bool isexcept, bool forceable)
 {
-    assert(wsid_map && wsid_map->exists(my_wsid)); // Detect use of deleted stream
+    // Detect use of deleted stream
+    assert(wsid_map && (wsid_map->find(my_wsid) != wsid_map->end()));
         
     SelectInfo si;
-    _build_selectinfo(si, msec_timeout,
-                      readable, writable, isexcept, forceable);
-    
-    if (!isok())
-	return false;
+    _build_selectinfo(si, msec_timeout, readable, writable, isexcept,
+		      forceable);
     
     bool sure = false;
     int sel = _do_select(si);
@@ -997,11 +1026,11 @@ IWvStream::SelectRequest WvStream::get_select_request()
 void WvStream::force_select(bool readable, bool writable, bool isexception)
 {
     if (readable)
-	readcb = IWvStreamCallback(this, &WvStream::legacy_callback);
+	readcb = wv::bind(&WvStream::legacy_callback, this);
     if (writable)
-	writecb = IWvStreamCallback(this, &WvStream::legacy_callback);
+	writecb = wv::bind(&WvStream::legacy_callback, this);
     if (isexception)
-	exceptcb = IWvStreamCallback(this, &WvStream::legacy_callback);
+	exceptcb = wv::bind(&WvStream::legacy_callback, this);
 }
 
 
@@ -1095,19 +1124,18 @@ const WvAddr *WvStream::src() const
 }
 
 
-void WvStream::setcallback(WvStreamCallback _callfunc, void *_userdata)
+void WvStream::setcallback(IWvStreamCallback _callfunc)
 { 
     callfunc = _callfunc;
-    userdata = _userdata;
     call_ctx = 0; // delete any in-progress WvCont
 }
 
 
-void WvStream::legacy_callback(IWvStream& s)
+void WvStream::legacy_callback()
 {
     execute();
-    if (!! callfunc)
-	callfunc(*this, userdata);
+    if (!!callfunc)
+	callfunc();
 }
 
 
@@ -1151,7 +1179,7 @@ IWvStreamCallback WvStream::setclosecallback(IWvStreamCallback _callback)
 	// already closed?  notify immediately!
 	closecb = 0;
 	if (!!_callback)
-	    _callback(*this);
+	    _callback();
     }
     return tmp;
 }
@@ -1169,9 +1197,15 @@ void WvStream::unread(WvBuf &unreadbuf, size_t count)
 
 IWvStream *WvStream::find_by_wsid(WSID wsid)
 {
-    WvStream **presult = wsid_map? wsid_map->find(wsid): NULL;
-    if (presult)
-        return *presult;
-    else
-        return NULL;   
+    IWvStream *retval = NULL;
+
+    if (wsid_map)
+    {
+	map<WSID, WvStream*>::iterator it = wsid_map->find(wsid);
+
+	if (it != wsid_map->end())
+	    retval = it->second;
+    }
+
+    return retval;
 }

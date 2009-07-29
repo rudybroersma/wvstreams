@@ -22,25 +22,24 @@ WV_LINK(UniReplicateGen);
 #endif
 
 
-static IUniConfGen *creator(WvStringParm s)
+static IUniConfGen *creator(WvStringParm s, IObject *_obj)
 {
     IUniConfGenList gens;
-
-    if (gens.isempty())
+    
+    DPRINTF("encoded_monikers = %s\n", s.cstr());
+    WvStringList monikers;
+    wvtcl_decode(monikers, s);
+    DPRINTF("monikers = %s\n", monikers.join(",").cstr());
+    
+    WvStringList::Iter i(monikers);
+    for (i.rewind(); i.next(); )
     {
-    	DPRINTF("encoded_monikers = %s\n", s.cstr());
-    	WvStringList monikers;
-    	wvtcl_decode(monikers, s);
-    	DPRINTF("monikers = %s\n", monikers.join(",").cstr());
-    	
-    	WvStringList::Iter i(monikers);
-    	for (i.rewind(); i.next(); )
-    	{
-            IUniConfGen *gen = wvcreate<IUniConfGen>(*i);
-            if (gen)
-            	gens.append(gen, false);
-        }
+        if (_obj) _obj->addRef();
+	IUniConfGen *gen = wvcreate<IUniConfGen>(*i, _obj);
+	if (gen)
+	    gens.append(gen, false);
     }
+    if (_obj) _obj->release();
 
     return new UniReplicateGen(gens);
 }
@@ -66,9 +65,9 @@ UniReplicateGen::UniReplicateGen(const IUniConfGenList &_gens,
     	if (gen)
     	{
     	    gens.append(gen, true);
-            gen->gen->add_callback(
-		this, WvBoundCallback<UniConfGenCallback, Gen*>(
-		    this, &UniReplicateGen::deltacallback, gen));
+            gen->gen->add_callback(this,
+				   wv::bind(&UniReplicateGen::deltacallback,
+					    this, gen, _1, _2));
         }
     }
     
@@ -90,9 +89,8 @@ void UniReplicateGen::prepend(IUniConfGen *_gen, bool auto_free)
     if (gen)
     {
     	gens.prepend(gen, true);
-        gen->gen->add_callback(
-	    this, WvBoundCallback<UniConfGenCallback, Gen*>(
-		this, &UniReplicateGen::deltacallback, gen));
+        gen->gen->add_callback(this, wv::bind(&UniReplicateGen::deltacallback,
+					      this, gen, _1, _2));
             
         replicate();
     }
@@ -105,9 +103,8 @@ void UniReplicateGen::append(IUniConfGen *_gen, bool auto_free)
     if (gen)
     {
     	gens.append(gen, true);
-        gen->gen->add_callback(
-	    this, WvBoundCallback<UniConfGenCallback, Gen*>(
-		this, &UniReplicateGen::deltacallback, gen));
+        gen->gen->add_callback(this, wv::bind(&UniReplicateGen::deltacallback,
+					      this, gen, _1, _2));
             
         replicate();
     }

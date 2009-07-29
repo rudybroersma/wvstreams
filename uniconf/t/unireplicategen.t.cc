@@ -3,11 +3,17 @@
 #include "unitempgen.h"
 #include "unireplicategen.h"
 #include "wvistreamlist.h"
+#include "wvtimeutils.h"
 #include "uniconfgen-sanitytest.h"
 
 #include <sys/types.h>
 #include <sys/wait.h>
+
+#ifdef MACOS
+#include <signal.h>
+#else
 #include <sys/signal.h>
+#endif
 
 WVTEST_MAIN("UniReplicateGen Sanity Test")
 {
@@ -109,10 +115,8 @@ WVTEST_MAIN("retry:uniconfd")
     WvString ini_moniker("ini:%s", uniconfd_ini);
     char * uniconfd_argv[] =
         {
-            "uniconfd",
-            "-p", "0",
-            "-s", "0",
-            "-u", uniconfd_sock.edit(),
+            (char*)"uniconfd",
+            (char*)"-l", WvString("unix:%s", uniconfd_sock).edit(),
             ini_moniker.edit(),
             NULL
         };
@@ -141,7 +145,7 @@ WVTEST_MAIN("retry:uniconfd")
     	execv("uniconf/daemon/uniconfd", uniconfd_argv);
     	_exit(1);
     }
-    sleep(1);
+    wvdelay(100);
     
     // wait for connect
     {
@@ -151,7 +155,7 @@ WVTEST_MAIN("retry:uniconfd")
         {
             another_cfg.xset("wait", "ping");
             if (another_cfg.xget("wait") == "ping") break;
-            sleep(1);
+            wvdelay(100);
         }
     }
 
@@ -184,7 +188,7 @@ WVTEST_MAIN("retry:uniconfd")
     	execv("uniconf/daemon/uniconfd", uniconfd_argv);
     	_exit(1);
     }
-    sleep(1);
+    wvdelay(100);
     
     // wait for connect
     {
@@ -194,7 +198,7 @@ WVTEST_MAIN("retry:uniconfd")
         {
             another_cfg.xset("wait", "pong");
             if (another_cfg.xget("wait") == "pong") break;
-            sleep(1);
+            wvdelay(100);
         }
     }
 

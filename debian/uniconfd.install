@@ -1,2 +1,2 @@
-debian/tmp/usr/sbin/uniconfd
-debian/tmp/var/lib/uniconf/uniconfd.ini
+uniconf/daemon/uniconfd usr/sbin
+uniconf/daemon/uniconfd.ini var/lib/uniconf

@@ -15,14 +15,13 @@ WVTEST_MAIN("backslashtest.cc")
         WvEncoder *enc = new WvBackslashEncoder();
         WvBufStream *ostream = new WvBufStream();
         WvDynBuf outbuf;
-        char *input[BSLASH_NUM_INPUT] = 
+        const char *input[BSLASH_NUM_INPUT] = 
             {"encode this!\n", "baroofey\n", "\\", "\nmagoo\b", " "};
-        char *desired[BSLASH_NUM_INPUT] =
+        const char *desired[BSLASH_NUM_INPUT] =
             {"encode this!\\n", "baroofey\\n", "\\\\", "\\nmagoo\\b", " "};
         WvString result;
 
         WvEncoderStream *stream = new WvEncoderStream(ostream);
-        stream->disassociate_on_close = true;
         stream->auto_flush(true);
         stream->writechain.append(enc, true);
 
@@ -38,7 +37,6 @@ WVTEST_MAIN("backslashtest.cc")
        
         stream->flush(0);
         WVRELEASE(stream);
-        WVRELEASE(ostream);
     }
     
     // Test decoding
@@ -46,14 +44,13 @@ WVTEST_MAIN("backslashtest.cc")
         WvEncoder *enc = new WvBackslashDecoder();
         WvBufStream *ostream = new WvBufStream();
         WvDynBuf outbuf;
-        char *input[BSLASH_NUM_INPUT] =
+        const char *input[BSLASH_NUM_INPUT] =
             {"encode this!\\n", "baroofey\\n", "\\\\", "\\nmagoo\\b", " "};
-        char *desired[BSLASH_NUM_INPUT] = 
+        const char *desired[BSLASH_NUM_INPUT] = 
             {"encode this!\n", "baroofey\n", "\\", "\nmagoo\b", " "};
         WvString result;
 
         WvEncoderStream *stream = new WvEncoderStream(ostream);
-        stream->disassociate_on_close = true;
         stream->auto_flush(true);
         stream->writechain.append(enc, true);
 
@@ -69,6 +66,5 @@ WVTEST_MAIN("backslashtest.cc")
        
         stream->flush(0);
         WVRELEASE(stream);
-        WVRELEASE(ostream);
     }
 }

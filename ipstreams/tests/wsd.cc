@@ -5,6 +5,7 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 
+#ifndef MACOS // The version of READLINE shipped with MacOS is brain damaged.
 
 class WvReadLineStream : public WvStream
 {
@@ -150,10 +151,8 @@ public:
 WvReadLineStream *WvReadLineStream::me = NULL;
 
 
-void remote_cb(WvStream &remote, void *_local)
+void remote_cb(WvStream &remote, WvReadLineStream &local)
 {
-    WvReadLineStream &local = *(WvReadLineStream *)_local;
-
     const char *line = remote.getline();
     if (line == NULL)
         return;
@@ -174,11 +173,8 @@ void remote_cb(WvStream &remote, void *_local)
 }
 
 
-void local_cb(WvStream &_local, void  *_remote)
+void local_cb(WvReadLineStream &local, WvStream &remote)
 {
-    WvReadLineStream &local = (WvReadLineStream &)_local;
-    WvStream &remote = *(WvStream *)_remote;
-
     const char *line = local.getline();
     if (line == NULL)
         return;
@@ -208,11 +204,13 @@ int main(int argc, char **argv)
     s->set_wsname("%s", sockname);
     s->print("help\n");
 
-    s->setcallback(remote_cb, &readlinestream);
-    WvIStreamList::globallist.append(s, true);
+    s->setcallback(wv::bind(remote_cb, wv::ref(*s), wv::ref(readlinestream)));
+    WvIStreamList::globallist.append(s, true, "wvstreams debugger client");
 
-    readlinestream.setcallback(local_cb, s);
-    WvIStreamList::globallist.append(&readlinestream, false);
+    readlinestream.setcallback(wv::bind(local_cb, wv::ref(readlinestream),
+					wv::ref(*s)));
+    WvIStreamList::globallist.append(&readlinestream, false, 
+                                     "wvstreams debugger readline");
 
     while (s->isok() && readlinestream.isok())
         WvIStreamList::globallist.runonce();
@@ -220,3 +218,4 @@ int main(int argc, char **argv)
     return 0;
 }
 
+#endif // Apple brain damaged Readline.

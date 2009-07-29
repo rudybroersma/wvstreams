@@ -44,13 +44,23 @@ endif
 config.status: configure
 	dh_testdir
 	# Add here commands to configure the package.
+
+	QUILT_PATCHES=debian/patches quilt push -a || test $$? = 2
+
+ifneq "$(wildcard /usr/share/misc/config.sub)" ""
+	cp -f /usr/share/misc/config.sub config.sub
+endif
+ifneq "$(wildcard /usr/share/misc/config.guess)" ""
+	cp -f /usr/share/misc/config.guess config.guess
+endif
+
 	CFLAGS="$(CFLAGS)" ./configure \
 		--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 		--prefix=/usr --mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info \
 		--sysconfdir=/etc --localstatedir=/var \
 		--disable-debug --disable-verbose \
-		--with-qt --with-openslp
+		--with-qt --with-openslp --with-dbus=no
 
 
 #Architecture
@@ -85,12 +95,10 @@ clean:
 	[ ! -f xplc/Makefile ] || $(MAKE) -C xplc distclean
 	[ ! -f Makefile ] || $(MAKE) distclean
 
-ifneq "$(wildcard /usr/share/misc/config.sub)" ""
-	cp -f /usr/share/misc/config.sub config.sub
-endif
-ifneq "$(wildcard /usr/share/misc/config.guess)" ""
-	cp -f /usr/share/misc/config.guess config.guess
-endif
+	QUILT_PATCHES=debian/patches quilt pop -a -R || test $$? = 2
+
+	rm -f config.sub config.guess
+	rm -rf .pc
 
 	dh_clean
 
@@ -108,14 +116,6 @@ install-indep:
 	install -d $(DOCDIR)/html-api
 	find Docs/doxy-html -type f -exec install -m644 '{}' $(DOCDIR)/html-api/ ';'
 
-#	@# Don't install the SGML documentation.
-#	@install -d $(DOCDIR)/html-manual
-#	@install -m644 Docs/sgmlmanual/wvstreams.html/*.html \
-#		$(DOCDIR)/html-manual/
-#	@install -m644 Docs/sgmlmanual/wvstreams.ps \
-#		Docs/sgmlmanual/wvstreams.pdf \
-#		$(DOCDIR)
-
 	dh_install -i
 
 install-arch:
@@ -130,21 +130,11 @@ install-arch:
 
 	# Install library package
 
-#	$(MAKE) installshared PREFIX=$(PKG)/usr
 	# Temporary Fix to work around a bug in Debhelper
 	$(MAKE) install-shared DESTDIR=$(CURDIR)/debian/tmp
 
 	# Install development package
 	$(MAKE) install-dev DESTDIR=$(PKGDEV)
-
-	# Install a minimal XPLC
-	$(MAKE) install-xplc DESTDIR=$(PKGDEV)
-	rm -f $(PKGDEV)/usr/lib/libxplc.so*
-
-	# Install UniConf daemon
-	$(MAKE) install-uniconfd DESTDIR=$(CURDIR)/debian/tmp
-	install -d $(CURDIR)/debian/tmp/etc/default
-	install -m644 debian/uniconfd.default debian/tmp/etc/default/uniconfd
 
 	# Install lintian overrides
 	install -m644 debian/libwvstreams$(version)-base.lintian-override debian/libwvstreams$(version)-base/usr/share/lintian/overrides/libwvstreams$(version)-base
@@ -162,15 +152,7 @@ binary-common:
 	dh_installchangelogs ChangeLog
 	dh_installdocs
 	dh_installexamples
-#       dh_installmenu
-#       dh_installdebconf
-#       dh_installlogrotate
-#       dh_installemacsen
-#       dh_installpam
-#       dh_installmime
 	dh_installinit
-#       dh_installcron
-#       dh_installinfo
 	dh_installman
 	dh_link
 	dh_strip --exclude=libwvtest.a
@@ -178,8 +160,6 @@ binary-common:
 	dh_fixperms
 	#Fix other permissions
 	chmod -x $(CURDIR)/debian/libwvstreams-dev/usr/lib/valgrind/wvstreams.supp
-#       dh_perl
-#       dh_python
 	dh_makeshlibs -plibwvstreams$(version)-base \
 		      -plibwvstreams$(version)-extras \
 		      -plibwvstreams$(version)-qt \

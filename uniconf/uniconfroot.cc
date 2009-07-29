@@ -10,28 +10,33 @@
 
 WV_LINK_TO(UniGenHack);
 
-UniConfRoot::UniConfRoot() : UniConf(this), watchroot(NULL)
+
+UniConfRoot::UniConfRoot():
+    UniConf(this),
+    watchroot(NULL)
 {
-    mounts.add_callback(this, UniConfGenCallback(this,
-			  &UniConfRoot::gen_callback));
+    mounts.add_callback(this, wv::bind(&UniConfRoot::gen_callback, this,
+				       _1, _2));
 }
 
 
-UniConfRoot::UniConfRoot(WvStringParm moniker, bool refresh)
-    : UniConf(this), watchroot(NULL)
+UniConfRoot::UniConfRoot(WvStringParm moniker, bool refresh):
+    UniConf(this),
+    watchroot(NULL)
 {
     mounts.mount("/", moniker, refresh);
-    mounts.add_callback(this, UniConfGenCallback(this,
-			  &UniConfRoot::gen_callback));
+    mounts.add_callback(this, wv::bind(&UniConfRoot::gen_callback, this,
+				       _1, _2));
 }
 
 
-UniConfRoot::UniConfRoot(UniConfGen *gen, bool refresh)
-    : UniConf(this), watchroot(NULL)
+UniConfRoot::UniConfRoot(UniConfGen *gen, bool refresh):
+    UniConf(this),
+    watchroot(NULL)
 {
     mounts.mountgen("/", gen, refresh);
-    mounts.add_callback(this, UniConfGenCallback(this,
-			  &UniConfRoot::gen_callback));
+    mounts.add_callback(this, wv::bind(&UniConfRoot::gen_callback, this,
+				       _1, _2));
 }
 
 
@@ -53,7 +58,7 @@ static bool watchout(UniWatchInfoTree *t)
 	{
 	    fail = true;
 	    if (1)
-		fprintf(stderr, "Remaining watch: '%s' (%d)\n",
+		fprintf(stderr, "Remaining watch: '%s' (%zd)\n",
 			w->fullkey().printable().cstr(), w->watches.count());
 	}
     }
@@ -122,9 +127,8 @@ void UniConfRoot::del_callback(void *cookie, const UniConfKey &key,
 
 void UniConfRoot::add_setbool(const UniConfKey &key, bool *flag, bool recurse)
 {
-    add_callback(flag, key,
-		 WvBoundCallback<UniConfCallback, bool *>
-		    (&UniConfRoot::setbool_callback, flag),
+    add_callback(flag, key, wv::bind(&UniConfRoot::setbool_callback, flag,
+				     _1, _2),
 		 recurse);
 }
 

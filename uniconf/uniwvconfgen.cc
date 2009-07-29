@@ -28,7 +28,7 @@ public:
 };
 
 
-static IUniConfGen *creator(WvStringParm s)
+static IUniConfGen *creator(WvStringParm s, IObject*)
 {
     return new UniWvConfGen(new WvConf(s));
 }
@@ -52,8 +52,8 @@ void UniWvConfGen::notify(void *userdata, WvStringParm section,
 UniWvConfGen::UniWvConfGen(WvConf *_cfg):
     tempkey(NULL), tempvalue(), cfg(_cfg)
 {
-    cfg->add_callback(WvConfCallback(this, &UniWvConfGen::notify), NULL,
-		      "", "", this);
+    cfg->add_callback(wv::bind(&UniWvConfGen::notify, this, _1, _2, _3, _4, _5),
+		      NULL, "", "", this);
 }
 
 

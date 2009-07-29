@@ -3,18 +3,14 @@
  */
 #include "wvtest.h"
 #include "wvtask.h"
-#ifdef _WIN32
-#define usleep(t) Sleep((t) / 1000 + 1) // not exactly right but it will do
-#else
-#include <unistd.h> // for sleep()
-#endif
+#include "wvtimeutils.h" // for wvdelay()
 
 // BEGIN simple definition
-int glob;
+long glob;
 
 static void gentask(void *userdata)
 {
-    int startval = (int)userdata, val = startval;
+    long startval = (long)userdata, val = startval;
     
     while (val - startval < 3)
     {
@@ -81,7 +77,7 @@ void gentask2(void *userdata)
     while (count < 3)
     {
 	printf("%s count %d -- %p\n", str, ++count, &str);
-	usleep(delay*1000);
+	wvdelay(delay);
 	if (count % 2)
 	{
 	    if (gman->whoami() == ga)

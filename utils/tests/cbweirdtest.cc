@@ -1,6 +1,6 @@
-#include "wvcallback.h"
+#include "wvtr1.h"
 
-typedef WvCallback<void> Cb;
+typedef wv::function<void()> Cb;
 
 void f()
 {

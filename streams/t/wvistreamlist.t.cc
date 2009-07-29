@@ -1,13 +1,13 @@
 #include "wvistreamlist.h"
 #include "wvtest.h"
 #include "wvloopback.h"
+#include "wvtimeutils.h"
 #ifdef _WIN32
 #include "streams.h"
 #endif
 
-static void cb(WvStream &s, void *userdata)
+static void cb(int *x)
 {
-    int *x = (int *)userdata;
     (*x)++;
 }
 
@@ -17,10 +17,10 @@ WVTEST_MAIN("spinning list")
     int scount = 0, lcount = 0;
     
     WvStream s;
-    s.setcallback(cb, &scount);
+    s.setcallback(wv::bind(cb, &scount));
     
     WvIStreamList l;
-    l.setcallback(cb, &lcount);
+    l.setcallback(wv::bind(cb, &lcount));
     l.append(&s, false, "stream");
     
     l.alarm(0);
@@ -53,10 +53,10 @@ WVTEST_MAIN("spinning list 2")
     int scount = 0, lcount = 0;
     
     WvLoopback s;
-    s.setcallback(cb, &scount);
+    s.setcallback(wv::bind(cb, &scount));
     
     WvIStreamList l;
-    l.setcallback(cb, &lcount);
+    l.setcallback(wv::bind(cb, &lcount));
     l.append(&s, false, "stream");
     
     s.runonce(0);
@@ -78,7 +78,7 @@ WVTEST_MAIN("spinning list 2")
     scount = lcount = 0;
     s.write("x");
     l.alarm(0);
-    sleep(1);
+    wvdelay(100);
     l.runonce(5000);
     s.drain();
     WVPASSEQ(scount, 1);

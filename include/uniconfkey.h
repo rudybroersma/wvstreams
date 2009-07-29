@@ -9,11 +9,7 @@
 
 #include "wvstring.h"
 #include "wvlinklist.h"
-
-
-// The Python headers try to #define ANY as void.  If we're building Python
-// wrappers, get rid of that.
-#undef ANY
+#include <limits.h>
 
 
 /**
@@ -327,7 +323,7 @@ public:
      */
     UniConfKey last(int n = 1) const
     {
-        return range(numsegments() - n, __INT_MAX__);
+        return range(numsegments() - n, INT_MAX);
     }
 
     /**
@@ -338,7 +334,7 @@ public:
      */
     UniConfKey removefirst(int n = 1) const
     {
-        return range(n, __INT_MAX__);
+        return range(n, INT_MAX);
     }
 
     /**

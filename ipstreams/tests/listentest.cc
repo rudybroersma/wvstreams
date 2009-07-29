@@ -5,14 +5,15 @@
  * WvTCPListener test.  Listens on a port, and bounces stdin and stdout 
  * between all connections established to it.
  */
+#include "wvtcplistener.h"
 #include "wvtcp.h"
 #include "wvistreamlist.h"
 #include "wvlog.h"
 
-static void stream_bounce_to_list(WvStream &s, void *userdata)
+
+static void stream_bounce_to_list(WvStream &s, WvIStreamList *list)
 {
-    WvIStreamList &l = *(WvIStreamList *)userdata;
-    WvIStreamList::Iter out(l);
+    WvIStreamList::Iter out(*list);
     char *line;
 
     while ((line = s.getline()) != NULL)
@@ -39,6 +40,14 @@ static void stream_bounce_to_list(WvStream &s, void *userdata)
 }
 
 
+static void accept_callback(WvIStreamList &list, IWvStream *_conn)
+{
+    WvStreamClone *conn = new WvStreamClone(_conn);
+    conn->setcallback(wv::bind(stream_bounce_to_list, wv::ref(*conn), &list));
+    list.append(conn, true, "WvTCPConn");
+}
+
+
 int main(int argc, char **argv)
 {
     {
@@ -47,8 +56,9 @@ int main(int argc, char **argv)
 
 	WvTCPListener sock(WvIPPortAddr(argc==2 ? argv[1] : "0.0.0.0:0"));
 	
-	wvcon->setcallback(stream_bounce_to_list, &l);
-	sock.auto_accept(&l, stream_bounce_to_list, &l);
+	wvcon->setcallback(wv::bind(stream_bounce_to_list,
+				    wv::ref(*wvcon), &l));
+	sock.onaccept(wv::bind(accept_callback, wv::ref(l), _1));
 	
 	log("Listening on port %s\n", *sock.src());
 	

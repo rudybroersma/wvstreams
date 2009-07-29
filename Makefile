@@ -1,147 +1,288 @@
-WVSTREAMS=.
-WVSTREAMS_SRC= # Clear WVSTREAMS_SRC so wvrules.mk uses its WVSTREAMS_foo
-VPATH=$(libdir)
+WVSTREAMS:=.
+
 include wvrules.mk
-override enable_efence=no
+include install.mk
 
-ifneq (${_WIN32},)
-  $(error "Use 'make -f Makefile-win32' instead!")
+ifdef _WIN32
+    include win32.mk
 endif
 
-export WVSTREAMS
-
-XPATH=include
-
-include vars.mk
-
-SUBDIRS = gnulib
-
-all: runconfigure xplc $(TARGETS)
-
-.PHONY: xplc xplc/clean install-xplc
-xplc:
-xplc/clean:
-install-xplc:
-
-ifeq ("$(build_xplc)", "yes")
-
-xplc:
-	$(MAKE) -C xplc
-
-xplc/clean:
-	$(MAKE) -C xplc clean
-
-install-xplc: xplc
-	$(INSTALL) -d $(DESTDIR)$(includedir)/wvstreams/xplc
-	$(INSTALL_DATA) $(wildcard xplc/include/xplc/*.h) $(DESTDIR)$(includedir)/wvstreams/xplc
-	$(INSTALL) -d $(DESTDIR)$(libdir)
-	$(INSTALL_DATA) xplc/libxplc-cxx.a $(DESTDIR)$(libdir)
-
+ifdef _SOLARIS
+    RM = rm -f
+    CFLAGS += -DSOLARIS
+    CXXFLAGS += -DSOLARIS
+else 
+    ifdef _MACOS
+    	CFLAGS+= -DMACOS
+    	CXXFLAGS+= -DMACOS
+    	WV_EXCLUDES+= linuxstreams/tests/aliastest linuxstreams/tests/ifctest linuxstreams/tests/routetest qt/tests/qtstringtest
+    	TEST_SKIP_OBJS+= linuxstreams/t/%
+    else
+    	RM = rm -fv
+    endif 
 endif
 
-.PHONY: clean depend dust kdoc doxygen install install-shared install-dev install-xplc uninstall tests dishes dist distclean realclean test
+%: %.subst
+	sed -e 's/#VERSION#/$(WVPACKAGE_VERSION)/g' < $< > $@
 
-# FIXME: little trick to ensure that the wvautoconf.h.in file is there
-.PHONY: dist-hack-clean
-dist-hack-clean:
-	@rm -f stamp-h.in
-
-export AM_CFLAGS
-AM_CFLAGS=-fPIC
-gnulib/libgnu.a:
-	$(call subdirs_func,libgnu.a,gnulib)
-
-# Comment this assignment out for a release.
-ifdef PKGSNAPSHOT
-SNAPDATE=+$(shell date +%Y%m%d)
+ifeq ("$(enable_testgui)", "no")
+  WVTESTRUN=env
 endif
 
-dist-hook: dist-hack-clean configure
-	@rm -rf autom4te.cache
-	@if test -d .xplc; then \
-	    echo '--> Preparing XPLC for dist...'; \
-	    $(MAKE) -C .xplc clean patch && \
-	    cp -Lpr .xplc/build/xplc .; \
-	fi
+LIBS += -lm
 
-runconfigure: config.mk include/wvautoconf.h gnulib/Makefile
+ifeq ($(USE_WVSTREAMS_ARGP),1)
+  utils/wvargs.o-CPPFLAGS += -Iargp
+  libwvutils.so-LIBS += -Largp -largp
 
-ifndef CONFIGURING
-configure=$(error Please run the "configure" script)
+# argp does its own dependency checking, so let's call it once per wvstreams
+# build, in case some system dependencies have changed and argp should be
+# recompiled
+  ARGP_TARGET=argp/libargp.list
+  TARGETS += $(ARGP_TARGET)
+.PHONY: argp/all
+argp/all:
+	$(MAKE) -C argp
+# Warning!  Crucial!  KEEP THIS SEMICOLON HERE!  Without it, if you blow away
+# $(ARGP_TARGET), $(MAKE) will get confused.
+$(ARGP_TARGET): argp/all;
 else
-configure:=
+  ARGP_TARGET=
 endif
 
-config.mk: configure config.mk.in
-	$(call configure)
+#
+# libwvbase: a the minimal code needed to link a wvstreams program.
+#
+BASEOBJS = \
+	utils/wvbuffer.o utils/wvbufferstore.o \
+	utils/wvcont.o \
+	utils/wverror.o \
+	streams/wvfdstream.o \
+	utils/wvfork.o \
+	utils/wvhash.o \
+	utils/wvhashtable.o \
+	utils/wvlinklist.o \
+	utils/wvmoniker.o \
+	utils/wvregex.o \
+	utils/wvscatterhash.o utils/wvsorter.o \
+	utils/wvattrs.o \
+	utils/wvstring.o utils/wvstringlist.o \
+	utils/wvstringmask.o \
+	utils/strutils.o \
+	utils/wvtask.o \
+	utils/wvtimeutils.o \
+	streams/wvistreamlist.o \
+	utils/wvstreamsdebugger.o \
+	streams/wvlog.o \
+	streams/wvstream.o \
+	uniconf/uniconf.o \
+	uniconf/uniconfgen.o uniconf/uniconfkey.o uniconf/uniconfroot.o \
+	uniconf/unihashtree.o \
+	uniconf/unimountgen.o \
+	uniconf/unitempgen.o \
+	utils/wvbackslash.o \
+	utils/wvencoder.o \
+	utils/wvtclstring.o \
+	utils/wvstringcache.o \
+	uniconf/uniinigen.o \
+	uniconf/unigenhack.o \
+	uniconf/unilistiter.o \
+	streams/wvfile.o \
+	streams/wvstreamclone.o  \
+	streams/wvconstream.o \
+	utils/wvcrashbase.o \
+	xplc-cxx/factory.o \
+	xplc-cxx/getiface.o \
+	xplc-cxx/strtouuid.o \
+	xplc-cxx/uuidtostr.o \
+	xplc-cxx/xplc.o \
+	xplc/category.o \
+	xplc/catiter.o \
+	xplc/catmgr.o \
+	xplc/loader.o \
+	xplc/moduleloader.o \
+	xplc/modulemgr.o \
+	xplc/monikers.o \
+	xplc/new.o \
+	xplc/servmgr.o \
+	xplc/statichandler.o 
 
-include/wvautoconf.h: include/wvautoconf.h.in
-	$(call configure)
+TARGETS += libwvbase.so
+libwvbase_OBJS += $(filter-out uniconf/unigenhack.o $(WV_EXCLUDES),$(BASEOBJS))
+libwvbase.so: $(libwvbase_OBJS) uniconf/unigenhack.o
+libwvbase.so-LIBS += $(LIBXPLC)
 
-gnulib/Makefile: gnulib/Makefile.in
-	$(call configure)
-
-# FIXME: there is some confusion here
-ifdef WE_ARE_DIST
-aclocal.m4: $(wildcard gnulib/m4/*.m4) acinclude.m4
-	$(warning "$@" is old, please run "aclocal -I gnulib/m4")
-
-configure: configure.ac config.mk.in include/wvautoconf.h.in aclocal.m4
-	$(warning "$@" is old, please run "autoconf")
-
-include/wvautoconf.h.in: configure.ac aclocal.m4
-	$(warning "$@" is old, please run "autoheader")
+#
+# libwvutils: handy utility library for C++
+#
+TARGETS += libwvutils.so
+TESTS += $(call tests_cc,utils/tests)
+libwvutils_OBJS += $(filter-out $(BASEOBJS) $(TESTOBJS),$(call objects,utils))
+libwvutils.so: $(libwvutils_OBJS) $(LIBWVBASE) $(ARGP_TARGET)
+ifndef _MACOS
+libwvutils.so-LIBS += -lz -lcrypt $(LIBS_PAM)
 else
-aclocal.m4: $(wildcard gnulib/m4/*.m4) acinclude.m4
-	aclocal -I gnulib/m4
-	@touch $@
-
-configure: configure.ac include/wvautoconf.h.in aclocal.m4
-	autoconf
-	@rm -f config.mk include/wvautoconf.h gnulib/Makefile
-	@touch $@
-
-include/wvautoconf.h.in: configure.ac aclocal.m4
-	autoheader
-	@touch $@
+libwvutils.so-LIBS += -lz $(LIBS_PAM)
 endif
 
-ifeq ($(VERBOSE),)
-define wild_clean
-	@list=`echo $(wildcard $(1))`; \
-		test -z "$${list}" || sh -c "rm -rf $${list}"
-endef
+utils/tests/%: PRELIBS+=$(LIBWVSTREAMS)
+
+#
+# libwvstreams: stream/event handling library
+#
+TARGETS += libwvstreams.so
+TARGETS += crypto/tests/ssltest ipstreams/tests/unixtest
+TARGETS += crypto/tests/printcert
+
+ifndef _MACOS
+  ifneq ("$(with_readline)", "no")
+    TARGETS += ipstreams/tests/wsd
+    ipstreams/tests/wsd-LIBS += -lreadline
+  else
+    TEST_SKIP_OBJS += ipstreams/tests/wsd
+  endif
 else
-define wild_clean
-	@list=`echo $(wildcard $(1))`; \
-		test -z "$${list}" || sh -cx "rm -rf $${list}"
-endef
+  TEST_SKIP_OBJS += ipstreams/tests/wsd
 endif
 
-realclean: distclean
-	$(call wild_clean,$(REALCLEAN))
+TESTS += $(call tests_cc,configfile/tests)
+TESTS += $(call tests_cc,streams/tests)
+TESTS += $(call tests_cc,ipstreams/tests)
+TESTS += $(call tests_cc,crypto/tests)
+TESTS += $(call tests_cc,urlget/tests)
+TESTS += $(call tests_cc,linuxstreams/tests)
+libwvstreams_OBJS += $(filter-out $(BASEOBJS), \
+	$(call objects,configfile crypto ipstreams \
+		$(ARCH_SUBDIRS) streams urlget))
+libwvstreams.so: $(libwvstreams_OBJS) $(LIBWVUTILS)
+libwvstreams.so-LIBS += -lz -lssl -lcrypto $(LIBS_PAM)
+configfile/tests/% streams/tests/% ipstreams/tests/% crypto/tests/% \
+  urlget/tests/% linuxstreams/tests/%: PRELIBS+=$(LIBWVSTREAMS)
 
+#
+# libuniconf: unified configuration system
+#
+TARGETS += libuniconf.so
+TARGETS += uniconf/daemon/uniconfd uniconf/tests/uni
+TESTS += $(call tests_cc,uniconf/tests) uniconf/tests/uni
+libuniconf_OBJS += $(filter-out $(BASEOBJS) uniconf/daemon/uniconfd.o, \
+	$(call objects,uniconf uniconf/daemon))
+libuniconf.so: $(libuniconf_OBJS) $(LIBWVSTREAMS)
+uniconf/daemon/uniconfd uniconf/tests/uni: $(LIBUNICONF)
+uniconf/daemon/uniconfd: uniconf/daemon/uniconfd.o $(LIBUNICONF)
+uniconf/daemon/uniconfd: uniconf/daemon/uniconfd.ini \
+          uniconf/daemon/uniconfd.8
+uniconf/tests/%: PRELIBS+=$(LIBUNICONF)
+
+#
+# libwvdbus: C++ DBus library based on wvstreams
+#
+ifneq ("$(with_dbus)", "no")
+  TARGETS += libwvdbus.so
+  TARGETS += dbus/tests/wvdbus dbus/tests/wvdbusd
+  TESTS += $(call tests_cc,dbus/tests)
+  libwvdbus_OBJS += $(call objects,dbus)
+  libwvdbus.so: $(libwvdbus_OBJS) $(LIBWVSTREAMS)
+  libwvdbus.so-LIBS += $(LIBS_DBUS)
+  dbus/tests/%: PRELIBS+=$(LIBWVDBUS)
+else
+  TEST_SKIP_OBJS += dbus/t/%
+endif
+
+#
+# libwvqt: helper library to make WvStreams work better in Qt event loops
+#          This is not made to work with MacOS, so let's not ask it to.
+ifndef _MACOS
+ifneq ("$(with_qt)", "no")
+  TARGETS += libwvqt.so
+  TESTS += $(patsubst %.cc,%,$(wildcard qt/tests/*.cc))
+  libwvqt_OBJS += $(call objects,qt)
+  libwvqt.so: $(libwvqt_OBJS) $(LIBWVSTREAMS)
+  libwvqt.so-LIBS += $(LIBS_QT)
+  qt/tests/%: PRELIBS+=$(LIBWVQT)
+
+  qt/wvqtstreamclone.o: include/wvqtstreamclone.moc
+  qt/wvqthook.o: include/wvqthook.moc
+endif
+endif
+#
+# libwvstatic.a: all the wvstreams libraries in one static .a file, to make
+# it easy to link your programs statically to wvstreams.
+#
+TARGETS += libwvstatic.a
+libwvstatic.a: \
+	$(libwvbase_OBJS) \
+	$(libwvutils_OBJS) \
+	$(libwvstreams_OBJS) \
+	$(libuniconf_OBJS) \
+	$(libwvdbus_OBJS) \
+	$(libwvqt_OBJS) \
+	uniconf/unigenhack_s.o \
+	$(ARGP_TARGET)
+
+#
+# libwvtest: the WvTest tools for writing C++ unit tests
+#
+TARGETS += wvtestmain.o libwvtest.a
+TESTOBJS = utils/wvtest.o
+libwvtest.a: wvtestmain.o $(TESTOBJS)
+
+TARGETS_SO = $(filter %.so,$(TARGETS))
+TARGETS_A = $(filter %.a,$(TARGETS))
+
+all: config.mk $(filter-out $(WV_EXCLUDES), $(TARGETS))
+
+TESTS += wvtestmain
+
+REAL_TESTS = $(filter-out $(TEST_SKIP_OBJS), $(TESTS))
+$(addsuffix .o,$(REAL_TESTS)):
+tests: $(REAL_TESTS)
+
+test: all tests qtest
+
+qtest: all wvtestmain
+	LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(shell pwd)" $(WVTESTRUN) $(MAKE) runtests
+
+runtests:
+	$(VALGRIND) ./wvtestmain '$(TESTNAME)'
+ifeq ("$(TESTNAME)", "")
+	cd uniconf/tests && DAEMON=0 ./unitest.sh
+	cd uniconf/tests && DAEMON=1 ./unitest.sh
+endif
+
+
+TEST_TARGETS = 	$(filter-out $(TEST_SKIP_OBJS), $(call objects, $(filter-out win32/%, \
+		$(shell find . -type d -name t | sed 's,^\./,,'))))
+
+wvtestmain: $(TEST_TARGETS) $(LIBWVDBUS) $(LIBUNICONF) $(LIBWVSTREAMS) $(LIBWVTEST)
 
 distclean: clean
-	$(call wild_clean,$(DISTCLEAN))
-	@rm -rf autom4te.cache
-	@rm -f gnulib/Makefile
-	@rm -f pkgconfig/*.pc
-	@rm -f .xplc
+	rm -f uniconf/daemon/uniconfd.8 uniconf/tests/uni
+	rm -f config.mk config.log config.status \
+		include/wvautoconf.h config.cache \
+		stamp-h.in 
+	rm -rf autom4te.cache
+	rm -rf argp/autom4te.cache
+	rm -rf argp/config.status argp/config.log
+	rm -rf argp/configure.lineno argp/config.h
+	rm -rf argp/Makefile argp/testsuite/Makefile
+	rm -rf argp/testsuite/ex1 argp/testsuite/ex2 argp/testsuite/ex3
+	rm -rf argp/libargp.a argp/stamp-h1
+	rm -f pkgconfig/*.pc
 
-clean: depend dust xplc/clean
-	@if ! test -f gnulib/Makefile; then echo 'clean:' >gnulib/Makefile; fi
+clean:
 	$(subdirs)
-	@if test `wc -c <gnulib/Makefile` = '7'; then rm gnulib/Makefile; fi
-	$(call wild_clean,$(TARGETS) uniconf/daemon/uniconfd \
-		$(GARBAGE) $(TESTS) tmp.ini \
-		$(shell find . -name '*.o' -o -name '*.moc'))
-
-depend:
-	$(call wild_clean,$(shell find . -name '.*.d'))
-
-dust:
-	$(call wild_clean,$(shell find . -name 'core' -o -name '*~' -o -name '.#*') $(wildcard *.d))
+	@$(RM) .junk $(TARGETS) uniconf/daemon/uniconfd \
+		$(TESTS) tmp*.ini uniconf/daemon/uniconfd.ini \
+		.wvtest-total \
+		$(shell find . -name '*.o' -o -name '.*.d' \
+			-o -name '*~' -o -name '*.moc')
+		
+clean-targets:
+	$(RM) $(TARGETS)
+	
+clean-tests:
+	$(RM) $(TESTS)
 
 kdoc:
 	kdoc -f html -d Docs/kdoc-html --name wvstreams --strip-h-path */*.h
@@ -149,81 +290,15 @@ kdoc:
 doxygen:
 	doxygen
 
-ifeq ("$(with_readline)", "no")
-install: install-shared install-dev install-xplc install-uniconfd
-else
-install: install-shared install-dev install-xplc install-uniconfd install-wsd
-endif
+.PHONY: \
+	clean distclean \
+	kdoc doxygen \
+	install install-shared install-dev uninstall \
+	tests test
 
-install-shared: $(TARGETS_SO)
-	$(INSTALL) -d $(DESTDIR)$(libdir)
-	for i in $(TARGETS_SO); do \
-	    $(INSTALL_PROGRAM) $$i.$(SO_VERSION) $(DESTDIR)$(libdir)/ ; \
-	done
-	$(INSTALL) -d $(DESTDIR)$(sysconfdir)
-	$(INSTALL_DATA) uniconf/daemon/uniconf.conf $(DESTDIR)$(sysconfdir)/
-
-install-dev: $(TARGETS_SO) $(TARGETS_A)
-	$(INSTALL) -d $(DESTDIR)$(includedir)/wvstreams
-	$(INSTALL_DATA) $(wildcard include/*.h) $(DESTDIR)$(includedir)/wvstreams
-	$(INSTALL) -d $(DESTDIR)$(libdir)
-	for i in $(TARGETS_A); do \
-	    $(INSTALL_DATA) $$i $(DESTDIR)$(libdir); \
-	done
-	cd $(DESTDIR)$(libdir) && for i in $(TARGETS_SO); do \
-	    rm -f $$i; \
-	    $(LN_S) $$i.$(SO_VERSION) $$i; \
-	done
-	$(INSTALL) -d $(DESTDIR)$(libdir)/pkgconfig
-	$(INSTALL_DATA) $(filter-out %-uninstalled.pc, $(wildcard pkgconfig/*.pc)) $(DESTDIR)$(libdir)/pkgconfig
-	$(INSTALL) -d $(DESTDIR)$(bindir)
-	$(INSTALL) wvtesthelper wvtestmeter $(DESTDIR)$(bindir)
-	$(INSTALL) -d $(DESTDIR)$(libdir)/valgrind
-	$(INSTALL) wvstreams.supp $(DESTDIR)$(libdir)/valgrind
-
-uniconfd: uniconf/daemon/uniconfd uniconf/daemon/uniconfd.ini \
-          uniconf/daemon/uniconfd.8
-
-install-uniconfd: uniconfd uniconf/tests/uni uniconf/tests/uni.8
-	$(INSTALL) -d $(DESTDIR)$(bindir)
-	$(INSTALL_PROGRAM) uniconf/tests/uni $(DESTDIR)$(bindir)/
-	$(INSTALL) -d $(DESTDIR)$(sbindir)
-	$(INSTALL_PROGRAM) uniconf/daemon/uniconfd $(DESTDIR)$(sbindir)/
-	$(INSTALL) -d $(DESTDIR)$(localstatedir)/lib/uniconf
-	touch $(DESTDIR)$(localstatedir)/lib/uniconf/uniconfd.ini
-	$(INSTALL) -d $(DESTDIR)$(mandir)/man8
-	$(INSTALL_DATA) uniconf/daemon/uniconfd.8 $(DESTDIR)$(mandir)/man8
-	$(INSTALL_DATA) uniconf/tests/uni.8 $(DESTDIR)$(mandir)/man8
-
-install-wsd: ipstreams/tests/wsd
-	$(INSTALL) -d $(DESTDIR)$(bindir)
-	$(INSTALL_PROGRAM) ipstreams/tests/wsd $(DESTDIR)$(bindir)/
-
-uninstall:
-	$(tbd)
-
-$(TESTS): $(LIBUNICONF) $(LIBWVTEST)
-$(addsuffix .o,$(TESTS)):
-tests: $(TESTS)
-
-include $(filter-out xplc%,$(wildcard */rules.mk */*/rules.mk)) /dev/null
-
--include $(shell find . -name '.*.d') /dev/null
-
-test: runconfigure all tests qtest
-
-qtest: runconfigure all wvtestmain
-	LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(WVSTREAMS_LIB)" $(WVTESTRUN) $(MAKE) runtests
-
-runtests:
-	$(VALGRIND) ./wvtestmain '$(TESTNAME)'
-ifeq ("$(TESTNAME)", "unitest")
-	cd uniconf/tests && DAEMON=0 ./unitest.sh
-	cd uniconf/tests && DAEMON=1 ./unitest.sh
-endif
-
-wvtestmain: \
-	$(call objects, $(filter-out ./Win32WvStreams/%, \
-		$(shell find . -type d -name t))) \
-	$(LIBUNICONF) $(LIBWVSTREAMS) $(LIBWVTEST)
-
+debug-make:
+	@echo tests: $(TESTS)
+	@echo real_tests: $(REAL_TESTS)
+	@echo skip_tests: $(TEST_SKIP_OBJS)
+	@echo excluded_items: $(WV_EXCLUDES)
+	@echo targets: $(TARGETS)

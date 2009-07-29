@@ -1,6 +1,6 @@
 #include "wvstreamsdaemon.h"
 #include "wvstreamclone.h"
-#include "wvtcp.h"
+#include "wvtcplistener.h"
 #include "wvlog.h"
 
 const char * NAME = "MyWvStreamsDaemon";
@@ -11,10 +11,10 @@ const int default_port = 2121;
 class MyClient : public WvStreamClone
 {
 public:
-    MyClient(WvTCPConn *conn) :
+    MyClient(IWvStream *conn) :
         WvStreamClone(conn),
-        log("MyClient", WvLog::Info) {
-        setclone(conn);
+        log("MyClient", WvLog::Info) 
+    {
         uses_continue_select = true;
 
         print("Hello I am %s v%s\n", NAME, VERSION);
@@ -50,10 +50,11 @@ class MyListener : public WvTCPListener
 public:
     MyListener(const WvIPPortAddr &addr) :
         WvTCPListener(addr),
-        log("MyListener", WvLog::Info) {
+        log("MyListener", WvLog::Info)
+    {
         if (isok())
         {
-            setcallback(WvStreamCallback(this, &MyListener::accept_conn), 0);
+            onaccept(wv::bind(&MyListener::accept_conn, this, _1));
             log("Listening for client connections on %s\n", addr);
         }
         else 
@@ -62,7 +63,7 @@ public:
     }
 
 private:
-    void accept_conn(WvStream& l, void* userdata);
+    void accept_conn(IWvStream *s);
     WvLog log;
 };
 
@@ -72,15 +73,18 @@ class MyWvStreamsDaemon : public WvStreamsDaemon
 public:
     MyWvStreamsDaemon() :
         WvStreamsDaemon("MyWvStreamsDaemon", "1.0", 
-                        WvStreamsDaemonCallback(this, &MyWvStreamsDaemon::cb)),
+                        wv::bind(&MyWvStreamsDaemon::cb, this)),
         port(default_port),
         log("MyWvStreamsDaemon", WvLog::Info)
-        {
-            args.add_option('p', "port", "specify alternate port number", 
-                            "PORT", port);
-        }
+    {
+	args.add_option('p', "port", "specify alternate port number", 
+			"PORT", port);
+    }
+    
     virtual ~MyWvStreamsDaemon() {}
-    void cb(WvStreamsDaemon &daemon, void *) { 
+    
+    void cb()
+    { 
         log("MyWvStreamsDaemon starting..\n", port);
         WvString bindto("0.0.0.0:%s", port);
 
@@ -97,10 +101,8 @@ private:
 static MyWvStreamsDaemon d;
 
 
-void MyListener::accept_conn(WvStream& l, void* userdata)
+void MyListener::accept_conn(IWvStream *s)
 {
-    WvTCPListener *listener = static_cast<WvTCPListener*>(&l);
-    WvTCPConn *s = static_cast<WvTCPConn *>(listener->accept());
     log("Incoming TCP connection from %s.\n", *s->src());
     d.add_stream(new MyClient(s), true, "MyClient");
 }

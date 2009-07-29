@@ -7,10 +7,11 @@
 #ifndef __UNICONF_H
 #define __UNICONF_H
 
-#include "uniconfkey.h"
+#include <vector>
+
 #include "uniconfgen.h"
-#include "wvcallback.h"
-#include "wvvector.h"
+#include "uniconfkey.h"
+#include "wvtr1.h"
 
 class WvStream;
 class UniConf;
@@ -23,7 +24,7 @@ class UniConfRoot;
  *   cfg - the UniConf config object representing the key that has changed
  *   relkey - the changed keypath, relative to the config object
  */
-typedef WvCallback<void, const UniConf &, const UniConfKey &> UniConfCallback;
+typedef wv::function<void(const UniConf&, const UniConfKey&)> UniConfCallback;
 
 /**
  * UniConf instances function as handles to subtrees of a UniConf
@@ -560,19 +561,15 @@ private:
     void _purge();
     void _rewind();
     
-    static int wrapcomparator(const UniConf *a, const UniConf *b);
-    static Comparator innercomparator;
-
 protected:
-    typedef WvVector<UniConf> Vector;
-    Vector xkeys;
+    std::vector<UniConf> xkeys;
     
     template<class Iter>
     void populate(Iter &i)
     {
         _purge();
         for (i.rewind(); i.next(); )
-            xkeys.append(new UniConf(*i), true);
+            xkeys.push_back(*i);
         _rewind();
     }
 };

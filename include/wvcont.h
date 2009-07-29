@@ -12,11 +12,11 @@
 #ifndef __WVCONT_H
 #define __WVCONT_H
 
-#include "wvcallback.h"
 #include "wvlinklist.h"
 #include "wvstreamsdebugger.h"
+#include "wvtr1.h"
 
-typedef WvCallback<void*, void*> WvContCallback;
+typedef wv::function<void*(void*)> WvContCallback;
 
 /**
  * WvCont provides "continuations", which are apparently also known as

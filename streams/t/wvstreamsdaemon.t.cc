@@ -3,10 +3,12 @@
 #include <wvfork.h>
 #include <wvfile.h>
 #include <wvunixsocket.h>
+#include <wvunixlistener.h>
 #include <stdio.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <wvtimeutils.h>
 
 // This needs to be global (and not part of a WvStreamsDaemonTester class)
 // because the WvStreamsDaemon startup callback below needs to know the name
@@ -21,7 +23,7 @@ void init()
 }
 
 //Callback for the accepted client conection at the server
-void client_cb(WvStream &stream, void *)
+static void client_cb(WvStream &stream)
 {
     // Echo everything back
     const char *line = stream.getline();
@@ -29,12 +31,22 @@ void client_cb(WvStream &stream, void *)
         stream.print("Client said: %s\n", line);
 }     
 
-//Callback function for the daemon
-void startup(WvStreamsDaemon &daemon, void *)
+
+static void accept_cb(IWvStream *_conn)
 {
+    WvUnixConn *conn = (WvUnixConn*)_conn;
+    conn->setcallback(wv::bind(client_cb, wv::ref(*conn)));
+    WvIStreamList::globallist.append(conn, true, "WvUnixConn");
+}
+
+
+//Callback function for the daemon
+static void startup(WvStreamsDaemon *daemon)
+{
+    signal(SIGPIPE, SIG_IGN);
     WvUnixListener *listener = new WvUnixListener(sock_name, 0700);
-    listener->auto_accept(&WvIStreamList::globallist, client_cb); 
-    daemon.add_die_stream(listener, true, "Listener");
+    listener->onaccept(wv::bind(accept_cb, _1)); 
+    daemon->add_die_stream(listener, true, "Listener");
 }
 
 // Returns a new WvUnixConn connected to name.  Returns NULL if it could not
@@ -62,7 +74,7 @@ WvUnixConn *connect_to_daemon(WvString name, int num_retries,
             WVPASS("Connection unavailable.");
             break;
         }
-        sleep(1);
+        wvdelay(100);
     }
     return conn;
 }
@@ -91,15 +103,17 @@ WVTEST_MAIN("Checking Daemon created")
     //Forking the server (daemon) and client processes
     pid_t child = wvfork();
 
-    if(child == 0)
+    if (child == 0)
     {
         // This is the server process
         WvStreamsDaemon *daemon = NULL;
         wvout->print("Running code for server\n");
-        daemon = new WvStreamsDaemon("Sample Daemon", "0.1", startup);
+        daemon = new WvStreamsDaemon("Sample Daemon", "0.1",
+				     wv::bind(startup, wv::ref(daemon)));
 	daemon->pid_file = pidfile;
 	int fake_argc = 2;
-	char *fake_argv[] = { "WvStreamsDaemon_nonexistant", "-d", NULL };
+	char *fake_argv[] = 
+            { (char*)"WvStreamsDaemon_nonexistant", (char*)"-d", NULL };
 	_exit(daemon->run(fake_argc, fake_argv));
     }
     else
@@ -107,8 +121,7 @@ WVTEST_MAIN("Checking Daemon created")
         // This is the client process
         wvout->print("Running code for client\n");
                 
-        // Will wait for 10 sec at max for the daemon to load
-        WvUnixConn *client = connect_to_daemon(sock_name, 10, true);
+        WvUnixConn *client = connect_to_daemon(sock_name, 60, true);
 
 	if (WVPASS(client != NULL))
 	{
@@ -132,7 +145,6 @@ WVTEST_MAIN("Checking Daemon created")
         }
       
         printf("Process id for daemon is %d\n", pid_daemon);
-      
         if (WVPASS(pid_daemon > 0))
         {
             kill(pid_daemon, SIGTERM);
@@ -153,7 +165,7 @@ WVTEST_MAIN("Checking Daemon created")
   
         // connect_to_daemon returns NULL if it couldn't connect (i.e. if the
         // stream is not isok()); this is what we expect.
-        WvUnixConn *check_conn = connect_to_daemon(sock_name, 10, false);
+        WvUnixConn *check_conn = connect_to_daemon(sock_name, 60, false);
         WVFAIL(check_conn);
         WVRELEASE(check_conn);
     }

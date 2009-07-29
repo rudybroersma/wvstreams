@@ -6,6 +6,8 @@
 #include "wvsslstream.h"
 #include "wvx509mgr.h"
 #include "wvcrypto.h"
+#include "wvlistener.h"
+#include "wvstrutils.h"
 #include "wvmoniker.h"
 #include "wvlinkerhack.h"
 #include <openssl/ssl.h>
@@ -25,24 +27,131 @@
 #define errno GetLastError()
 #undef EAGAIN
 #define EAGAIN WSAEWOULDBLOCK
-#define error_t long
 #endif
 
 WV_LINK(WvSSLStream);
 
-static IWvStream *creator(WvStringParm s)
+static IWvStream *creator(WvStringParm s, IObject *_obj)
 {
-    return new WvSSLStream(wvcreate<IWvStream>(s), NULL, 0, false);
+    return new WvSSLStream(IWvStream::create(s, _obj), NULL, 0, false);
 }
 
-static IWvStream *screator(WvStringParm s)
+static IWvStream *screator(WvStringParm s, IObject *_obj)
 {
-    return new WvSSLStream(wvcreate<IWvStream>(s), NULL, 0, true);
+    return new WvSSLStream(IWvStream::create(s, _obj), 
+	   new WvX509Mgr(encode_hostname_as_DN(fqdomainname()), 1024),
+	   0, true);
+}
+
+struct WvTclParseValues
+{
+    WvX509Mgr *m;
+    WvString s;
+
+    /* Kind of necessary; the WvX509Mgr object here is meant to be passed into
+     * a WvSSLStream, which will addRef() the object.  Thus, once the stream
+     * has been created, we need to release() it here, so that once the stream
+     * itself falls into oblivion, we have no hanging references.
+     */
+    ~WvTclParseValues()
+	{ WVRELEASE(m); }
+};
+
+static WvTclParseValues *parse_wvtcl_sslcert(WvStringParm s)
+{
+    /* The idea here is that we've got s, which is a TclStyle string of the
+     * format (without the quotes, of course, but escaped):
+     * "PEM-encoded SSL cert" "PEM-encoded private RSA key" "connection moniker"
+     */
+    WvList<WvString> l;
+    wvtcl_decode(l, s);
+    if (l.count() > 3 || l.count() < 2)
+	return NULL; /* we fscked up, no clue how to recover */
+    // in the case of '2', 'obj' had better be set to the calling function
+
+    WvTclParseValues *p = new WvTclParseValues;
+    p->m = new WvX509Mgr;
+    p->m->decode(WvX509::CertPEM, *l.first());
+    l.unlink_first();
+    p->m->decode(WvRSAKey::RsaPEM, *l.first());
+    l.unlink_first();
+    if (!p->m->test()) { /* RSA key and certificate don't match up?? */
+	delete p;
+	return NULL;
+    }
+
+    if (l.count())
+	p->s = *l.first();
+
+    return p;
+}
+
+static IWvStream *sslcertcreator(WvStringParm s, IObject *_obj)
+{
+    WvTclParseValues *p = parse_wvtcl_sslcert(s);
+    if (!p) {
+	WVRELEASE(_obj);
+	return NULL;
+    }
+
+    WvSSLStream *ret = new WvSSLStream(IWvStream::create(p->s, _obj), p->m,
+					0, false);
+    delete p;
+    return ret;
+}
+
+static IWvStream *sslcertscreator(WvStringParm s, IObject *_obj)
+{
+    WvTclParseValues *p = parse_wvtcl_sslcert(s);
+    if (!p) {
+	WVRELEASE(_obj);
+	return NULL;
+    }
+
+    WvSSLStream *ret = new WvSSLStream(IWvStream::create(p->s, _obj), p->m,
+					0, true);
+    delete p;
+    return ret;
 }
 
 static WvMoniker<IWvStream> reg("ssl", creator);
 static WvMoniker<IWvStream> sreg("sslserv", screator);
+static WvMoniker<IWvStream> sslcertreg("sslcert", sslcertcreator);
+static WvMoniker<IWvStream> sslcertsreg("sslcertserv", sslcertscreator);
 
+static IWvListener *listener(WvStringParm s, IObject *obj)
+{
+    IWvListener *l = IWvListener::create(s, obj);
+    if (l)
+	l->addwrap(wv::bind(&IWvStream::create, "sslserv", _1));
+    return l;
+}
+
+static IWvListener *sslcertlistener(WvStringParm s, IObject *obj)
+{
+    WvList<WvString> li;
+    wvtcl_decode(li, s);
+    WvString connmoniker;
+    
+    if (li.count() == 3) {
+	// We have a connection moniker as well as SSL information
+	connmoniker = *li.last();
+	li.unlink(li.last());
+    } else if (li.count() != 2) {
+	// something went very wrong
+	WVRELEASE(obj);
+	return NULL;
+    }
+
+    IWvListener *l = IWvListener::create(connmoniker, obj);
+    if (l)
+	l->addwrap(wv::bind(&IWvStream::create, 
+			    WvString("sslcertserv:%s", wvtcl_encode(li)), _1));
+    return l;
+}
+
+static WvMoniker<IWvListener> lreg("ssl", listener);
+static WvMoniker<IWvListener> lsslcertreg("sslcert", sslcertlistener);
 
 #define MAX_BOUNCE_AMOUNT (16384) // 1 SSLv3/TLSv1 record
 
@@ -54,6 +163,8 @@ static int wv_verify_cb(int preverify_ok, X509_STORE_CTX *ctx)
    // is for the WvSSLValidateCallback to do this work
    return 1;
 }
+
+WvSSLGlobalValidateCallback WvSSLStream::global_vcb = 0;
 
 WvSSLStream::WvSSLStream(IWvStream *_slave, WvX509Mgr *_x509,
     WvSSLValidateCallback _vcb, bool _is_server) :
@@ -67,6 +178,9 @@ WvSSLStream::WvSSLStream(IWvStream *_slave, WvX509Mgr *_x509,
 	x509->addRef(); // openssl may keep a pointer to this object
     
     vcb = _vcb;
+    if (!vcb && global_vcb)
+	vcb = wv::bind(global_vcb, _1, this);;
+
     is_server = _is_server;
     ctx = NULL;
     ssl = NULL;
@@ -118,8 +232,7 @@ WvSSLStream::WvSSLStream(IWvStream *_slave, WvX509Mgr *_x509,
 	    return;
 	}
 	
-	if (!!vcb)
-            SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE, 
+        SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE, 
                                wv_verify_cb);
 	
 	debug("Server mode ready.\n");
@@ -151,7 +264,12 @@ WvSSLStream::WvSSLStream(IWvStream *_slave, WvX509Mgr *_x509,
 	return;
     }
 
-    if (!!vcb)
+    // If we set this, it seems we always verify the client... security hole,
+    // no?  Well, if we don't set it, the server doesn't even ask the client
+    // for a certificate, so, ya know, it's not actually any more secure.
+    // Client doesn't need this (unless vcb is set), since it always asks the
+    // server for a cert anyway
+    if (!!vcb || is_server)
 	SSL_set_verify(ssl, SSL_VERIFY_PEER|SSL_VERIFY_CLIENT_ONCE, 
                        wv_verify_cb);
 
@@ -180,14 +298,12 @@ void WvSSLStream::printerr(WvStringParm func)
     unsigned long l = ERR_get_error();
     char buf[121];      // man ERR_error_string says must be > 120.
 
-    SSL_load_error_strings();
     while (l)
     {
         ERR_error_string(l, buf);
         debug("%s error: %s\n", func, buf);
         l = ERR_get_error();
     }
-    ERR_free_strings();
 }
 
  
@@ -585,9 +701,13 @@ bool WvSSLStream::post_select(SelectInfo &si)
 	else  // We're connected, so let's do some checks ;)
 	{
 	    debug("SSL connection using cipher %s.\n", SSL_get_cipher(ssl));
+
+	    WvX509 *peercert = new WvX509(SSL_get_peer_certificate(ssl));
+	    //Should we try to validate before storing, or not?
+	    if (peercert->isok() && peercert->validate())
+		setattr("peercert", peercert->encode(WvX509::CertPEM));
 	    if (!!vcb)
 	    {
-	    	WvX509 *peercert = new WvX509(SSL_get_peer_certificate(ssl));
 		debug("SSL Peer is: %s\n", peercert->get_subject());
 	    	if (peercert->isok() && peercert->validate() && vcb(peercert))
 	    	{
@@ -601,7 +721,6 @@ bool WvSSLStream::post_select(SelectInfo &si)
 		    else
 			seterr("Peer certificate is invalid!");
 	    	}
-		WVRELEASE(peercert);
 	    }
 	    else
 	    {
@@ -609,6 +728,7 @@ bool WvSSLStream::post_select(SelectInfo &si)
 		debug("SSL finished negotiating "
 		      "- certificate validation disabled.\n");
 	    }	
+	    WVRELEASE(peercert);
 	} 
 	
 	return false;

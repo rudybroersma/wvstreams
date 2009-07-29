@@ -1,8 +1,10 @@
 /* -*- Mode: C++ -*-
- * Worldvisions Weaver Software:
- *   Copyright (C) 1997-2004 Net Integration Technologies, Inc.
  *
- * X.509 certificate management classes.
+ * X.509 certificate class: This class abstracts some of the common operations
+ * performed on basic X.509 certificates (signature verification, public
+ * key identification, etc.). If you want to perform operations with
+ * a certificate and its corresponding private key, consider using WvX509Mgr
+ * instead.
  */ 
 #ifndef __WVX509_H
 #define __WVX509_H
@@ -53,6 +55,7 @@ public:
     */
     enum DumpMode { CertPEM = 0, CertDER, CertHex, CertFilePEM, CertFileDER };
 
+    enum FprintMode { FingerMD5 = 0, FingerSHA1 };
     /**
      * Initialize a completely empty X509 Object with an X509 certificate
      * that doesn't have anything it it... good for building custom 
@@ -65,15 +68,13 @@ public:
      * (used for client side operations...)
      * 
      * This either initializes a completely empty object, or takes _cert,
-     * and extracts the distinguished name into dname, and the the RSA
+     * and extracts the distinguished name into dname, and the RSA
      * public key into rsa. rsa->prv is empty.
      */
     WvX509(X509 *_cert);
 
-private:
     /** 
-     * Placeholder for Copy Constructor: this doesn't exist yet, but it keeps
-     * us out of trouble :) 
+     * Copy Constructor. 
      */
     WvX509(const WvX509 &x509);
 
@@ -165,7 +166,7 @@ public:
     /**
      * get and set the serialNumber field of the certificate
      */
-    WvString get_serial() const;
+    WvString get_serial(bool hex = false) const;
     void set_serial(long serial_no);
 
     /** 
@@ -334,18 +335,31 @@ public:
     WvString get_aki() const;
 
     /**
+     * Get the certHash (fingerprint) of the certificate
+     */
+    WvString get_fingerprint(const FprintMode mode = FingerSHA1) const;
+
+    /**
      * Is the certificate object valid?
      */
     virtual bool isok() const;
 
-    /**
-     * Returns an error string if isok() is not true.
-     */
+     /**
+      * Returns an error string if isok() is not true.
+      */
     virtual WvString errstr() const;
+
+    /**
+     * The not operator returns true if !isok()
+     */
+    bool operator! () const;
+
 
 private:
     friend class WvCRL;
     friend class WvX509Mgr;
+    friend class WvOCSPReq;
+    friend class WvOCSPResp;
 
     /** X.509v3 Certificate - this is why this class exists */
     X509     *cert;

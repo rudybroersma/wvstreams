@@ -25,7 +25,7 @@ class WvFile;
 class UniIniGen : public UniTempGen
 {
 public:
-    typedef WvCallback<void> SaveCallback;
+    typedef wv::function<void()> SaveCallback;
 
 private:
     WvString filename;
@@ -58,7 +58,7 @@ private:
     
     void save(WvStream &file, UniConfValueTree &parent);
     bool refreshcomparator(const UniConfValueTree *a,
-        const UniConfValueTree *b, void *userdata);
+			   const UniConfValueTree *b);
 };
 
 

@@ -9,12 +9,14 @@
 
 // Some screwy defines that show up in _WIN32 and cause problems
 #undef error_t
+#undef __error_t_defined
 #undef argc
 #undef argv
 #undef __argc
 #undef __argv
 
 #include <argp.h>
+#include <limits.h>
 
 
 class WvArgsOption
@@ -583,9 +585,9 @@ void WvArgsData::remove(char short_option, WvStringParm long_option)
 	if (!long_option.isnull() && i->long_option == long_option)
 	    matches_long = true;
 
-	if (matches_short && matches_long
-	    || matches_short && i->long_option.isnull()
-	    || matches_long && i->short_option == '\0')
+	if ((matches_short && matches_long)
+	 || (matches_short && i->long_option.isnull())
+	 || (matches_long && i->short_option == '\0'))
 	{
 	    // Delete this item from the data-structures
 	    options_dict.remove(i.ptr());
@@ -965,9 +967,14 @@ void WvArgs::add_required_arg(WvStringParm desc, bool multiple)
 {
     data->add_required_arg();
     if (!!args_doc)
-        args_doc.append(" ", multiple);
-    args_doc.append(desc, multiple);
-    if (data->maximum_args < LONG_MAX)
+        args_doc.append(" ");
+    args_doc.append(desc);
+    if (multiple)
+    {
+	args_doc.append("...");
+	data->maximum_args = LONG_MAX;
+    }
+    else if (data->maximum_args < LONG_MAX)
 	++(data->maximum_args);
 }
 
@@ -975,13 +982,8 @@ void WvArgs::add_required_arg(WvStringParm desc, bool multiple)
 void WvArgs::add_optional_arg(WvStringParm desc, bool multiple)
 {
     // an optional arg is a required arg without the requirement :-)
-    add_required_arg(WvString("[%s]", desc));
+    add_required_arg(WvString("[%s]", desc), multiple);
     data->subtract_required_arg();
-    if (multiple)
-    {
-	args_doc.append("...");
-	data->maximum_args = LONG_MAX;
-    }
 }
 
 

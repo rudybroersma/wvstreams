@@ -2,13 +2,13 @@ Source: wvstreams
 Section: libs
 Priority: optional
 Maintainer: Debian QA Group <packages@qa.debian.org>
-Build-Depends: debhelper (>> 5.0.0), libdb-dev, libpam0g-dev, libqt3-mt-dev, libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen
+Build-Depends: debhelper (>> 5.0.0), quilt, autotools-dev, libdb-dev, libpam0g-dev, libqt3-mt-dev, libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen
 Build-Conflicts: valgrind
-Standards-Version: 3.8.0
+Standards-Version: 3.8.2
+Homepage: http://alumnit.ca
 
-Package: libwvstreams4.4-base
+Package: libwvstreams4.6-base
 Architecture: any
-Section: libs
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: C++ network libraries for rapid application development
  WvStreams is a library suite that is comprised of several parts.  Included
@@ -21,9 +21,8 @@ Description: C++ network libraries for rapid application development
   * WvLog: a log files handler 
   * UniIniGen: a tiny version of UniConf for simple configuration systems
 
-Package: libwvstreams4.4-extras
+Package: libwvstreams4.6-extras
 Architecture: any
-Section: libs
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: C++ network libraries for rapid application development
  WvStreams is a library suite that is comprised of several parts.  Included
@@ -35,9 +34,8 @@ Description: C++ network libraries for rapid application development
  WvDial, TunnelVision, FastForward, KWvDial, retchmail, and many more yet 
  to come.  ;) 
 
-Package: libuniconf4.4
+Package: libuniconf4.6
 Architecture: any
-Section: libs
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Conflicts: libuniconf4.0 (<< 4.0.2-5), libuniconf4.2, libuniconf4.3
 Description: C++ network libraries for rapid application development
@@ -51,7 +49,7 @@ Description: C++ network libraries for rapid application development
  UniConf can also be accessed over the network, with authentication, allowing
  easy replication of configuration data via the UniReplicateGen.
 
-Package: libwvstreams4.4-doc
+Package: libwvstreams4.6-doc
 Architecture: all
 Section: doc
 Suggests: libwvstreams-dev (= ${binary:Version})
@@ -61,9 +59,8 @@ Description: Documentation for WvStreams
  The WvStreams library suite is a set of C++ network libraries that
  make it fast and simple to develop network applications.
 
-Package: libwvstreams4.4-qt
+Package: libwvstreams4.6-qt
 Architecture: any
-Section: libs
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: WvStreams and Qt Event Integration Library
  This package contains the library necessary to tie WvStreams and Qt program
@@ -73,10 +70,10 @@ Description: WvStreams and Qt Event Integration Library
 Package: libwvstreams-dev
 Architecture: any
 Section: libdevel
-Depends: libwvstreams4.4-base, libwvstreams4.4-extras, libuniconf4.4, libwvstreams4.4-qt, libxplc0.3.13-dev, ${misc:Depends}
+Depends: libwvstreams4.6-base, libwvstreams4.6-extras, libuniconf4.6, libwvstreams4.6-qt, libxplc0.3.13-dev, ${misc:Depends}
 Suggests: tk8.4 | wish
-Provides: libwvstreams4.4-dev
-Description: Development libraries and header files for libwvstreams4.4
+Provides: libwvstreams4.6-dev
+Description: Development libraries and header files for libwvstreams4.6
  Contains the header files and static libraries for use in rapid 
  application development using the WvStreams set of libraries.  It 
  includes everything that is needed to compile a program that needs 

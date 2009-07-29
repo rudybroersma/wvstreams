@@ -1,11 +1,13 @@
+/* -*- Mode: C++ -*- */
 #ifndef WVSTREAMSDEBUGGER_H
 #define WVSTREAMSDEBUGGER_H
 
-#include "wvtclstring.h"
-#include "wvcallback.h"
+#include <map>
+
 #include "wverror.h"
-#include "wvhashtable.h"
 #include "wvstringlist.h"
+#include "wvtclstring.h"
+#include "wvtr1.h"
 
 class WvStreamsDebugger
 {
@@ -14,7 +16,7 @@ public:
     // The callback type used to pass the results back to the application
     // that calls WvStreamsDebugger::run.  The application is allowed
     // to consume the WvStringList of results.
-    typedef WvCallback<void, WvStringParm, WvStringList &> ResultCallback;
+    typedef wv::function<void(WvStringParm, WvStringList&)> ResultCallback;
 
     // Debugging commands are implemented through the following three
     // callbacks:
@@ -24,14 +26,15 @@ public:
     //     the command as a result of a call to WvStreamsDebugger::run
     //   - CleanupCallback is optional and is used to free state
     //     for an instance of WvStreamsDebugger for the given command
-    typedef WvCallback<void *, WvStringParm> InitCallback;
-    typedef WvCallback<WvString, WvStringParm, WvStringList &,
-            ResultCallback, void *> RunCallback;
-    typedef WvCallback<void, WvStringParm, void *> CleanupCallback;
+    typedef wv::function<void*(WvStringParm)> InitCallback;
+    typedef wv::function<WvString(WvStringParm, WvStringList&,
+				  ResultCallback, void*)> RunCallback;
+
+    typedef wv::function<void(WvStringParm, void*)> CleanupCallback;
 
     // The WvStreamsDebugger::foreach function can be used to update
     // state in every instance of WvStreamsDebugger for a given command.
-    typedef WvCallback<void, WvStringParm, void *> ForeachCallback;
+    typedef wv::function<void(WvStringParm, void*)> ForeachCallback;
     
 private:
 
@@ -49,9 +52,9 @@ private:
             cleanup_cb = _cleanup_cb;
         }
     };
-    typedef WvMap<WvString, Command *> CommandMap;
+    typedef std::map<WvString, Command> CommandMap;
     static CommandMap *commands;
-    typedef WvMap<WvString, char *> CommandDataMap;
+    typedef std::map<WvString, void*> CommandDataMap;
     CommandDataMap command_data;
     
     void *get_command_data(WvStringParm cmd, Command *command);

@@ -1,21 +1,6 @@
 # Process this file with autoconf to produce a configure script.
-AC_INIT(WvStreams, 4.4.1, wvstreams-devel@googlegroups.com, wvstreams)
-SO_VERSION=4.4
-
-save_args() {
-    ARGS=""
-
-    while test $# -gt 0; do
-        ARGS="$ARGS \"$1\""
-        shift
-    done
-
-    rm -f reconfigure
-    echo $0 $ARGS '"$@"' >reconfigure
-    chmod +x reconfigure
-}
-
-save_args "$@"
+AC_INIT(WvStreams, 4.6, wvstreams-devel@googlegroups.com, wvstreams)
+SO_VERSION=4.6
 
 # append to a variable without introducing superfluous white space
 AC_DEFUN([WV_APPEND],[
@@ -48,18 +33,6 @@ AC_ARG_ENABLE(debug,
               AC_HELP_STRING([--disable-debug],
                              [strip debug information]))
 
-AC_ARG_ENABLE(devel,
-              AC_HELP_STRING([--enable-devel],
-                             [developer options]))
-
-AC_ARG_ENABLE(efence,
-              AC_HELP_STRING([--enable-efence],
-                             [link against Electric Fence]))
-
-AC_ARG_ENABLE(exceptions,
-              AC_HELP_STRING([--disable-exceptions],
-                             [C++ exceptions (compiler)]))
-
 AC_ARG_ENABLE(fatal-warnings,
               AC_HELP_STRING([--enable-fatal-warnings],
                              [turn warnings into errors]))
@@ -76,14 +49,6 @@ AC_ARG_ENABLE(delete-detector,
               AC_HELP_STRING([--enable-delete-detector],
                              [Delete detector (reference counting)]))
 
-AC_ARG_ENABLE(rtti,
-              AC_HELP_STRING([--disable-rtti],
-                             [C++ run-time type identification (compiler)]))
-
-AC_ARG_ENABLE(verbose,
-              AC_HELP_STRING([--enable-verbose],
-                             [verbose compilation output]))
-
 AC_ARG_ENABLE(warnings,
               AC_HELP_STRING([--disable-warnings],
                              [extra warnings]))
@@ -92,13 +57,13 @@ AC_ARG_ENABLE(testgui,
               AC_HELP_STRING([--disable-testgui],
                              [GUI for unit tests]))
 
+AC_ARG_WITH(dbus, AC_HELP_STRING([--with-dbus], [DBUS]))
 AC_ARG_WITH(openssl, AC_HELP_STRING([--with-openssl], [OpenSSL >= 0.9.7 (required)]))
 AC_ARG_WITH(pam, AC_HELP_STRING([--with-pam], [PAM]))
 AC_ARG_WITH(tcl, AC_HELP_STRING([--with-tcl], [Tcl]))
 AC_ARG_WITH(qt, AC_HELP_STRING([--with-qt], [Qt]))
-xplc_version='0.3.13'
-AC_ARG_WITH(xplc, AC_HELP_STRING([--with-xplc], [XPLC ${xplc_version} (required)]))
 AC_ARG_WITH(zlib, AC_HELP_STRING([--with-zlib], [zlib (required)]))
+AC_ARG_WITH(valgrind, AC_HELP_STRING([--with-valgrind], [Valgrind]))
 
 AC_ARG_VAR(MOC, [Qt meta object compiler])
 AC_ARG_VAR(WEAVER_BUILD_INFO, [Extra version info])
@@ -116,25 +81,35 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 
-# Poke gnulib
-gl_EARLY
-
 # Detect target build environment
 AC_CANONICAL_TARGET
 case "$target" in
     *-linux*)
         ARCH_SUBDIRS="linuxstreams"
+        OS="LINUX"
 	;;
     *-sunos*|*-solaris*)
     	ARCH_SUBDIRS=""
 	ac_libs="-lstdc++ -lgcc_s -ldl -lm -lc"
+	OS="SOLARIS"
 	;;
+    *-win*|*-mingw32*)
+    	ARCH_SUBDIRS="win32"
+    	OS="WIN32"
+    	;;
+    *-apple*)
+    	ARCH_SUBDIRS=""
+    	OS="MACOS"
+    	;;
     *)
     	ARCH_SUBDIRS=""
+    	OS="OTHER"
 	;;
 esac
+
 AC_SUBST(target)
 AC_SUBST(ARCH_SUBDIRS)
+AC_SUBST(OS)
 
 # Detect endianness
 AC_C_BIGENDIAN
@@ -164,18 +139,36 @@ int main()
 			     [Compiler warning on deprecated functions])])
 CPPFLAGS="$CPPFLAGS_save"
 
+# argp
+USE_WVSTREAMS_ARGP=0
+AC_CHECK_HEADERS(argp.h)
+AC_CHECK_FUNC(argp_parse)
+if test "$ac_cv_func_argp_parse" != yes \
+    -o "$ac_cv_header_argp_h" != yes ; then
+    (
+    	echo
+    	echo 'configuring argp...'
+    	cd argp
+    	./configure --host=$host_cpu-$host_os || exit $?
+    	echo 'argp configured.'
+    	echo
+    ) || exit $?
+    USE_WVSTREAMS_ARGP=1
+fi
+
 # Function checks
+AC_HEADER_DIRENT
+
 AC_FUNC_ALLOCA
 
 AC_CHECK_HEADERS(execinfo.h)
 
-# Initialise gnulib
-gl_INIT
-
 # Check for error_t
 AC_CHECK_HEADERS([argz.h errno.h])
-AC_CHECK_TYPE(error_t,, AC_DEFINE([error_t], [int],
-				  [Define to a type to use for `error_t' if it is not otherwise available.]),dnl `
+AC_CHECK_TYPE(error_t,, [AC_DEFINE([error_t], [int],
+				  [Define to a type to use for `error_t' if it is not otherwise available.])
+AC_DEFINE([__error_t_defined], [1], [Define so that glibc/gnulib argp.h
+    does not typedef error_t.])],dnl `
 [#if HAVE_ARGZ_H
 # include <argz.h>
 #else
@@ -335,30 +328,29 @@ AC_SUBST(LN)
 # used for compile tests.
 AC_LANG(C++)
 
+# __libc_stack_end isn't available to shared libraries with some libc versions
+AC_MSG_CHECKING([whether __libc_stack_end is public])
+AH_TEMPLATE([HAVE_LIBC_STACK_END], [Whether libc supports __libc_stack_end])
+LDFLAGS_save="$LDFLAGS"
+WV_APPEND(LDFLAGS, [-Wl,-z,defs -shared])
+HAVE_LIBC_STACK_END=no
+AC_TRY_LINK([extern const void *__libc_stack_end; ],
+	    [volatile const void *x = __libc_stack_end; ],
+	    [HAVE_LIBC_STACK_END=yes; ])
+if test "$HAVE_LIBC_STACK_END" = "yes"; then
+	AC_DEFINE([HAVE_LIBC_STACK_END])
+fi
+AC_MSG_RESULT([$HAVE_LIBC_STACK_END])
+LDFLAGS="$LDFLAGS_save"
+
 # Detect pkg-config
 AC_PATH_PROG([PKGCONFIG], [pkg-config], [no])
 if test "$PKGCONFIG" = "no"; then
-    if test "$with_xplc" = ""; then
-	AC_MSG_ERROR([pkg-config is not installed])
-    else
-	AC_MSG_WARN([pkg-config is not installed])
-    fi
-fi
-
-# devel
-if test "$enable_devel" = "yes"; then
-    enable_debug=yes
-    enable_fatal_warnings=yes
-    enable_warnings=yes
+    AC_MSG_WARN([pkg-config is not installed])
 fi
 
 if test "$enable_debug" != "no"; then
     AC_DEFINE_UNQUOTED(VER_STRING_EXTRA, [" (`whoami`@`hostname`$VER_STRING_EXTRA)"], [Extra version string.])
-fi
-
-# exceptions
-if test "$enable_exceptions" = "no"; then
-    WV_APPEND(CXXFLAGS, -fno-exceptions)
 fi
 
 # resolver-fork
@@ -367,26 +359,47 @@ if test "$enable_resolver_fork" = "no"; then
               [Define to disable WvResolver forking for debugging with gdb.])
 fi
 
-# resolver-fork
+# xplc delete detector
 if test "$enable_delete_detector" = "yes"; then
     AC_DEFINE(ENABLE_DELETE_DETECTOR,,
               [Define to enable the XPLC delete detector.])
 fi
 
-# rtti
-if test "$enable_rtti" = "no"; then
-    WV_APPEND(CXXFLAGS, -fno-rtti)
-fi
+# dbus
+if test "$with_dbus" != "no"; then        
+    if test "$with_dbus" = "" -o "$with_dbus" = "yes"; then
+        AC_MSG_CHECKING([Checking that D-Bus version greater than 1.2.14 installed.])
+        if pkg-config --atleast-version 1.2.14 dbus-1; then
+	    WV_APPEND(CPPFLAGS, [`pkg-config --cflags dbus-1`])
+            WV_APPEND(LDFLAGS, [`pkg-config --libs dbus-1`])
+	    AC_MSG_RESULT([yes])
+        else
+	    with_dbus=no
+	    AC_MSG_RESULT([no])
+	fi
+    else
+        # no version check when doing --with-dbus
+        DBUS_LIBDIR=$with_dbus/dbus/.libs
+    	WV_APPEND(CPPFLAGS, -I$with_dbus)
+    	WV_APPEND(LDFLAGS, -L$DBUS_LIBDIR)
+    	WV_APPEND(LIBS, -ldbus-1)
+    fi
 
-# gtk
-#if test "$with_gtk" != "no"; then
-#    CPPFLAGS_save="$CPPFLAGS"
-#    WV_APPEND(CPPFLAGS,`pkg-config --cflags gtk+ 2>/dev/null`)
-#    AC_CHECK_HEADERS(gtk/gtk.h,, [with_gtk=no])
-#    AC_CHECK_LIB(gdk, gdk_init,, [with_gtk=no])
-#    AC_CHECK_LIB(gtk, gtk_main,, [with_gtk=no])
-#    test "$with_gtk" = no && CPPFLAGS="$CPPFLAGS_save"
-#fi
+    # double check that we actually have D-Bus
+    if test "$with_dbus" != "no"; then
+        AC_CHECK_HEADERS(dbus/dbus.h,, [with_dbus=no])
+	with_dbus=no
+	AC_TRY_LINK([extern "C" void dbus_message_new(); ],
+                    [dbus_message_new(); ],
+                    [with_dbus=])
+    fi
+
+    if test "$with_dbus" != "no"; then
+        AC_DEFINE(WITH_DBUS,,
+                  [Define to enable DBUS support.])
+        LIBS_DBUS=$DBUS_LIBDIR/libdbus-1.a
+    fi
+fi
 
 # BSD sockets, if you're on Solaris
 AC_CHECK_LIB(socket, bind)
@@ -399,8 +412,18 @@ if test "$with_openssl" != "no"; then
     fi
     AC_CHECK_HEADERS(openssl/ssl.h,, [with_openssl=no],
                      [#define OPENSSL_NO_KRB5])
+    LIBS_save="$LIBS"
     AC_CHECK_LIB(crypto, X509_free)
     AC_CHECK_LIB(ssl, SSL_has_matching_session_id,, [with_openssl=no])
+    AC_CHECK_LIB(ssl, POLICY_MAPPING_new,, [with_openssl_policy_mapping=no])
+    if test "$with_openssl_policy_mapping" != "no"; then
+        AC_DEFINE([HAVE_OPENSSL_POLICY_MAPPING], [1],
+	    [Whether libssl has the POLICY_MAPPING features (0.9.8 and up)])
+    fi
+    LIBS="$LIBS_save"
+    if test "$with_openssl" != "no"; then
+        LIBS_SSL="-lcrypto -lssl"
+    fi
 fi
 
 # readline
@@ -412,6 +435,7 @@ fi
 # pam
 if test "$with_pam" != "no"; then
     AC_CHECK_HEADERS(security/pam_appl.h,, [with_pam=no])
+    LIBS_save="$LIBS"
     AC_CHECK_LIB(pam, pam_start,, [with_pam=no])
     AC_MSG_CHECKING(for sane PAM implementation)
     AC_COMPILE_IFELSE(
@@ -440,6 +464,10 @@ int main()
 		      [AC_MSG_RESULT([no])
 		       AC_DEFINE([HAVE_BROKEN_PAM], [1],
 				 [Solaris has a broken PAM implementation])])
+    LIBS="$LIBS_save"
+    if test "$with_pam" != "no" -a "$HAVE_BROKEN_PAM" != "1"; then
+        LIBS_PAM=-lpam
+    fi
 fi
 
 # tcl
@@ -447,9 +475,12 @@ if test "$with_tcl" != "no"; then
     CPPFLAGS_save="$CPPFLAGS"
     WV_APPEND(CPPFLAGS, -I/usr/include/tcl8.3)
     AC_CHECK_HEADERS(tcl.h,, [with_tcl=no])
+    LIBS_save="$LIBS"
     AC_CHECK_LIB(tcl8.3, TclInterpInit,, [with_tcl=no])
+    LIBS="$LIBS_save"
     if test "$with_tcl" != "no"; then
         CPPFLAGS="$CPPFLAGS_save"
+        LIBS_TCL=-ltcl8.3
     fi
 fi
 
@@ -460,61 +491,36 @@ if test "$with_qt" != "no"; then
         wv_cv_with_qt=no
         CPPFLAGS_save="$CPPFLAGS"
         LDFLAGS_save="$LDFLAGS"
-        for wv_qtdir in $with_qt $QTDIR $QT_SEARCH_PATH; do
+        LIBS_save="$LIBS"
+        for wv_qtdir in $with_qt $QTDIR $QT_SEARCH_PATH $(pkg-config --variable=prefix qt-mt); do
             eval wv_qtdir="$wv_qtdir"
             CPPFLAGS="$CPPFLAGS_save -I$wv_qtdir/include -I$wv_qtdir/include/qt3"
-            LDFLAGS="$LDFLAGS_save -L$wv_qtdir/lib -lqt-mt"
+            LDFLAGS="$LDFLAGS_save -L$wv_qtdir/lib"
+            LIBS="$LIBS_save -lqt-mt"
             AC_TRY_LINK([#include <qstring.h>],
                         [QString x("hello"); return 0; ],
                         [wv_cv_with_qt=$wv_qtdir; break])
         done
         CPPFLAGS="$CPPFLAGS_save"
         LDFLAGS="$LDFLAGS_save"
+        LIBS="$LIBS_save"
     ])
     with_qt=$wv_cv_with_qt
     if test "$with_qt" != no; then
         WV_APPEND(CPPFLAGS, -I$with_qt/include -I$with_qt/include/qt3)
-        WV_APPEND(LDFLAGS, -L$with_qt/lib)
+        if test "$wv_qtdir" != "/usr" ; then
+                # never explicitly include /usr/lib
+	        WV_APPEND(LDFLAGS, -L$with_qt/lib)
+	fi
+        WV_APPEND(LIBS_QT, -lqt-mt)
     fi
     AC_PATH_PROG(MOC, moc, [moc not found], $with_qt/bin)
 fi
 
 # valgrind
-AC_CHECK_PROG(VALGRIND, valgrind, valgrind)
-AC_CHECK_HEADERS(valgrind/memcheck.h)
-
-# xplc
-if test "$with_xplc" != "no"; then
-    if test "$with_xplc" = ""; then
-	if pkg-config --modversion xplc-${xplc_version}; then
-            WV_APPEND(CPPFLAGS, [`pkg-config --cflags xplc-${xplc_version}`])
-	    WV_APPEND(LDFLAGS, [`pkg-config --libs xplc-${xplc_version}`])
-	    AC_CHECK_HEADERS(xplc/core.h,, [with_xplc=no], [#define UNSTABLE])
-	    LIBS_save="$LIBS"
-	    AC_CHECK_LIB(xplc, XPLC_getServiceManager,, [with_xplc=no])
-	    LIBS="$LIBS_save"
-	    xplc_pc="xplc-${xplc_version}"
-	else
-	    with_xplc='no'
-	fi
-    else
-        WV_APPEND(CPPFLAGS, [-I$with_xplc/include])
-	WV_APPEND(LDFLAGS, [-L$with_xplc])
-	AC_CHECK_HEADERS(xplc/core.h,, [with_xplc=no], [#define UNSTABLE])
-	LIBS_save="$LIBS"
-	AC_CHECK_LIB(xplc, XPLC_getServiceManager,, [with_xplc=no])
-	LIBS="$LIBS_save"
-	xplc_pc="xplc-${xplc_version}"
-    fi
-    # What if we can't find it?
-    if test "$with_xplc" = "no" && test -d xplc; then
-        WV_APPEND(CPPFLAGS, [-I\$(WVSTREAMS)/xplc/include])
-        WV_APPEND(LDFLAGS, [-L\$(WVSTREAMS)/xplc])
-        AC_CONFIG_SUBDIRS(xplc)
-        build_xplc=yes
-        with_xplc='$(WVSTREAMS)/xplc'
-	xplc_pc='wvxplc'
-    fi
+if test "$with_valgrind" != "no"; then
+    AC_CHECK_PROG(VALGRIND, valgrind, valgrind)
+    AC_CHECK_HEADERS(valgrind/memcheck.h)
 fi
 
 # zlib
@@ -523,9 +529,21 @@ if test "$with_zlib" != "no"; then
     AC_CHECK_LIB(z, compress,, [with_zlib=no])
 fi
 
+# Find out whether TR1 or Boost are available.
+AC_CHECK_HEADERS(tr1/functional)
+AC_CHECK_HEADERS(boost/function.hpp)
+
+# When compiling with exceptions disabled and Boost, applications need
+# to provide an "exception handler", declared here.
+AC_CHECK_HEADERS(boost/throw_exception.hpp)
+
 # check for missing packages
 missing_required=
 missing_devel=
+if test "$with_dbus" = "no"; then
+    AC_MSG_WARN([DBUS is missing.])
+    missing_devel=yes
+fi
 if test "$with_pam" = "no"; then
     AC_MSG_WARN([PAM is missing.])
     missing_devel=yes
@@ -533,10 +551,6 @@ fi
 if test "$with_qt" = "no"; then
     AC_MSG_WARN([Qt is missing.])
     missing_devel=yes
-fi
-if test "$with_xplc" = "no"; then
-    AC_MSG_WARN([XPLC is missing.])
-    missing_required="$missing_required XPLC"
 fi
 if test "$VALGRIND" = ""; then
     AC_MSG_WARN([Valgrind is missing.])
@@ -552,15 +566,14 @@ if test "$with_zlib" = "no"; then
     AC_MSG_WARN([zlib is missing.])
     missing_required="$missing_required zlib"
 fi
+if test "$ac_cv_header_tr1_functional" != "yes" \
+     -a "$ac_cv_header_boost_function_hpp" != "yes"; then
+    AC_MSG_WARN([both tr1/functional and boost/function.hpp are missing.])
+    missing_required="$missing_required boost/function.hpp"
+fi
 
 if test -n "$missing_required"; then
     AC_MSG_ERROR([Required dependencies missing:$missing_required])
-fi
-
-if test "$enable_devel" = "yes"; then
-    if test -n "$missing_devel"; then
-        AC_MSG_ERROR([Some packages required in developer mode are missing.])
-    fi
 fi
 
 if test "$VALGRIND" != ""; then
@@ -572,35 +585,34 @@ if test "$VALGRIND" != ""; then
     fi
 fi
 
+
 # Compiler is always posix if invoking this configure script
 COMPILER_STANDARD=posix
 
 AC_SUBST(SO_VERSION)
 
+AC_SUBST(USE_WVSTREAMS_ARGP)
+
 AC_SUBST(enable_debug)
-AC_SUBST(enable_devel)
-AC_SUBST(enable_efence)
-AC_SUBST(enable_exceptions)
-AC_SUBST(enable_fatal_warnings)
 AC_SUBST(enable_optimization)
 AC_SUBST(enable_resolver_fork)
 AC_SUBST(enable_delete_detector)
-AC_SUBST(enable_rtti)
-AC_SUBST(enable_verbose)
 AC_SUBST(enable_warnings)
 AC_SUBST(enable_testgui)
 
-AC_SUBST(with_gtk)
+AC_SUBST(with_dbus)
 AC_SUBST(with_openssl)
+AC_SUBST(with_openssl_policy_mapping)
 AC_SUBST(with_pam)
 AC_SUBST(with_readline)
 AC_SUBST(with_qt)
 AC_SUBST(with_tcl)
-AC_SUBST(with_xplc)
 AC_SUBST(with_zlib)
 
-AC_SUBST(build_xplc)
-AC_SUBST(xplc_pc)
+AC_SUBST(LIBS_DBUS)
+AC_SUBST(LIBS_QT)
+AC_SUBST(LIBS_PAM)
+AC_SUBST(LIBS_TCL)
 
 AC_SUBST(ac_libs)
 AC_SUBST(COMPILER_STANDARD)
@@ -608,11 +620,12 @@ AC_SUBST(COMPILER_STANDARD)
 AC_DEFINE_UNQUOTED([VERBOSE_PACKAGE_VERSION],["$PACKAGE_VERSION$WEAVER_BUILD_INFO"],[Verbose package version])
 
 AC_CONFIG_FILES(config.mk)
-AC_CONFIG_FILES(gnulib/Makefile)
 AC_CONFIG_FILES([pkgconfig/libuniconf.pc
                  pkgconfig/libuniconf-uninstalled.pc
 		 pkgconfig/libwvbase.pc
 		 pkgconfig/libwvbase-uninstalled.pc
+		 pkgconfig/libwvdbus.pc
+		 pkgconfig/libwvdbus-uninstalled.pc
 		 pkgconfig/libwvqt.pc
 		 pkgconfig/libwvqt-uninstalled.pc
 		 pkgconfig/libwvstreams.pc
@@ -622,17 +635,14 @@ AC_CONFIG_FILES([pkgconfig/libuniconf.pc
 		 pkgconfig/libwvtest.pc
                  pkgconfig/libwvtest-uninstalled.pc])
 
-if test "$xplc_pc" = "wvxplc"; then
-    AC_CONFIG_FILES([pkgconfig/wvxplc.pc])
-fi
 AC_CONFIG_HEADERS(include/wvautoconf.h)
 
 AC_OUTPUT
 
-# Now remove PACKAGE_* macros from include/wvautoconf.h
-sed 's,^#.*define.*PACKAGE_.*$,/* & */,' include/wvautoconf.h > include/wvautoconf.h.new
+# Now convert PACKAGE_* macros into WVPACKAGE_* in include/wvautoconf.h
+sed 's,\(\#define.*\)PACKAGE,\1WVPACKAGE,' include/wvautoconf.h > include/wvautoconf.h.new
 if test "x$?" = "x0"; then
-    if ! diff include/wvautoconf.h include/wvautoconf.h >/dev/null; then
+    if ! diff include/wvautoconf.h include/wvautoconf.h.new >/dev/null; then
 	mv include/wvautoconf.h.new include/wvautoconf.h
     else
 	rm include/wvautoconf.h.new

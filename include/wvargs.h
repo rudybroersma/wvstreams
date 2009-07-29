@@ -8,8 +8,7 @@
 
 #include "wvstring.h"
 #include "wvstringlist.h"
-#include "wvcallback.h"
-#include "wvvector.h"
+#include "wvtr1.h"
 
 class WvArgsOption;
 class WvArgsData;
@@ -67,12 +66,12 @@ public:
     //! The callback type used for switches that do not take a parameter.
     //! It returns true if the switch was parsed correctly.
     //!
-    typedef WvCallback<bool, void *> NoArgCallback;
+    typedef wv::function<bool(void*)> NoArgCallback;
     //!
     //! The callback type used for switches that take a parameter
     //! It returns true if the switch was parsed correctly.
     //!
-    typedef WvCallback<bool, WvStringParm, void *> ArgCallback;
+    typedef wv::function<bool(WvStringParm, void*)> ArgCallback;
 
 private:
 

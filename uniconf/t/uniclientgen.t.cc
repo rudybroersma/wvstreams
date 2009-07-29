@@ -11,8 +11,10 @@
 #include "wvfile.h"
 #include "uniwatch.h"
 #include "wvstrutils.h"
+#include "wvtimeutils.h"
 
 #include <signal.h>
+#include <utime.h>
 
 class WvDebugUnixConn : public WvUnixConn
 {
@@ -56,8 +58,8 @@ static void delta_callback(const UniConf &, const UniConfKey &)
     ++delta_count;
 }
 
-typedef WvCallback<UniClientGen*, WvStringParm, WvStringParm, 
-        WvUnixConn *&> client_factory_t;
+typedef wv::function<UniClientGen*(WvStringParm, WvStringParm, 
+				   WvUnixConn*&)> client_factory_t;
 
 
 // Returns a new UniClientGen, using a non-logging underlying stream.
@@ -84,7 +86,7 @@ static UniClientGen *create_client_conn(WvString name, WvString sockname,
         {
             WVRELEASE(client_gen);
             wvout->print("Failed to connect, retrying...\n");
-            sleep(1);
+            wvdelay(100);
         }
         else break;
     }
@@ -95,6 +97,8 @@ static UniClientGen *create_client_conn(WvString name, WvString sockname,
 
 WVTEST_MAIN("UniClientGen Sanity Test")
 {
+    signal(SIGPIPE, SIG_IGN);
+
     WvString sockname = wvtmpfilename("uniclientgen.t-sock");
     UniConfTestDaemon daemon(sockname, "temp:");
 
@@ -107,9 +111,9 @@ WVTEST_MAIN("UniClientGen Sanity Test")
 
 WVTEST_MAIN("deltas")
 {
-    UniConfRoot uniconf;
-
     signal(SIGPIPE, SIG_IGN);
+
+    UniConfRoot uniconf;
 
     WvString sockname = wvtmpfilename("uniclientgen.t-sock");
     unlink(sockname);
@@ -126,7 +130,7 @@ WVTEST_MAIN("deltas")
     for (i=0; i<100; ++i)
     {
         client_gen->refresh();
-        usleep(1000);
+        wvdelay(1);
     }
 
     WVPASS(delta_count > old_delta_count);
@@ -149,12 +153,12 @@ static time_t file_time(WvStringParm filename)
 
 WVTEST_MAIN("commit")
 {
+    signal(SIGPIPE, SIG_IGN);
+
     UniConfRoot uniconf;
     WvString ini_file("/tmp/wvtest-uniclientgen-commit-%s.ini", getpid());
     unlink(ini_file);
     
-    signal(SIGPIPE, SIG_IGN);
-
     WvString sockname = wvtmpfilename("uniclientgen.t-sock");
 
     UniConfTestDaemon daemon(sockname, WvString("ini:%s", ini_file));
@@ -162,22 +166,25 @@ WVTEST_MAIN("commit")
     UniClientGen *client_gen = create_client_conn("commit", sockname);
     uniconf.mountgen(client_gen); 
 
-    uniconf.setmeint(time(NULL));
+    uniconf.setmeint(0);
     uniconf.commit();
     time_t old_file_time = file_time(ini_file);
     WVPASS(old_file_time != -1);
     WVPASS(old_file_time <= time(NULL));
 
-    // Wait until ini file is old
-    while (time(NULL) <= old_file_time)
-        sleep(1);
+    // utime the ini file into the past
+    time_t real_old_file_time = old_file_time - 5000;
+    utimbuf buf;
+    buf.actime = real_old_file_time;
+    buf.modtime = real_old_file_time;
+    WVPASSEQ(utime(ini_file, &buf), 0);
 
-    uniconf.setmeint(time(NULL));
+    uniconf.setmeint(1);
     uniconf.commit();
 
     time_t new_file_time = file_time(ini_file);
     WVPASS(new_file_time != -1);
-    WVPASS(new_file_time > old_file_time);
+    WVPASS(new_file_time > real_old_file_time);
 
     unlink(ini_file);
 }
@@ -185,12 +192,12 @@ WVTEST_MAIN("commit")
 
 WVTEST_MAIN("refresh")
 {
+    signal(SIGPIPE, SIG_IGN);
+
     UniConfRoot uniconf;
     WvString ini_file("/tmp/wvtest-uniclientgen-refresh-%s.ini", getpid());
     unlink(ini_file);
     
-    signal(SIGPIPE, SIG_IGN);
-
     WvString sockname = wvtmpfilename("uniclientgen.t-sock");
 
     UniConfTestDaemon daemon(sockname, WvString("ini:%s", ini_file));
@@ -213,10 +220,10 @@ WVTEST_MAIN("refresh")
 // Can't run this test -- it takes at least 60 seconds...
 WVTEST_MAIN("dead uniconfd")
 {
-    UniConfRoot uniconf;
-    
     signal(SIGPIPE, SIG_IGN);
 
+    UniConfRoot uniconf;
+    
     WvString sockname = get_sockname();
 
     pid_t child = wvfork();
@@ -245,7 +252,7 @@ WVTEST_MAIN("dead uniconfd")
             {
                 WVRELEASE(client_gen);
                 wvout->print("Failed to connect, retrying...\n");
-                sleep(1);
+                wvdelay(100);
             }
             else break;
         }
@@ -277,6 +284,8 @@ static void save_callback()
 
 WVTEST_MAIN("SaveCallback")
 {
+    signal(SIGPIPE, SIG_IGN);
+
     UniConfRoot uniconf;
 
     WvString ini_file("/tmp/wvtest-uniclientgen-refresh-%s.ini", getpid());

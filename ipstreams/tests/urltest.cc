@@ -2,12 +2,12 @@
  * Worldvisions Weaver Software:
  *   Copyright (C) 1997-2002 Net Integration Technologies, Inc.
  *
- * WvUDPStream test.  Waits for data on port 19.
+ * URL parsing test.
  */
 #include "wvurl.h"
 #include "wvstream.h"
 
-char *urls[] = {
+const char *urls[] = {
     "http://www.test.test",
     "http://www.test.test:100",
     "http://www.test.test:80",
@@ -26,7 +26,7 @@ char *urls[] = {
 
 int main()
 {
-    char **s;
+    const char **s;
     for (s = urls; *s != NULL; s++)
     {
         WvUrl url(*s);

@@ -1,3 +1,21 @@
+wvstreams (4.6-1) unstable; urgency=low
+
+  * QA upload.
+  * New upstream release.
+    + Move old source changes to quilt.
+    + Rename binaries for new upstream version.
+  * 01_kfreebsd_ftbfs.diff - Fix FTBFS on kFreeBSD. (Closes: #537883).
+    + Thanks to Petr Salinger for the fix!
+  * Copy in config.{sub,guess} on configure, rm them on clean.
+    + Add autotools-dev build-dep.
+  * Clean up rules file.
+  * Add Homepage.
+  * Remove duplicate sections from debian/control.
+  * Update debian/copyright.
+  * Bump Standards Version to 3.8.2. (No changes needed).
+
+ -- Barry deFreese <bdefreese@debian.org>  Wed, 29 Jul 2009 11:36:38 -0400
+
 wvstreams (4.4.1-1.1) unstable; urgency=high
 
   * Non-maintainer upload.

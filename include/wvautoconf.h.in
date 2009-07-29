@@ -1,5 +1,8 @@
 /* include/wvautoconf.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Define if building universal (internal helper macro) */
+#undef AC_APPLE_UNIVERSAL_BUILD
+
 /* Compiler warning on deprecated functions */
 #undef ATTR_DEPRECATED
 
@@ -14,25 +17,27 @@
 /* Define to enable the XPLC delete detector. */
 #undef ENABLE_DELETE_DETECTOR
 
-/* Define as good substitute value for EOVERFLOW. */
-#undef EOVERFLOW
-
 /* Size of ethernet address */
 #undef ETHER_ADDR_LEN
 
-/* Define to 1 if you have `alloca' after including <alloca.h>, a header that
-   may be supplied by this distribution. */
+/* Define to 1 if you have `alloca', as a function or macro. */
 #undef HAVE_ALLOCA
 
-/* Define HAVE_ALLOCA_H for backward compatibility with older code that
-   includes <alloca.h> only if HAVE_ALLOCA_H is defined. */
+/* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
+   */
 #undef HAVE_ALLOCA_H
+
+/* Define to 1 if you have the <argp.h> header file. */
+#undef HAVE_ARGP_H
 
 /* Define to 1 if you have the <argz.h> header file. */
 #undef HAVE_ARGZ_H
 
-/* Define to 1 if you have the <bp-sym.h> header file. */
-#undef HAVE_BP_SYM_H
+/* Define to 1 if you have the <boost/function.hpp> header file. */
+#undef HAVE_BOOST_FUNCTION_HPP
+
+/* Define to 1 if you have the <boost/throw_exception.hpp> header file. */
+#undef HAVE_BOOST_THROW_EXCEPTION_HPP
 
 /* Solaris has a broken PAM implementation */
 #undef HAVE_BROKEN_PAM
@@ -40,73 +45,12 @@
 /* Define to 1 if you have the `cfmakeraw' function. */
 #undef HAVE_CFMAKERAW
 
-/* Define to 1 if you have the declaration of `clearerr_unlocked', and to 0 if
-   you don't. */
-#undef HAVE_DECL_CLEARERR_UNLOCKED
+/* Define to 1 if you have the <dbus/dbus.h> header file. */
+#undef HAVE_DBUS_DBUS_H
 
-/* Define to 1 if you have the declaration of `feof_unlocked', and to 0 if you
-   don't. */
-#undef HAVE_DECL_FEOF_UNLOCKED
-
-/* Define to 1 if you have the declaration of `ferror_unlocked', and to 0 if
-   you don't. */
-#undef HAVE_DECL_FERROR_UNLOCKED
-
-/* Define to 1 if you have the declaration of `fflush_unlocked', and to 0 if
-   you don't. */
-#undef HAVE_DECL_FFLUSH_UNLOCKED
-
-/* Define to 1 if you have the declaration of `fgets_unlocked', and to 0 if
-   you don't. */
-#undef HAVE_DECL_FGETS_UNLOCKED
-
-/* Define to 1 if you have the declaration of `fputc_unlocked', and to 0 if
-   you don't. */
-#undef HAVE_DECL_FPUTC_UNLOCKED
-
-/* Define to 1 if you have the declaration of `fputs_unlocked', and to 0 if
-   you don't. */
-#undef HAVE_DECL_FPUTS_UNLOCKED
-
-/* Define to 1 if you have the declaration of `fread_unlocked', and to 0 if
-   you don't. */
-#undef HAVE_DECL_FREAD_UNLOCKED
-
-/* Define to 1 if you have the declaration of `fwrite_unlocked', and to 0 if
-   you don't. */
-#undef HAVE_DECL_FWRITE_UNLOCKED
-
-/* Define to 1 if you have the declaration of `getchar_unlocked', and to 0 if
-   you don't. */
-#undef HAVE_DECL_GETCHAR_UNLOCKED
-
-/* Define to 1 if you have the declaration of `getc_unlocked', and to 0 if you
-   don't. */
-#undef HAVE_DECL_GETC_UNLOCKED
-
-/* Define to 1 if you have the declaration of `program_invocation_name', and
-   to 0 if you don't. */
-#undef HAVE_DECL_PROGRAM_INVOCATION_NAME
-
-/* Define to 1 if you have the declaration of `program_invocation_short_name',
-   and to 0 if you don't. */
-#undef HAVE_DECL_PROGRAM_INVOCATION_SHORT_NAME
-
-/* Define to 1 if you have the declaration of `putchar_unlocked', and to 0 if
-   you don't. */
-#undef HAVE_DECL_PUTCHAR_UNLOCKED
-
-/* Define to 1 if you have the declaration of `putc_unlocked', and to 0 if you
-   don't. */
-#undef HAVE_DECL_PUTC_UNLOCKED
-
-/* Define to 1 if you have the declaration of `strnlen', and to 0 if you
-   don't. */
-#undef HAVE_DECL_STRNLEN
-
-/* Define to 1 if you have the declaration of `vsnprintf', and to 0 if you
-   don't. */
-#undef HAVE_DECL_VSNPRINTF
+/* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
+   */
+#undef HAVE_DIRENT_H
 
 /* Define to 1 if you have the <errno.h> header file. */
 #undef HAVE_ERRNO_H
@@ -114,33 +58,14 @@
 /* Define to 1 if you have the <execinfo.h> header file. */
 #undef HAVE_EXECINFO_H
 
-/* Define to 1 if you have the <features.h> header file. */
-#undef HAVE_FEATURES_H
-
-/* Define to 1 if you have the `flockfile' function. */
-#undef HAVE_FLOCKFILE
-
-/* Define to 1 if you have the `funlockfile' function. */
-#undef HAVE_FUNLOCKFILE
-
-/* Define to 1 if you have the <getopt.h> header file. */
-#undef HAVE_GETOPT_H
-
-/* Define to 1 if you have the `getopt_long_only' function. */
-#undef HAVE_GETOPT_LONG_ONLY
-
-/* Define if you have the 'intmax_t' type in <stdint.h> or <inttypes.h>. */
-#undef HAVE_INTMAX_T
-
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define if <inttypes.h> exists, doesn't clash with <sys/types.h>, and
-   declares uintmax_t. */
-#undef HAVE_INTTYPES_H_WITH_UINTMAX
-
 /* Define to 1 if you have the `crypto' library (-lcrypto). */
 #undef HAVE_LIBCRYPTO
+
+/* Whether libc supports __libc_stack_end */
+#undef HAVE_LIBC_STACK_END
 
 /* Define to 1 if you have the `pam' library (-lpam). */
 #undef HAVE_LIBPAM
@@ -157,44 +82,17 @@
 /* Define to 1 if you have the `tcl8.3' library (-ltcl8.3). */
 #undef HAVE_LIBTCL8_3
 
-/* Define to 1 if you have the `xplc' library (-lxplc). */
-#undef HAVE_LIBXPLC
-
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ
-
-/* Define to 1 if you have the <linewrap.h> header file. */
-#undef HAVE_LINEWRAP_H
 
 /* Define to 1 if you have the <linux/serial.h> header file. */
 #undef HAVE_LINUX_SERIAL_H
 
-/* Define if you have the 'long double' type. */
-#undef HAVE_LONG_DOUBLE
-
-/* Define if you have the 'long long' type. */
-#undef HAVE_LONG_LONG
-
-/* Define to 1 if mbrtowc and mbstate_t are properly declared. */
-#undef HAVE_MBRTOWC
-
-/* Define to 1 if <wchar.h> declares mbstate_t. */
-#undef HAVE_MBSTATE_T
-
-/* Define to 1 if you have the `memchr' function. */
-#undef HAVE_MEMCHR
-
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
-/* Define to 1 if you have the `mempcpy' function. */
-#undef HAVE_MEMPCPY
-
-/* Define to 1 if <limits.h> defines the MIN and MAX macros. */
-#undef HAVE_MINMAX_IN_LIMITS_H
-
-/* Define to 1 if <sys/param.h> defines the MIN and MAX macros. */
-#undef HAVE_MINMAX_IN_SYS_PARAM_H
+/* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
+#undef HAVE_NDIR_H
 
 /* Define to 1 if you have the <netdb.h> header file. */
 #undef HAVE_NETDB_H
@@ -220,11 +118,11 @@
 /* Define to 1 if you have the <net/if.h> header file. */
 #undef HAVE_NET_IF_H
 
+/* Whether libssl has the POLICY_MAPPING features (0.9.8 and up) */
+#undef HAVE_OPENSSL_POLICY_MAPPING
+
 /* Define to 1 if you have the <openssl/ssl.h> header file. */
 #undef HAVE_OPENSSL_SSL_H
-
-/* Define to 1 if the system has the type `ptrdiff_t'. */
-#undef HAVE_PTRDIFF_T
 
 /* Define to 1 if you have the <readline/readline.h> header file. */
 #undef HAVE_READLINE_READLINE_H
@@ -232,24 +130,11 @@
 /* Define to 1 if you have the <security/pam_appl.h> header file. */
 #undef HAVE_SECURITY_PAM_APPL_H
 
-/* Define to 1 if you have the `snprintf' function. */
-#undef HAVE_SNPRINTF
-
-/* Define to 1 if stdbool.h conforms to C99. */
-#undef HAVE_STDBOOL_H
-
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
-/* Define if <stdint.h> exists, doesn't clash with <sys/types.h>, and declares
-   uintmax_t. */
-#undef HAVE_STDINT_H_WITH_UINTMAX
-
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
-
-/* Define to 1 if you have the `strchrnul' function. */
-#undef HAVE_STRCHRNUL
 
 /* Define to 1 if you have the <strings.h> header file. */
 #undef HAVE_STRINGS_H
@@ -257,14 +142,13 @@
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
 
-/* Define to 1 if you have the `strncasecmp' function. */
-#undef HAVE_STRNCASECMP
+/* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
+   */
+#undef HAVE_SYS_DIR_H
 
-/* Define to 1 if you have the `strndup' function. */
-#undef HAVE_STRNDUP
-
-/* Define to 1 if you have the <sysexits.h> header file. */
-#undef HAVE_SYSEXITS_H
+/* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
+   */
+#undef HAVE_SYS_NDIR_H
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #undef HAVE_SYS_SOCKET_H
@@ -278,41 +162,17 @@
 /* Define to 1 if you have the <tcl.h> header file. */
 #undef HAVE_TCL_H
 
+/* Define to 1 if you have the <tr1/functional> header file. */
+#undef HAVE_TR1_FUNCTIONAL
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
 /* Define to 1 if you have the <valgrind/memcheck.h> header file. */
 #undef HAVE_VALGRIND_MEMCHECK_H
 
-/* Define to 1 if you have the `vasnprintf' function. */
-#undef HAVE_VASNPRINTF
-
-/* Define to 1 if you have the `vsnprintf' function. */
-#undef HAVE_VSNPRINTF
-
-/* Define to 1 if you have the <wchar.h> header file. */
-#undef HAVE_WCHAR_H
-
-/* Define if you have the 'wchar_t' type. */
-#undef HAVE_WCHAR_T
-
-/* Define to 1 if you have the `wcslen' function. */
-#undef HAVE_WCSLEN
-
-/* Define to 1 if you have the <wctype.h> header file. */
-#undef HAVE_WCTYPE_H
-
-/* Define if you have the 'wint_t' type. */
-#undef HAVE_WINT_T
-
-/* Define to 1 if you have the <xplc/core.h> header file. */
-#undef HAVE_XPLC_CORE_H
-
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
-
-/* Define to 1 if the system has the type `_Bool'. */
-#undef HAVE__BOOL
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
@@ -328,10 +188,6 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
-
-/* Define as the maximum value of type 'size_t', if the system doesn't define
-   it. */
-#undef SIZE_MAX
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
@@ -350,74 +206,26 @@
 /* Extra version string. */
 #undef VER_STRING_EXTRA
 
-/* Define to 1 if your processor stores words with the most significant byte
-   first (like Motorola and SPARC, unlike Intel and VAX). */
-#undef WORDS_BIGENDIAN
+/* Define to enable DBUS support. */
+#undef WITH_DBUS
+
+/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
+   significant byte first (like Motorola and SPARC, unlike Intel). */
+#if defined AC_APPLE_UNIVERSAL_BUILD
+# if defined __BIG_ENDIAN__
+#  define WORDS_BIGENDIAN 1
+# endif
+#else
+# ifndef WORDS_BIGENDIAN
+#  undef WORDS_BIGENDIAN
+# endif
+#endif
 
 /* Define to disable WvResolver forking for debugging with gdb. */
 #undef WVRESOLVER_SKIP_FORK
 
-/* Define to 1 if on AIX 3.
-   System headers sometimes define this.
-   We just want to avoid a redefinition error message.  */
-#ifndef _ALL_SOURCE
-# undef _ALL_SOURCE
-#endif
-
-/* Enable GNU extensions on systems that have them.  */
-#ifndef _GNU_SOURCE
-# undef _GNU_SOURCE
-#endif
-
-/* Define to 1 if on MINIX. */
-#undef _MINIX
-
-/* Define to 2 if the system does not provide POSIX.1 features except with
-   this defined. */
-#undef _POSIX_1_SOURCE
-
-/* Define to 1 if you need to in order for `stat' and other things to work. */
-#undef _POSIX_SOURCE
-
-/* Enable extensions on Solaris.  */
-#ifndef __EXTENSIONS__
-# undef __EXTENSIONS__
-#endif
-#ifndef _POSIX_PTHREAD_SEMANTICS
-# undef _POSIX_PTHREAD_SEMANTICS
-#endif
-#ifndef _TANDEM_SOURCE
-# undef _TANDEM_SOURCE
-#endif
-
-/* Define to rpl_ if the getopt replacement functions and variables should be
-   used. */
-#undef __GETOPT_PREFIX
+/* Define so that glibc/gnulib argp.h does not typedef error_t. */
+#undef __error_t_defined
 
 /* Define to a type to use for `error_t' if it is not otherwise available. */
 #undef error_t
-
-/* Define to `__inline__' or `__inline' if that's what the C compiler
-   calls it, or to nothing if 'inline' is not supported under any name.  */
-#ifndef __cplusplus
-#undef inline
-#endif
-
-/* Define to long or long long if <stdint.h> and <inttypes.h> don't define. */
-#undef intmax_t
-
-/* Define to a type if <wchar.h> does not define. */
-#undef mbstate_t
-
-/* Define to equivalent of C99 restrict keyword, or to nothing if this is not
-   supported. Do not define if restrict is supported directly. */
-#undef restrict
-
-/* Define to empty if the C compiler doesn't support this keyword. */
-#undef signed
-
-/* Define to `unsigned int' if <sys/types.h> does not define. */
-#undef size_t
-
-/* Define to rpl_strnlen if the replacement function should be used. */
-#undef strnlen

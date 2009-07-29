@@ -4,9 +4,12 @@
  *
  * Various little time functions...
  */
-#include <limits.h>
-
 #include "wvtimeutils.h"
+#include <limits.h>
+#ifndef _MSC_VER
+#include <unistd.h>
+#include <utime.h>
+#endif
 
 time_t msecdiff(const WvTime &a, const WvTime &b)
 {
@@ -103,3 +106,12 @@ void wvstime_set(const WvTime &_new_time)
     wvstime_cur = _new_time;
 }
 
+
+void wvdelay(int msec_delay)
+{
+#ifdef _WIN32
+    Sleep(msec_delay);
+#else
+    usleep(msec_delay * 1000);
+#endif
+}

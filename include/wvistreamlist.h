@@ -31,28 +31,33 @@ public:
         { sure_thing.unlink(data); WvIStreamListBase::unlink(data); }
 
     void add_after(WvLink *after, IWvStream *data, bool autofree,
-		   char *id)
+		   const char *id)
     {
 	WvIStreamListBase::add_after(after, data, autofree, id);
     }
-    void append(IWvStream *data, bool autofree, char *id)
-    {
-	WvIStreamListBase::append(data, autofree, id);
-    }
-    void add(IWvStream *data, bool autofree, char *id)
+    void add(IWvStream *data, bool autofree, const char *id)
     {
 	WvIStreamListBase::add(data, autofree, id);
     }
-    void prepend(IWvStream *data, bool autofree, char *id)
+    void prepend(IWvStream *data, bool autofree, const char *id)
     {
 	WvIStreamListBase::prepend(data, autofree, id);
     }
-    
+
+public: 
     bool auto_prune; // remove !isok() streams from the list automatically?
     static WvIStreamList globallist;
     
 protected:
     WvIStreamListBase sure_thing;
+
+private:
+    // Create some undefined overrides to prevent accidentally using a
+    // WvString as an id; these functions will keep a long-term reference to
+    // the string, so you should probably use a string constant.
+    void add_after(WvLink *after, IWvStream *data, bool autofree, WvString id);
+    void add(IWvStream *data, bool autofree, WvString id);
+    void prepend(IWvStream *data, bool autofree, WvString id);
 
 private:
     bool in_select;
@@ -63,7 +68,7 @@ private:
 #endif
 
 public:
-    void append(IWvStream *s, bool auto_free, const char *id = NULL)
+    void append(IWvStream *s, bool auto_free, const char *id)
     {
         if (s->wsname() == NULL)
             s->set_wsname(id);

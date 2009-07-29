@@ -25,8 +25,7 @@ WVTEST_MAIN("gzip")
     char *line; 
     
     WvLoopback loopy;
-    WvEncoderStream gzip(&loopy);
-    gzip.disassociate_on_close = true; 
+    WvEncoderStream gzip((loopy.addRef(), &loopy));
     
     gzip.write(in_data);
     line = gzip.blocking_getline(1000);
@@ -41,8 +40,7 @@ WVTEST_MAIN("gzip")
     WVPASSEQ(line, "a compressed line");
     
     WvLoopback loopy2;
-    WvEncoderStream gzip2(&loopy);
-    gzip2.disassociate_on_close = true; 
+    WvEncoderStream gzip2((loopy.addRef(), &loopy));
     
     gzip2.write(in_data);
     gzip2.write(zin_data);
@@ -471,7 +469,7 @@ protected:
 
 
 
-static void closecb(int *i, WvStream &s)
+static void closecb(int *i)
 {
     (*i)++;
 }
@@ -486,8 +484,7 @@ WVTEST_MAIN("encoderstream eof3")
 	WvEncoderStream s(l);
 	s.writechain.append(new_enc(), true);
 	s.readchain.append(new_dec(), true);
-	s.setclosecallback
-	    (WvBoundCallback<IWvStreamCallback, int *>(&closecb, &closed));
+	s.setclosecallback(wv::bind(&closecb, &closed));
 	
 	s.write("Hello\n");
 	s.write("nonewline");
