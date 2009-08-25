@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Debian QA Group <packages@qa.debian.org>
 Build-Depends: debhelper (>> 5.0.0), quilt, autotools-dev, libdb-dev, libpam0g-dev, libqt3-mt-dev, libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen
 Build-Conflicts: valgrind
-Standards-Version: 3.8.2
+Standards-Version: 3.8.3
 Homepage: http://alumnit.ca
 
 Package: libwvstreams4.6-base
@@ -37,7 +37,8 @@ Description: C++ network libraries for rapid application development
 Package: libuniconf4.6
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Conflicts: libuniconf4.0 (<< 4.0.2-5), libuniconf4.2, libuniconf4.3
+Conflicts: libuniconf4.0 (<< 4.0.2-5), libuniconf4.2, libuniconf4.3, libuniconf4.4
+Replaces: libuniconf4.4
 Description: C++ network libraries for rapid application development
  UniConf is a configuration system that can serve as the centrepiece among
  many other, existing configuration systems, such as:

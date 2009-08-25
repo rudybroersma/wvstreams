@@ -1,3 +1,12 @@
+wvstreams (4.6-2) unstable; urgency=low
+
+  * QA upload.
+  * Conflicts/Replaces libuniconf4.4 for libuniconf4.6 binary package
+    to allow clean upgrade from a previous version (Closes: #540320).
+  * Bump Standards-Version to 3.8.3, no changes needed.
+
+ -- Luca Falavigna <dktrkranz@debian.org>  Tue, 25 Aug 2009 21:55:23 +0200
+
 wvstreams (4.6-1) unstable; urgency=low
 
   * QA upload.
