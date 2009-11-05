@@ -60,8 +60,7 @@ endif
 		--infodir=\$${prefix}/share/info \
 		--sysconfdir=/etc --localstatedir=/var \
 		--disable-debug --disable-verbose \
-		--with-qt --with-openslp --with-dbus=no
-
+		--with-qt --with-openslp --with-dbus
 
 #Architecture
 build: build-arch build-indep

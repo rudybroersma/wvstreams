@@ -1,3 +1,18 @@
+wvstreams (4.6.1-1) unstable; urgency=low
+
+  * QA upload.
+  * New upstream release
+  * debian/rules
+    - enable "--with-dbus" (Closes: #551869)
+  * debian/libwvstreams4.6-extra.install
+    - add "debian/tmp/usr/lib/libwvdbus.so*" to inclde libwvdubs.so.4.6
+  * debian/control
+    - add "(= ${binary:Version})" to libwvstreams-dev package to fix 
+     "weak-library-dev-dependency" 
+    - add Build-Depends: libdbus-1-dev to correspond to "--with-dbus" in rules.
+
+ -- Hideki Yamane (Debian-JP) <henrich@debian.or.jp>  Thu, 05 Nov 2009 09:12:48 +0900
+
 wvstreams (4.6-2) unstable; urgency=low
 
   * QA upload.

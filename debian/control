@@ -2,7 +2,7 @@ Source: wvstreams
 Section: libs
 Priority: optional
 Maintainer: Debian QA Group <packages@qa.debian.org>
-Build-Depends: debhelper (>> 5.0.0), quilt, autotools-dev, libdb-dev, libpam0g-dev, libqt3-mt-dev, libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen
+Build-Depends: debhelper (>> 5.0.0), quilt, autotools-dev, libdb-dev, libpam0g-dev, libqt3-mt-dev, libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen, libdbus-1-dev
 Build-Conflicts: valgrind
 Standards-Version: 3.8.3
 Homepage: http://alumnit.ca
@@ -71,7 +71,7 @@ Description: WvStreams and Qt Event Integration Library
 Package: libwvstreams-dev
 Architecture: any
 Section: libdevel
-Depends: libwvstreams4.6-base, libwvstreams4.6-extras, libuniconf4.6, libwvstreams4.6-qt, libxplc0.3.13-dev, ${misc:Depends}
+Depends: libwvstreams4.6-base (= ${binary:Version}), libwvstreams4.6-extras (= ${binary:Version}), libuniconf4.6 (= ${binary:Version}), libwvstreams4.6-qt (= ${binary:Version}), libxplc0.3.13-dev, ${misc:Depends}
 Suggests: tk8.4 | wish
 Provides: libwvstreams4.6-dev
 Description: Development libraries and header files for libwvstreams4.6
