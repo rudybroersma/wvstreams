@@ -2,9 +2,9 @@ Source: wvstreams
 Section: libs
 Priority: optional
 Maintainer: Debian QA Group <packages@qa.debian.org>
-Build-Depends: debhelper (>> 5.0.0), quilt, autotools-dev, libdb-dev, libpam0g-dev, libqt3-mt-dev, libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen, libdbus-1-dev
+Build-Depends: debhelper (>> 5.0.0), autotools-dev, libdb-dev, libpam0g-dev, libqt3-mt-dev, libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen, libdbus-1-dev
 Build-Conflicts: valgrind
-Standards-Version: 3.8.3
+Standards-Version: 3.9.2
 Homepage: http://alumnit.ca
 
 Package: libwvstreams4.6-base
@@ -37,8 +37,6 @@ Description: C++ network libraries for rapid application development
 Package: libuniconf4.6
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Conflicts: libuniconf4.0 (<< 4.0.2-5), libuniconf4.2, libuniconf4.3, libuniconf4.4
-Replaces: libuniconf4.4
 Description: C++ network libraries for rapid application development
  UniConf is a configuration system that can serve as the centrepiece among
  many other, existing configuration systems, such as:
@@ -53,6 +51,7 @@ Description: C++ network libraries for rapid application development
 Package: libwvstreams4.6-doc
 Architecture: all
 Section: doc
+Depends: ${misc:Depends}
 Suggests: libwvstreams-dev (= ${binary:Version})
 Description: Documentation for WvStreams
  Contains all the documentation available to program with WvStreams.

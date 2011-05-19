@@ -1,3 +1,14 @@
+wvstreams (4.6.1-2) unstable; urgency=low
+
+  * QA upload.
+  * Switch to format 3.0 (quilt).
+  * debian/patches/05_gcc.diff:
+    - Fix FTBFS with new gcc (Closes: #621990).
+  * Drop obsolete Conflicts/Replaces fields.
+  * Bump Standards-Version to 3.9.2.
+
+ -- Luca Falavigna <dktrkranz@debian.org>  Fri, 20 May 2011 00:39:34 +0200
+
 wvstreams (4.6.1-1) unstable; urgency=low
 
   * QA upload.

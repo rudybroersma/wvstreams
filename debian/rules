@@ -45,8 +45,6 @@ config.status: configure
 	dh_testdir
 	# Add here commands to configure the package.
 
-	QUILT_PATCHES=debian/patches quilt push -a || test $$? = 2
-
 ifneq "$(wildcard /usr/share/misc/config.sub)" ""
 	cp -f /usr/share/misc/config.sub config.sub
 endif
@@ -93,8 +91,6 @@ clean:
 	-rm -rf Docs/doxy-html
 	[ ! -f xplc/Makefile ] || $(MAKE) -C xplc distclean
 	[ ! -f Makefile ] || $(MAKE) distclean
-
-	QUILT_PATCHES=debian/patches quilt pop -a -R || test $$? = 2
 
 	rm -f config.sub config.guess
 	rm -rf .pc
