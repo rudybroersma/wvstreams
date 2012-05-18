@@ -22,7 +22,6 @@ version:=$(shell awk -F= '/SO_VERSION=/{print $$2}' $(CURDIR)/configure.ac)
 base=libwvstreams$(version)
 # This is used the wvstreams makefile to set the .so links
 PKG=$(CURDIR)/debian/${base}
-PKG_QT=$(CURDIR)/debian/${base}-qt
 PKGDEV=$(CURDIR)/debian/libwvstreams-dev
 PKGDOC=$(CURDIR)/debian/${base}-doc
 DOCDIR=$(PKGDOC)/usr/share/doc/$(base)-doc
@@ -58,7 +57,7 @@ endif
 		--infodir=\$${prefix}/share/info \
 		--sysconfdir=/etc --localstatedir=/var \
 		--disable-debug --disable-verbose \
-		--with-qt --with-openslp --with-dbus
+		--with-openslp --with-dbus
 
 #Architecture
 build: build-arch build-indep
@@ -134,7 +133,6 @@ install-arch:
 	# Install lintian overrides
 	install -m644 debian/libwvstreams$(version)-base.lintian-override debian/libwvstreams$(version)-base/usr/share/lintian/overrides/libwvstreams$(version)-base
 	install -m644 debian/libwvstreams$(version)-extras.lintian-override debian/libwvstreams$(version)-extras/usr/share/lintian/overrides/libwvstreams$(version)-extras
-	install -m644 debian/libwvstreams$(version)-qt.lintian-override debian/libwvstreams$(version)-qt/usr/share/lintian/overrides/libwvstreams$(version)-qt
 
 	dh_install -s
 
@@ -157,7 +155,6 @@ binary-common:
 	chmod -x $(CURDIR)/debian/libwvstreams-dev/usr/lib/valgrind/wvstreams.supp
 	dh_makeshlibs -plibwvstreams$(version)-base \
 		      -plibwvstreams$(version)-extras \
-		      -plibwvstreams$(version)-qt \
 		      -plibuniconf$(version)
 	dh_installdeb
 	dh_shlibdeps -L libwvstreams$(version)-base \
