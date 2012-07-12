@@ -34,11 +34,13 @@ endif
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
 	CFLAGS += -O0
 else
-	CFLAGS += -O2
+	CFLAGS += -O2 -fno-tree-dce -fno-optimize-sibling-calls
 endif
 ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
 	INSTALL_PROGRAM += -s
 endif
+
+MAKEFLAGS += -j1 # parallel build broken
 
 config.status: configure
 	dh_testdir
@@ -66,7 +68,7 @@ build-arch: build-arch-stamp
 build-arch-stamp: config.status
 
 	# Add here commands to compile the arch part of the package.
-	$(MAKE) VERBOSE=1 CXXOPTS="-fPIC -DPIC" COPTS="-fPIC -DPIC"
+	$(MAKE) VERBOSE=1 CXXOPTS="-fPIC -DPIC -fno-tree-dce -fno-optimize-sibling-calls" COPTS="-fPIC -DPIC"
 	$(MAKE) VERBOSE=1 CXXOPTS="-fPIC -DPIC" COPTS="-fPIC -DPIC" uniconf/tests/uni
 	touch build-arch-stamp
 

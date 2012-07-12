@@ -2,7 +2,9 @@ Source: wvstreams
 Section: libs
 Priority: optional
 Maintainer: Debian QA Group <packages@qa.debian.org>
-Build-Depends: debhelper (>> 5.0.0), autotools-dev, libdb-dev, libpam0g-dev, libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen, libdbus-1-dev
+Build-Depends: debhelper (>> 5.0.0), autotools-dev, libdb-dev, libpam0g-dev,
+ libssl-dev, libxplc0.3.13-dev, libpopt-dev, zlib1g-dev, doxygen, libdbus-1-dev,
+ graphviz
 Build-Conflicts: valgrind
 Standards-Version: 3.9.2
 Homepage: http://alumnit.ca

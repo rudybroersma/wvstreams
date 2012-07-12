@@ -1,3 +1,13 @@
+wvstreams (4.6.1-5) unstable; urgency=low
+
+  * QA upload.
+  * Disable some gcc-4.7 optimization flags to fix wrong magic_number bug.
+    Thanks to Peter Drysdale <drysdalepete@gmail.com>. (Closes: #674006) 
+  * Disable parallel build.
+  * Add Build-Depends: graphviz.
+
+ -- Johann Felix Soden <johfel@debian.org>  Fri, 13 Jul 2012 00:39:24 +0200
+
 wvstreams (4.6.1-4) unstable; urgency=low
 
   * QA upload.
