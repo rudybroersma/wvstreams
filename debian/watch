@@ -1,5 +1,4 @@
 version=3
-
-http://code.google.com/p/wvstreams/downloads/list \
-http:\/\/wvstreams.googlecode.com\/files\/wvstreams-([\d.]+)\.tar\.gz 
-
+opts=uversionmangle=s/(\d)[_\.\-\+]?((RC|rc|pre|dev|beta|alpha|b|a)[\-\.]?\d*)$/$1~$2/,\
+downloadurlmangle=s%.*/([^/]*)/downloads/detail\?name=([^=&]*).*%http://$1.googlecode.com/files/$2%,filenamemangle=s/.*name=([^&]+).*/$1/ \
+http://code.google.com/p/wvstreams/downloads/list?can=1 .*=wvstreams-(\d.*)\.(?:tgz|tbz2|txz|tar\.(?:gz|bz2|xz)|zip).*

@@ -26,15 +26,11 @@ PKGDEV=$(CURDIR)/debian/libwvstreams-dev
 PKGDOC=$(CURDIR)/debian/${base}-doc
 DOCDIR=$(PKGDOC)/usr/share/doc/$(base)-doc
 
-CFLAGS = -Wall
+CFLAGS = -Wall $(shell dpkg-buildflags --get CFLAGS; dpkg-buildflags --get CPPFLAGS)
+LDFLAGS = $(shell dpkg-buildflags --get LDFLAGS)
 
-ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
-	CFLAGS += -g
-endif
-ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
-	CFLAGS += -O0
-else
-	CFLAGS += -O2 -fno-tree-dce -fno-optimize-sibling-calls
+ifeq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -fno-tree-dce -fno-optimize-sibling-calls
 endif
 ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
 	INSTALL_PROGRAM += -s
@@ -53,7 +49,7 @@ ifneq "$(wildcard /usr/share/misc/config.guess)" ""
 	cp -f /usr/share/misc/config.guess config.guess
 endif
 
-	CFLAGS="$(CFLAGS)" ./configure \
+	CFLAGS="$(CFLAGS)" CXXFLAGS="$(CXXFLAGS)" LDFLAGS="$(LDFLAGS)" ./configure \
 		--host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE) \
 		--prefix=/usr --mandir=\$${prefix}/share/man \
 		--infodir=\$${prefix}/share/info \
@@ -68,8 +64,8 @@ build-arch: build-arch-stamp
 build-arch-stamp: config.status
 
 	# Add here commands to compile the arch part of the package.
-	$(MAKE) VERBOSE=1 CXXOPTS="-fPIC -DPIC -fno-tree-dce -fno-optimize-sibling-calls" COPTS="-fPIC -DPIC"
-	$(MAKE) VERBOSE=1 CXXOPTS="-fPIC -DPIC" COPTS="-fPIC -DPIC" uniconf/tests/uni
+	$(MAKE) VERBOSE=1 CXXOPTS="$(CFLAGS) -fPIC -DPIC -fno-tree-dce -fno-optimize-sibling-calls" COPTS="$(CFLAGS) -fPIC -DPIC"
+	$(MAKE) VERBOSE=1 CXXOPTS="$(CFLAGS) -fPIC -DPIC" COPTS="$(CFLAGS) -fPIC -DPIC" uniconf/tests/uni
 	touch build-arch-stamp
 
 build-indep: build-stamp-indep
@@ -85,7 +81,7 @@ build-stamp-indep: config.status
 clean:
 	dh_testdir
 	dh_testroot
-	rm -f build-stamp build-stamp-indep #CONFIGURE-STAMP#
+	rm -f build-stamp build-arch-stamp build-stamp-indep #CONFIGURE-STAMP#
 
 	# Add here commands to clean up after the build process.
 	[ ! -f Docs/sgmlmanual/Makefile ] || $(MAKE) -C Docs/sgmlmanual clean

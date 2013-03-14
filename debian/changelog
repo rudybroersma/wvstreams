@@ -1,3 +1,13 @@
+wvstreams (4.6.1-6) unstable; urgency=low
+
+  * QA upload.
+  * Suggest tk8.5 instead of tk8.4.
+  * Build using hardening flags.
+  * Enable verbose build.
+  * debian/control: Remove Homepage attribute, doesn't exist anymore.
+
+ -- Matthias Klose <doko@debian.org>  Thu, 14 Mar 2013 11:51:08 -0700
+
 wvstreams (4.6.1-5) unstable; urgency=low
 
   * QA upload.
