@@ -1,7 +1,11 @@
-Index: wvstreams-4.6/utils/wvcrash.cc
-===================================================================
---- wvstreams-4.6.orig/utils/wvcrash.cc	2009-07-29 11:41:39.000000000 -0400
-+++ wvstreams-4.6/utils/wvcrash.cc	2009-07-29 11:41:59.000000000 -0400
+Description: fix FTBFS on kFreeBSD
+Author: Petr Salinger <Petr.Salinger@seznam.cz>
+Bug-Debian: http://bugs.debian.org/537883
+Forwarded: no
+Last-Update: 2013-10-30
+
+--- a/utils/wvcrash.cc
++++ b/utils/wvcrash.cc
 @@ -26,7 +26,7 @@
  #endif
  
@@ -11,10 +15,8 @@ Index: wvstreams-4.6/utils/wvcrash.cc
  
  # include <execinfo.h>
  #include <unistd.h>
-Index: wvstreams-4.6/utils/wvcrashbase.cc
-===================================================================
---- wvstreams-4.6.orig/utils/wvcrashbase.cc	2009-07-29 11:42:21.000000000 -0400
-+++ wvstreams-4.6/utils/wvcrashbase.cc	2009-07-29 11:42:36.000000000 -0400
+--- a/utils/wvcrashbase.cc
++++ b/utils/wvcrashbase.cc
 @@ -66,7 +66,7 @@
  
  

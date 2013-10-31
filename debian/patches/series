@@ -2,6 +2,9 @@
 02_doc_path.diff
 03_html_sgml.diff
 04_signed_request.diff
-05_gcc.diff
 06_gcc-4.7.diff
 07_buildflags.diff
+08_openssl-1.0.diff
+09_glibc-2.12.diff
+10_readline.diff
+11_typos.diff

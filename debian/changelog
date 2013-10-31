@@ -1,3 +1,29 @@
+wvstreams (4.6.1-7) unstable; urgency=low
+
+  * QA upload.
+  * Don't build-conflict with valgrind; pass --without-valgrind to the
+    configure script instead.
+  * Regenerate the configure script from source at build time. Build-depend on
+    autoconf.
+  * Patch the configure script to make it possible to disable readline.
+  * Disable readline support (closes: #725858).
+  * Bump debhelper compatibility level to 7.
+    + Update minimum required debhelper version in Build-Depends accordingly.
+  * Improve debian/rules:
+    + Use “chmod a-x” instead of “chmod -x”.
+    + Don't ignore errors from rm.
+    + Don't remove the .pc directory in the clean target.
+    + Copy config.sub and config.guess unconditionally.
+    + Use “dh_prep” instead of “dh_clean -k”.
+  * Improve patches:
+    + Add patch headers.
+    + Split 05_gcc.diff into two patches:
+      - 08_openssl-1.0.diff, to fix FTBFS with OpenSSL 1.0;
+      - 09_glibc-2.12.diff, to fix FTBFS with glibc 1.12.
+  * Fix a typo.
+
+ -- Jakub Wilk <jwilk@debian.org>  Thu, 31 Oct 2013 16:10:21 +0100
+
 wvstreams (4.6.1-6) unstable; urgency=low
 
   * QA upload.
