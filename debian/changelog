@@ -1,3 +1,11 @@
+wvstreams (4.6.1-8) unstable; urgency=medium
+
+  * QA upload.
+  * Move the last three dh_commands to binary-arch and binary-indep.
+  * Move chmod a-x to binary-arch. Closes: #806122.
+
+ -- Santiago Vila <sanvila@debian.org>  Sun, 01 May 2016 13:01:12 +0200
+
 wvstreams (4.6.1-7) unstable; urgency=low
 
   * QA upload.
