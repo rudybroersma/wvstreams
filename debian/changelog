@@ -1,3 +1,18 @@
+wvstreams (4.6.1-9) unstable; urgency=medium
+
+  * QA upload.
+  * d/p/gcc-6: Patch to fix compilation with gcc-6, Closes: #811659
+  * run 'cme fix dpkg-control', updated standards version to 3.9.8 
+  * d/compat, d/control: update compat level to 9
+  * d/watch: Point to new github source location 
+  * d/control: add new Github home page 
+  * d/uniconfd.init: source /lib/lsb/init-functions if available
+  * d/rules: Add and install overrides for missing manpage of dev test 
+    program and the Doxygen created embedded javascript library 
+  * d/rules: remove irrelevant *.md5 files from -doc package
+
+ -- Gert Wollny <gw.fossdev@gmail.com>  Mon, 11 Jul 2016 15:34:22 +0000
+
 wvstreams (4.6.1-8) unstable; urgency=medium
 
   * QA upload.

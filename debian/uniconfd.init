@@ -18,6 +18,10 @@ DAEMON=/usr/sbin/uniconfd
 NAME=uniconfd
 DESC="UniConf daemon"
 
+if [ -f /lib/lsb/init-functions ] ; then
+	. /lib/lsb/init-functions
+fi
+
 test -x $DAEMON || exit 0
 
 # Include uniconf defaults if available

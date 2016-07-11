@@ -8,3 +8,4 @@
 09_glibc-2.12.diff
 10_readline.diff
 11_typos.diff
+gcc-6.patch
