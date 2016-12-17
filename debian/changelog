@@ -1,3 +1,10 @@
+wvstreams (4.6.1-11) unstable; urgency=medium
+
+  * QA upload.
+  * Build with OpenSSL 1.0 (Closes: #828603).
+
+ -- Andrey Rahmatullin <wrar@debian.org>  Sat, 17 Dec 2016 15:02:02 +0500
+
 wvstreams (4.6.1-10) unstable; urgency=medium
 
   * QA upload.
