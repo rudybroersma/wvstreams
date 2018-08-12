@@ -1,3 +1,11 @@
+wvstreams (4.6.1-12) unstable; urgency=low
+
+  * QA upload.
+  * Work around stack corruption, thanks to Karol Ossowski.
+    (Closes: #863039)
+
+ -- Adrian Bunk <bunk@debian.org>  Sun, 12 Aug 2018 21:40:33 +0300
+
 wvstreams (4.6.1-11) unstable; urgency=medium
 
   * QA upload.

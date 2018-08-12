@@ -9,3 +9,4 @@
 10_readline.diff
 11_typos.diff
 gcc-6.patch
+12_increase_task_stack.patch
