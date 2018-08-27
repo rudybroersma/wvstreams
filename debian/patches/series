@@ -11,3 +11,4 @@
 gcc-6.patch
 12_increase_task_stack.patch
 wvstreams_openssl1.1.patch
+12_cross.diff
