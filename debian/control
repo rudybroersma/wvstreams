@@ -90,31 +90,3 @@ Description: Development libraries and header files for libwvstreams4.6
  .
  The WvStreams library suite is a set of C++ network libraries that
  make it fast and simple to develop network applications.
-
-Package: uniconfd
-Architecture: any
-Section: utils
-Depends: ${shlibs:Depends},
-         ${misc:Depends}
-Description: Server that manages UniConf elements
- UniConf is a configuration system that can serve as the centrepiece among
- many other, existing configuration systems.
- .
- UniConf can also be accessed over the network, with authentication, allowing
- easy replication of configuration data via the UniReplicateGen.
- .
- This package contains the server that accepts incoming TCP or Unix
- connections, and gets or sets UniConf elements at the request of a
- UniConf client.
-
-Package: uniconf-tools
-Architecture: any
-Section: utils
-Depends: ${shlibs:Depends},
-         ${misc:Depends}
-Description: Tools to interface with UniConf
- UniConf is a configuration system that can serve as the centrepiece among
- many other, existing configuration systems.
- .
- This package contains utilities that allow users to interface with 
- UniConf manually.
