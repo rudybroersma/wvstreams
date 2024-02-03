@@ -1,3 +1,13 @@
+wvstreams (4.6.1-17) unstable; urgency=medium
+
+  * QA upload.
+  * Run dh_autreconf. (Closes: #1046700)
+  * Trim URI whitespace according to RFC. (Closes: #781745)
+  * d/copyright: Convert to machine-readable format.
+  * Add public domain statement for ftpparse.
+
+ -- Bastian Germann <bage@debian.org>  Sat, 03 Feb 2024 22:43:16 +0000
+
 wvstreams (4.6.1-16) unstable; urgency=medium
 
   * QA upload.

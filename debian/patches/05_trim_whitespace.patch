@@ -1,0 +1,15 @@
+Description: Trim URI whitespace according to RFC
+Author: Bastian Germann <bage@debian.org>
+Bug-Debian: https://bugs.debian.org/781745
+---
+--- wvstreams-4.6.1.orig/crypto/wvx509.cc
++++ wvstreams-4.6.1/crypto/wvx509.cc
+@@ -1020,7 +1020,7 @@ static void parse_stack(WvStringParm ext
+         WvString stack_entry(*i);
+         if (strstr(stack_entry, prefix))
+         {
+-            WvString uri(stack_entry.edit() + prefix.len());
++            WvString uri(trim_string(stack_entry.edit()) + prefix.len());
+             list.append(uri);  
+         }
+     }

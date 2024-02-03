@@ -13,3 +13,4 @@ gcc-6.patch
 wvstreams_openssl1.1.patch
 12_cross.diff
 0001-Fix-narrowing-conversion-error.patch
+05_trim_whitespace.patch
