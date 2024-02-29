@@ -2,7 +2,7 @@ Source: wvstreams
 Maintainer: Debian QA Group <packages@qa.debian.org>
 Section: libs
 Priority: optional
-Build-Depends: debhelper-compat (= 10),
+Build-Depends: dpkg-dev (>= 1.22.5), debhelper-compat (= 10),
                autoconf,
                autotools-dev,
                libdb-dev,
@@ -17,7 +17,11 @@ Build-Depends: debhelper-compat (= 10),
 Standards-Version: 3.9.8
 Homepage: https://github.com/apenwarr/wvstreams/
 
-Package: libwvstreams4.6-base
+Package: libwvstreams4.6t64-base
+Provides: ${t64:Provides}
+X-Time64-Compat: libwvstreams4.6-base
+Replaces: libwvstreams4.6-base
+Breaks: libwvstreams4.6-base (<< ${source:Version})
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends}
@@ -32,7 +36,11 @@ Description: C++ network libraries for rapid application development
   * WvLog: a log files handler 
   * UniIniGen: a tiny version of UniConf for simple configuration systems
 
-Package: libwvstreams4.6-extras
+Package: libwvstreams4.6t64-extras
+Provides: ${t64:Provides}
+X-Time64-Compat: libwvstreams4.6-extras
+Replaces: libwvstreams4.6-extras
+Breaks: libwvstreams4.6-extras (<< ${source:Version})
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends}
@@ -46,7 +54,10 @@ Description: C++ network libraries for rapid application development
  WvDial, TunnelVision, FastForward, KWvDial, retchmail, and many more yet 
  to come.  ;) 
 
-Package: libuniconf4.6
+Package: libuniconf4.6t64
+Provides: ${t64:Provides}
+Replaces: libuniconf4.6
+Breaks: libuniconf4.6 (<< ${source:Version})
 Architecture: any
 Depends: ${shlibs:Depends},
          ${misc:Depends}
@@ -75,9 +86,9 @@ Description: Documentation for WvStreams
 Package: libwvstreams-dev
 Architecture: any
 Section: libdevel
-Depends: libwvstreams4.6-base (= ${binary:Version}),
-         libwvstreams4.6-extras (= ${binary:Version}),
-         libuniconf4.6 (= ${binary:Version}),
+Depends: libwvstreams4.6t64-base (= ${binary:Version}),
+         libwvstreams4.6t64-extras (= ${binary:Version}),
+         libuniconf4.6t64 (= ${binary:Version}),
          libxplc0.3.13-dev,
          ${misc:Depends}
 Suggests: tk8.5 | wish
