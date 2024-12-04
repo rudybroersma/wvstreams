@@ -47,29 +47,31 @@ WvStreamClone::~WvStreamClone()
 
 void WvStreamClone::noread()
 {
-#if 0 
+    // unlike nowrite(), it is safe to call cloned->noread() immediately.
+    // That will pass the shutdown(SHUT_RD) on to the deepest stream right
+    // away, but won't close anything until all the inbufs are empty.
     if (cloned)
 	cloned->noread();
-#endif
     WvStream::noread();
 }
 
 
 void WvStreamClone::nowrite()
 {
-#if 0 // this clone may have an unflushed buffer, so don't nowrite() now!
-    if (cloned)
+    // this sets stop_write.  We call cloned->nowrite() in flush_internal()
+    // when our outbuf is flushed (because until then, we *do* want to be
+    // able to write to the clone).
+    if (cloned && !outbuf.used())
 	cloned->nowrite();
-#endif
     WvStream::nowrite();
 }
 
 
 void WvStreamClone::close()
 {
-    //fprintf(stderr, "%p closing substream %p\n", this, cloned);
+    // fprintf(stderr, "%p closing substream %p\n", this, cloned);
     if (cloned)
-	cloned->setclosecallback(0, 0); // prevent recursion!
+	cloned->setclosecallback(0); // prevent recursion!
     WvStream::close();
     if (disassociate_on_close)
         setclone(NULL);
@@ -81,7 +83,11 @@ void WvStreamClone::close()
 bool WvStreamClone::flush_internal(time_t msec_timeout)
 {
     if (cloned)
+    {
+	if (stop_write && !outbuf.used())
+	    cloned->nowrite();
         return cloned->flush(msec_timeout);
+    }
     else
 	return true;
 }
@@ -92,7 +98,14 @@ size_t WvStreamClone::uread(void *buf, size_t size)
     // we use cloned->read() here, not uread(), since we want the _clone_
     // to own the input buffer, not the main stream.
     if (cloned)
-	return cloned->read(buf, size);
+    {
+	size_t len = 0;
+	if (cloned->isok())
+	    len = cloned->read(buf, size);
+	if (len == 0 && !cloned->isok())
+	    close();
+	return len;
+    }
     else
 	return 0;
 }
@@ -113,9 +126,12 @@ bool WvStreamClone::isok() const
 {
     if (geterr())
 	return false;
-    if (cloned)
-	return cloned->isok();
-    return false;
+    if (!cloned)
+	return false;
+    return WvStream::isok();
+    
+    // don't do this: cloned's closecallback will close us when needed.
+    // return cloned->isok();
 }
 
 
@@ -139,21 +155,31 @@ WvString WvStreamClone::errstr() const
 }
 
 
-static void close_callback(WvStream &s, void *userdata)
+void WvStreamClone::close_callback(WvStream &s)
 {
-    WvStreamClone *_this = (WvStreamClone *)userdata;
-    if (_this->cloned == &s)
-	_this->close();
+    if (cloned == &s)
+    {
+	//fprintf(stderr, "streamclone-closecb: %d/%d/%d/%d/%d\n",
+	//	stop_read, stop_write, outbuf.used(), inbuf.used(), closed);
+	nowrite();
+	noread();
+	// close();
+	//fprintf(stderr, "streamclone-closecb2: %d/%d/%d/%d/%d\n",
+	//	stop_read, stop_write, outbuf.used(), inbuf.used(), closed);
+    }
 }
 
 
 void WvStreamClone::setclone(IWvStream *newclone)
 {
     if (cloned)
-	cloned->setclosecallback(0, 0);
+	cloned->setclosecallback(0);
     cloned = newclone;
+    closed = stop_read = stop_write = false;
     if (cloned)
-	cloned->setclosecallback(close_callback, this);
+	cloned->setclosecallback(IWvStreamCallback(this, &WvStreamClone::close_callback));
+    if (newclone)
+        closed = stop_read = stop_write = false;
 }
 
 
@@ -167,7 +193,9 @@ bool WvStreamClone::pre_select(SelectInfo &si)
 	
 	if (!si.inherit_request)
 	{
-	    si.wants |= force;
+	    si.wants.readable |= readcb;
+	    si.wants.writable |= writecb;
+	    si.wants.isexception |= exceptcb;
 	    // si.wants |= cloned->force; // why would this be necessary?
 	}
 	
@@ -198,7 +226,9 @@ bool WvStreamClone::post_select(SelectInfo &si)
 	oldwant = si.wants;
 	if (!si.inherit_request)
 	{
-	    si.wants |= force;
+	    si.wants.readable |= readcb;
+	    si.wants.writable |= writecb;
+	    si.wants.isexception |= exceptcb;
 	    // si.wants |= cloned->force; // why would this be needed?
 	}
 

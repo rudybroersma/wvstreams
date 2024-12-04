@@ -13,38 +13,19 @@
 #include "wvtest.h"
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/signal.h>
 
+
 // write out a temporary ini file for use, saves flushing entries
-static bool write_ini(WvString &ininame)
+static void write_ini(WvString &ininame)
 {
-    int fd;
-    ininame = "/tmp/iniXXXXXX";
-    if ((fd = mkstemp(ininame.edit())) == (-1))
-        return false;    
-    close(fd);
+    ininame = WvString("/tmp/unitempgenvsdaemonini-%s", getpid());
 
-
-    WvFile outfile(ininame, O_CREAT | O_WRONLY | O_TRUNC);
-    if (outfile.isok())
-    {
-        outfile.print("%s\n%s\n", "[eth0]", "dhcpd = 1");
-        return true;
-    }
-
-    return false;
-}
-
-static WvString get_sockname()
-{
-    int fd;
-    WvString sockname = "/tmp/sockXXXXXX";
-    if ((fd = mkstemp(sockname.edit())) == (-1))
-        return "";    
-    close(fd);
-
-    return sockname;
+    WvFile outfile(ininame, O_CREAT | O_RDWR | O_TRUNC);
+    outfile.print("%s\n%s\n", "[eth0]", "dhcpd = 1");
+    outfile.close();
 }
 
 WVTEST_MAIN("tempgen/cachegen basics")
@@ -52,16 +33,15 @@ WVTEST_MAIN("tempgen/cachegen basics")
     signal(SIGPIPE, SIG_IGN);
 
     WvString ininame;
-    if (!write_ini(ininame))
-    {
-        WVFAIL(true || "Could not write ini file");
-        exit(1); 
-    }
+    write_ini(ininame);
 
-    WvString sockname = get_sockname();
-    if (!sockname)
+    WvString sockname = WvString("/tmp/unitempgensock-%s", getpid());
+    
+    struct stat sock_exist;
+    if (stat(sockname, &sock_exist) == 0)
     {
-        WVFAIL(true || "Could not get socket filename");
+        WVFAIL(true || "Socket filename already exists");
+        unlink(ininame);
         exit(1); 
     }
 
@@ -73,8 +53,6 @@ WVTEST_MAIN("tempgen/cachegen basics")
         UniConfRoot uniconf;
         uniconf["cfg"].mountgen(unigen);
         uniconf["tmp"].mount("temp:");
-
-        UniConf defcfg(uniconf["default"]);
 
         UniConfDaemon daemon(uniconf, false, NULL);
         daemon.setupunixsocket(sockname, 0777);
@@ -106,37 +84,34 @@ WVTEST_MAIN("tempgen/cachegen basics")
     
     int initial_value = cfg["eth0"].xgetint("dhcpd", 0);
     cfg["eth0"].xsetint("dhcpd", !initial_value);
-    //usleep(50); // compensate for latency in propogation
     cfg.commit();
     int new_value = cfg["eth0"].xgetint("dhcpd", 0);
 
     WVPASS(initial_value != new_value);
    
-    // kill off the daemon
+    // kill off the daemon and clean up the zombie
     kill(cfg_handler, 15);
-    unlink(ininame.cstr());
-    unlink(sockname.cstr());
+
+    // In case a signal is in the process of being delivered..
+    pid_t rv;
+    while ((rv = waitpid(cfg_handler, NULL, 0)) != cfg_handler)
+        if (rv == -1 && errno != EINTR)
+            break;
+    WVPASSEQ(rv, cfg_handler);
+
+    unlink(ininame);
+    unlink(sockname);
 }
 
-#if 0
-// BUGZID: 10567
+
 WVTEST_MAIN("cache:subtree:unix assertion failure")
 {
     signal(SIGPIPE, SIG_IGN);
 
     WvString ininame;
-    if (!write_ini(ininame))
-    {
-        WVFAIL(true || "Could not write ini file");
-        exit(1); 
-    }
+    write_ini(ininame);
 
-    WvString sockname = get_sockname();
-    if (!sockname)
-    {
-        WVFAIL(true || "Could not get socket filename");
-        exit(1); 
-    }
+    WvString sockname = WvString("/tmp/unitempgensock2-%s", getpid());
 
     pid_t cfg_handler = fork();
     if (!cfg_handler) // child only
@@ -179,10 +154,17 @@ WVTEST_MAIN("cache:subtree:unix assertion failure")
     
     WvUnixConn unixconn(sockname);
     WVPASS(unixconn.isok());
-   
-    // kill off the daemon
+
+    // kill off the daemon and clean up the zombie
     kill(cfg_handler, 15);
-    unlink(ininame.cstr());
-    unlink(sockname.cstr());
+
+    // In case a signal is in the process of being delivered...
+    pid_t rv;
+    while ((rv = waitpid(cfg_handler, NULL, 0)) != cfg_handler)
+        if (rv == -1 && errno != EINTR)
+            break;
+    WVPASSEQ(rv, cfg_handler);
+
+    unlink(ininame);
+    unlink(sockname);
 }
-#endif

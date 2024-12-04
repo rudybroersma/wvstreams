@@ -1,4 +1,5 @@
 #include "wvtest.h"
+#include "uniclientconn.h"
 #include "uniconfdaemon.h"
 #include "uniconfroot.h"
 #include "unitempgen.h"
@@ -12,6 +13,7 @@
 #include "wvfile.h"
 #include "wvpipe.h"
 #include "wvstringlist.h"
+#include "wvfileutils.h"
 #include <signal.h>
 
 /**** Generic daemon testing helpers ****/
@@ -40,7 +42,7 @@ public:
     virtual void close()
         {
             log("Closing connection\n");
-            cloned->close();
+	    WvStreamClone::close();
         }
 
     virtual void execute() 
@@ -54,7 +56,7 @@ public:
             {
                 while (expected_responses->first()->count())
                 {
-                    WvString line = getline(-1);
+                    WvString line = blocking_getline(-1);
                     WvString expected = expected_responses->first()->popstr();
                     log(">> '%s' (expect: '%s')\n", line, expected);
                     WVPASS(!strcmp(line.cstr(), expected.cstr()));
@@ -72,7 +74,10 @@ public:
             // expecting nothing more, can close
             if (!expected_responses->count())
             {
+		log("no more responses expected, closing\n");
                 close();
+		if (isok())
+		    log("um, why are we still ok?\n");
             }
         }
 
@@ -172,6 +177,7 @@ WVTEST_MAIN("daemon surprise close")
 
 /**** Daemon multimount test ****/
 
+
 WVTEST_MAIN("daemon multimount")
 {
     signal(SIGPIPE, SIG_IGN);
@@ -190,7 +196,8 @@ WVTEST_MAIN("daemon multimount")
     commands.append("subt / 1");
     WvStringListList expected_responses;
     WvStringList hello_response;
-    hello_response.append("HELLO {UniConf Server ready.}");
+    hello_response.append(WvString("HELLO {UniConf Server ready.} %s",
+				   UNICONF_PROTOCOL_VERSION));
     expected_responses.add(&hello_response, false);
     WvStringList expected_quit_response;
     expected_quit_response.append("VAL subtree {}");
@@ -202,8 +209,7 @@ WVTEST_MAIN("daemon multimount")
     expected_quit_response.append("OK ");
     expected_responses.add(&expected_quit_response, false);
 
-    WvString pipename("/tmp/uniconfd-t-%s", getpid());
-    unlink(pipename);
+    WvString pipename = wvtmpfilename("uniconfd.t-pipe");
     WVPASS(daemon.setupunixsocket(pipename));
     WvUnixAddr addr(pipename);
     WvUnixConn *sock = new WvUnixConn(addr);
@@ -222,6 +228,7 @@ WVTEST_MAIN("daemon multimount")
 
     WVPASS(daemon.isok());
     WvIStreamList::globallist.zap();
+    fprintf(stderr, "we're here\n");
 }
 
 
@@ -246,14 +253,14 @@ WVTEST_MAIN("daemon quit")
     commands.append("quit");
     WvStringListList expected_responses;
     WvStringList hello_response;
-    hello_response.append("HELLO {UniConf Server ready.}");
+    hello_response.append(WvString("HELLO {UniConf Server ready.} %s",
+				   UNICONF_PROTOCOL_VERSION));
     expected_responses.add(&hello_response, false);
     WvStringList expected_quit_response;
     expected_quit_response.append("OK ");
     expected_responses.add(&expected_quit_response, false);
 
-    WvString pipename("/tmp/uniconfd-t-%s", getpid());
-    unlink(pipename);
+    WvString pipename = wvtmpfilename("uniconfd.t-pipe");
     WVPASS(daemon.setupunixsocket(pipename));
     WvUnixAddr addr(pipename);
     WvUnixConn *sock = new WvUnixConn(addr);
@@ -280,24 +287,17 @@ WVTEST_MAIN("daemon quit")
 // test that proxying between two uniconf daemons works
 // e.g.: client -> uniconfd -> uniconfd
 
-static WvPipe * setup_master_daemon(bool implicit_root, WvString &masterpipename, WvString &ininame)
+static WvPipe * setup_master_daemon(bool implicit_root, 
+        WvString &masterpipename, WvString &ininame)
 {
-    int fd;
+    ininame = wvtmpfilename("uniconfd.t-ini");
 
-    ininame = "/tmp/iniXXXXXX";
-    if ((fd = mkstemp(ininame.edit())) == (-1))
-        return NULL;
-    close(fd);
-
-    WvFile stuff(ininame, O_CREAT|O_WRONLY|O_TRUNC);
+    WvFile stuff(ininame, (O_CREAT | O_WRONLY));
     stuff.print("pickles/apples/foo=1\n");
     stuff.print("pickles/mangos/bar=1\n");
     stuff.close();
 
-    masterpipename = "/tmp/sockXXXXXX";
-    if ((fd = mkstemp(masterpipename.edit())) == (-1))
-        return NULL;
-    close(fd);
+    masterpipename = wvtmpfilename("uniconfd.t-sock");
 
     WvString inimount("/cfg=ini:%s", ininame);    
     WvString mount1, mount2;
@@ -331,11 +331,7 @@ static WvPipe * setup_master_daemon(bool implicit_root, WvString &masterpipename
 static WvPipe * setup_slave_daemon(bool implicit_root, WvStringParm masterpipename, 
                             WvString &slavepipename)
 {
-    int fd;
-    slavepipename = "/tmp/sockXXXXXX";
-    if ((fd = mkstemp(slavepipename.edit())) == (-1))
-        return NULL;    
-    close(fd);
+    slavepipename = wvtmpfilename("uniconfd.t-sock");
 
     WvString rootmount;
     if (implicit_root)
@@ -401,7 +397,8 @@ static void daemon_proxy_test(bool implicit_root)
     commands.append("subt /");
     WvStringListList expected_responses;
     WvStringList hello_response;
-    hello_response.append("HELLO {UniConf Server ready.}");
+    hello_response.append(WvString("HELLO {UniConf Server ready.} %s",
+				   UNICONF_PROTOCOL_VERSION));
     expected_responses.add(&hello_response, false);
     WvStringList expected_get_response;
     expected_get_response.append("ONEVAL cfg/pickles/apples/foo 1");

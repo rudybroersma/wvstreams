@@ -19,10 +19,44 @@
 
 
 DeclareWvList(WvIPPortAddr);
+class IWvIPFirewall
+{
+public:
+    virtual ~IWvIPFirewall() { }
+    virtual void zap() = 0;
+    virtual void add_port(const WvIPPortAddr &addr) = 0;
+    virtual void add_redir(const WvIPPortAddr &src, int dstport) = 0;
+    virtual void add_redir_all(int dstport) = 0;
+    virtual void add_redir_port_range(const WvIPPortAddr &src_min,
+            const WvIPPortAddr &src_max, int dstport) = 0;
+    virtual void add_proto(WvStringParm proto) = 0;
+    virtual void add_forward(const WvIPPortAddr &src, const WvIPPortAddr &dst,
+            bool snat) = 0;
+    
+    virtual void del_port(const WvIPPortAddr &addr) = 0;
+    virtual void del_redir(const WvIPPortAddr &src, int dstport) = 0;
+    virtual void del_redir_all(int dstport) = 0;
+    virtual void del_redir_port_range(const WvIPPortAddr &src_min,
+            const WvIPPortAddr &src_max, int dstport) = 0;
+    virtual void del_proto(WvStringParm proto) = 0;
+    virtual void del_forward(const WvIPPortAddr &src, const WvIPPortAddr &dst,
+            bool snat) = 0;
+};
 
 /** Class to handle Linux 2.4 IPTables */
-class WvIPFirewall
+class WvIPFirewall : public IWvIPFirewall
 {
+    class FFwd
+    {
+    public:
+        WvIPPortAddr src;
+        WvIPPortAddr dst;
+        bool snat;
+
+        FFwd(const WvIPPortAddr &_src, const WvIPPortAddr &_dst, bool _snat) : src(_src), dst(_dst) 
+            { snat = _snat; } 
+    };
+    
     class Redir
     {
     public:
@@ -55,10 +89,12 @@ class WvIPFirewall
 	    { dstport = _dstport; }
     };
 
+    DeclareWvList(FFwd);
     DeclareWvList(Redir);
     DeclareWvList(RedirAll);
     DeclareWvList(RedirPortRange);
 
+    FFwdList ffwds;
     RedirList redirs;
     RedirAllList redir_alls;
     RedirPortRangeList redir_port_ranges;
@@ -83,26 +119,26 @@ class WvIPFirewall
     
 public:
     WvIPFirewall();
-    ~WvIPFirewall();
+    virtual ~WvIPFirewall();
     
     static bool enable, ignore_errors;
     
-    void zap();
-    void add_port(const WvIPPortAddr &addr);
-    void add_redir(const WvIPPortAddr &src, int dstport);
-    void add_redir_all(int dstport);
-    void add_redir_port_range(const WvIPPortAddr &src_min,
+    virtual void zap();
+    virtual void add_port(const WvIPPortAddr &addr);
+    virtual void add_redir(const WvIPPortAddr &src, int dstport);
+    virtual void add_redir_all(int dstport);
+    virtual void add_redir_port_range(const WvIPPortAddr &src_min,
     	    const WvIPPortAddr &src_max, int dstport);
-    void add_proto(WvStringParm proto);
-    void add_forward(const WvIPPortAddr &src, const WvIPPortAddr &dst,
+    virtual void add_proto(WvStringParm proto);
+    virtual void add_forward(const WvIPPortAddr &src, const WvIPPortAddr &dst,
 	    bool snat);
-    void del_proto(WvStringParm proto);
-    void del_port(const WvIPPortAddr &addr);
-    void del_redir(const WvIPPortAddr &src, int dstport);
-    void del_forward(const WvIPPortAddr &src, const WvIPPortAddr &dst,
+    virtual void del_proto(WvStringParm proto);
+    virtual void del_port(const WvIPPortAddr &addr);
+    virtual void del_redir(const WvIPPortAddr &src, int dstport);
+    virtual void del_forward(const WvIPPortAddr &src, const WvIPPortAddr &dst,
 	    bool snat);
-    void del_redir_all(int dstport);
-    void del_redir_port_range(const WvIPPortAddr &src_min,
+    virtual void del_redir_all(int dstport);
+    virtual void del_redir_port_range(const WvIPPortAddr &src_min,
     	    const WvIPPortAddr &src_max, int dstport);
 };
 

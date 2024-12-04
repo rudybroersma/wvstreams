@@ -7,11 +7,14 @@
  */
 #include "unipermgen.h"
 #include "unidefgen.h"
-
 #include "wvmoniker.h"
 #include "wvstringlist.h"
 #include "wvtclstring.h"
 #include "wvstream.h"
+#include "wvlinkerhack.h"
+
+WV_LINK(UniPermGen);
+
 
 
 UniPermGen::UniPermGen(IUniConfGen *_gen)
@@ -38,7 +41,8 @@ void UniPermGen::setowner(const UniConfKey &path, WvStringParm owner)
 WvString UniPermGen::getowner(const UniConfKey &path)
 {
     WvString owner = inner()->get(WvString("%s/owner", path));
-    if (owner.isnull() && !path.isempty())
+
+    if (!owner && !path.isempty())
         owner = getowner(path.removelast());
     return owner;
 }
@@ -53,7 +57,7 @@ void UniPermGen::setgroup(const UniConfKey &path, WvStringParm group)
 WvString UniPermGen::getgroup(const UniConfKey &path)
 {
     WvString group = inner()->get(WvString("%s/group", path));
-    if (group.isnull() && !path.isempty())
+    if (!group && !path.isempty())
         group = getgroup(path.removelast());
     return group;
 }
@@ -79,9 +83,9 @@ bool UniPermGen::getperm(const UniConfKey &path, const Credentials &cred,
     else level = WORLD;
 
     bool perm = getoneperm(path, level, type);
-    //wverr->print("getperm(%s/%s,%s,%s-%s) = %s\n",
-    //           cred.user, cred.groups.count(),
-    //		 path, level2str(level), type2str(type), perm);
+//     wverr->print("getperm(%s/%s, %s/%s, %s,%s-%s) = %s\n",
+//                  cred.user, cred.groups.count(), owner, group,
+//       		 path, level2str(level), type2str(type), perm);
     return perm;
 }
 

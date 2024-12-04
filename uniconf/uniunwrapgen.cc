@@ -5,7 +5,11 @@
  * A totally evil UniConfGen that "unwraps" a UniConf object by turning it
  * back into a UniConfGen.  See uniunwrapgen.h.
  */
+#include "uniconfroot.h"
 #include "uniunwrapgen.h"
+#include "wvlinkerhack.h"
+
+WV_LINK(UniUnwrapGen);
 
 
 UniUnwrapGen::UniUnwrapGen(const UniConf &inner)
@@ -17,19 +21,36 @@ UniUnwrapGen::UniUnwrapGen(const UniConf &inner)
 
 UniUnwrapGen::~UniUnwrapGen()
 {
-    xinner.del_callback(this, true);
+    UniConfRoot *root = xinner.rootobj();
+    if (root)
+	root->mounts.del_callback(this);
 }
 
 
 void UniUnwrapGen::setinner(const UniConf &inner)
 {
-    if (xinner.rootobj())
-	xinner.del_callback(this, true);
+    UniConfRoot *root = xinner.rootobj();
+    if (root)
+	root->mounts.del_callback(this);
+
     xinner = inner;
-    if (xinner.rootobj())
-	xinner.add_callback(this,
-			    UniConfCallback(this, &UniUnwrapGen::gencallback),
-			    true);
+    xfullkey = xinner.fullkey();
+
+    root = xinner.rootobj();
+    if (root)
+    {
+	UniConfGenCallback cb(this, &UniUnwrapGen::gencallback);
+	root->mounts.add_callback(this, cb);
+    }
+}
+
+
+UniConf UniUnwrapGen::_sub(const UniConfKey &key)
+{
+    if (key.isempty())
+	return xinner;
+    else
+	return xinner[key];
 }
 
 
@@ -59,31 +80,39 @@ bool UniUnwrapGen::refresh()
 
 void UniUnwrapGen::prefetch(const UniConfKey &key, bool recursive)
 {
-    xinner[key].prefetch(recursive);
+    _sub(key).prefetch(recursive);
 }
 
 
 WvString UniUnwrapGen::get(const UniConfKey &key)
 {
-    return xinner[key].getme();
+    return _sub(key).getme();
 }
 
 
 void UniUnwrapGen::set(const UniConfKey &key, WvStringParm value)
 {
-    xinner[key].setme(value);
+    _sub(key).setme(value);
+}
+
+
+void UniUnwrapGen::setv(const UniConfPairList &pairs)
+{
+    // Extremely evil.  This pokes directly into UniMountGen, because we
+    // don't want to expose setv to users.
+    xinner.rootobj()->mounts.setv(pairs);
 }
 
 
 bool UniUnwrapGen::exists(const UniConfKey &key)
 {
-    return xinner[key].exists();
+    return _sub(key).exists();
 }
 
 
 bool UniUnwrapGen::haschildren(const UniConfKey &key)
 {
-    return xinner[key].haschildren();
+    return _sub(key).haschildren();
 }
 
 
@@ -134,17 +163,19 @@ public:
 
 UniConfGen::Iter *UniUnwrapGen::iterator(const UniConfKey &key)
 {
-    return new Iter(xinner[key]);
+    return new Iter(_sub(key));
 }
 
 
 UniConfGen::Iter *UniUnwrapGen::recursiveiterator(const UniConfKey &key)
 {
-    return new RecursiveIter(xinner[key]);
+    return new RecursiveIter(_sub(key));
 }
 
 
-void UniUnwrapGen::gencallback(const UniConf &cfg, const UniConfKey &key)
+void UniUnwrapGen::gencallback(const UniConfKey &key, WvStringParm value)
 {
-    delta(cfg[key].fullkey(), cfg[key].getme());
+    WvString subkey;
+    if (xfullkey.suborsame(key, subkey))
+	delta(subkey, value);
 }

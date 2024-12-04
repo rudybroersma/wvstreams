@@ -41,12 +41,7 @@ UniConf::~UniConf()
 
 UniConfKey UniConf::fullkey(const UniConfKey &k) const
 {
-    int n = k.numsegments();
-    
-    // this function is undefined if k isn't an ancestor!
-    assert(k == xfullkey.first(n));
-    
-    return xfullkey.removefirst(n);
+    return k.subkey(xfullkey);
 }
 
 
@@ -158,6 +153,13 @@ bool UniConf::ismountpoint() const
 IUniConfGen *UniConf::whichmount(UniConfKey *mountpoint) const
 {
     return xroot->mounts.whichmount(xfullkey, mountpoint);
+}
+
+
+bool UniConf::isok() const
+{
+    IUniConfGen *gen = whichmount();
+    return gen && gen->isok();
 }
 
 
@@ -406,7 +408,7 @@ bool UniConf::XIter::next()
 
 UniConf::SortedIterBase::SortedIterBase(const UniConf &root,
     UniConf::SortedIterBase::Comparator comparator) 
-    : IterBase(root), xcomparator(comparator), xkeys(true)
+    : IterBase(root), xcomparator(comparator), xkeys()
 {
 }
 
@@ -427,10 +429,10 @@ int UniConf::SortedIterBase::defcomparator(const UniConf &a,
 UniConf::SortedIterBase::Comparator
     UniConf::SortedIterBase::innercomparator = NULL;
 
-int UniConf::SortedIterBase::wrapcomparator(const UniConf **a,
-    const UniConf **b)
+int UniConf::SortedIterBase::wrapcomparator(const UniConf *a,
+    const UniConf *b)
 {
-    return innercomparator(**a, **b);
+    return innercomparator(*a, *b);
 }
 
 
@@ -448,8 +450,7 @@ void UniConf::SortedIterBase::_rewind()
     
     // This code is NOT reentrant because qsort makes it too hard
     innercomparator = xcomparator;
-    qsort(xkeys.ptr(), count, sizeof(UniConf*),
-        (int (*)(const void *, const void *))wrapcomparator);
+    xkeys.qsort(&wrapcomparator);
 }
 
 

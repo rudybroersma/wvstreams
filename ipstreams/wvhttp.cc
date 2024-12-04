@@ -72,10 +72,14 @@ bool WvHTTPStream::pre_select(SelectInfo &si)
 	    if (url.getproto() == "https")
 	    {
 		ssl = new WvSSLStream(tcp, NULL, 0);
-		cloned = conn = ssl;
+		conn = ssl;
+                setclone(ssl);
 	    }
 	    else
-		cloned = conn = tcp;
+            {
+		conn = tcp;
+                setclone(tcp);
+            }
 	}
 	return false;
 
@@ -123,7 +127,7 @@ size_t WvHTTPStream::uread(void *buf, size_t count)
 	break;
 	
     case ReadHeader1:
-	line = trim_string(conn->getline(0));
+	line = trim_string(conn->getline());
 	if (line) // got response code line
 	{
 	    if (strncmp(line, "HTTP/", 5))
@@ -145,7 +149,7 @@ size_t WvHTTPStream::uread(void *buf, size_t count)
 	break;
 	
     case ReadHeader:
-	line = trim_string(conn->getline(0));
+	line = trim_string(conn->getline());
 	if (line)
 	{
 	    if (!line[0])

@@ -9,6 +9,9 @@
 
 #include "unitempgen.h"
 #include "wvlog.h"
+#include <sys/stat.h>
+
+class WvFile;
 
 /**
  * Loads and saves ".ini"-style files similar to those used by
@@ -24,6 +27,7 @@ class UniIniGen : public UniTempGen
     WvString filename;
     int create_mode;
     WvLog log;
+    struct stat old_st;
     
 public:
     /**
@@ -38,8 +42,14 @@ public:
 
     virtual void commit();
     virtual bool refresh();
+    virtual void set(const UniConfKey &key, WvStringParm value);
 
 private:
+#ifndef _WIN32
+    // helper methods for commit
+    bool commit_atomic(WvStringParm real_filename);
+#endif
+    
     void save(WvStream &file, UniConfValueTree &parent);
     bool refreshcomparator(const UniConfValueTree *a,
         const UniConfValueTree *b, void *userdata);

@@ -7,13 +7,12 @@
 #ifndef __UNICONFGEN_H
 #define __UNICONFGEN_H
  
-#include "wvxplc.h"
-#include "uniconfkey.h"
 #include "wvcallback.h"
-#include "wvlinklist.h"
+#include "wvcallbacklist.h"
 #include "uniconfpair.h"
 
 class UniConfGen;
+class UniListIter;
 
 /**
  * The callback type for signalling key changes from a UniConfGen.
@@ -27,9 +26,8 @@ class UniConfGen;
  * Parameters: gen, key, userdata
  *   gen - the externally visible generator whose key has changed
  *   key - the key that has changed
- *   userdata - the userdata supplied during setcallback
  */
-typedef WvCallback<void, const UniConfKey &, WvStringParm, void *> 
+typedef WvCallback<void, const UniConfKey &, WvStringParm> 
     UniConfGenCallback;
 
 /**
@@ -45,9 +43,12 @@ public:
     
     /***** Notification API *****/
     
-    /** Sets the callback for change notification. */
-    virtual void setcallback(const UniConfGenCallback &callback,
-			     void *userdata) = 0;
+    /** Adds a callback for change notification. */
+    virtual void add_callback(void *cookie,
+			      const UniConfGenCallback &callback) = 0;
+    
+    /** Removes a callback for change notification. */
+    virtual void del_callback(void *cookie) = 0;
     
 
     /***** Status API *****/
@@ -127,10 +128,15 @@ public:
     /**
      * Stores a string value for a key into the registry.  If the value is
      * WvString::null, the key is deleted.
-     * 
-     * Returns true on success.
      */
     virtual void set(const UniConfKey &key, WvStringParm value) = 0;
+
+
+    /**
+     * Stores multiple key-value pairs into the registry.  If the value is
+     * WvString::null, the key is deleted.
+     */
+    virtual void setv(const UniConfPairList &pairs) = 0;
 
 
     /***** Key Enumeration API *****/
@@ -154,7 +160,7 @@ public:
     class NullIter;
     
     /** An iterator over a constant list of keys (see below) */
-    class ListIter;
+    typedef ::UniListIter ListIter;
 
     /**
      * Returns an iterator over the children of the specified key.
@@ -197,8 +203,7 @@ class UniConfGen : public IUniConfGen
     // These fields are deliberately hidden to encourage use of the
     // special notification members
 
-    UniConfGenCallback cb; //!< gets called whenever a key changes its value.
-    void *cbdata;
+    WvCallbackList<UniConfGenCallback> cblist;
     int hold_nesting;
     UniConfPairList deltas;
     
@@ -213,10 +218,12 @@ public:
     /***** Notification API *****/
     
     /**
-     * Sets the callback for change notification.
-     * Must not be reimplemented by subclasses.
+     * Adds a callback for change notification.
+     * Must *not* be reimplemented by subclasses of UniConfGen.
      */
-    void setcallback(const UniConfGenCallback &callback, void *userdata);
+    virtual void add_callback(void *cookie, 
+			      const UniConfGenCallback &callback);
+    virtual void del_callback(void *cookie);
     
     /**
      * Immediately sends notification that a key has possibly changed.
@@ -279,6 +286,7 @@ public:
 
     /***** Key Storage API *****/
     virtual void set(const UniConfKey &key, WvStringParm value) = 0;
+    virtual void setv(const UniConfPairList &pairs) = 0;
 
     virtual void flush_buffers() = 0;
 
@@ -288,6 +296,10 @@ public:
     
     // a helpful default that just calls iterator() recursively
     virtual Iter *recursiveiterator(const UniConfKey &key);
+
+protected:
+    // A naive implementation of setv() that uses only set().
+    void setv_naive(const UniConfPairList &pairs);
 };
 
 DeclareWvList(IUniConfGen);
@@ -353,32 +365,5 @@ public:
     virtual WvString value() const { return WvString(); }
 };
 
-
-/**
- * An iterator that iterates through a constant list of keys.  This is
- * handy if you know the list of keys is relatively short, and you don't
- * want to write your own iterator and/or you know your own object state
- * might change during iteration, so you would have to pregenerate the list
- * of keys anyway.
- * 
- * The creator of the iter is responsible for filling the 'keys' and 'values'
- * lists.  If the 'values' list runs out of values before 'keys', the
- * remaining values will be retrieved from the given generator instead.
- */
-class UniConfGen::ListIter : public UniConfGen::Iter
-{
-public:
-    IUniConfGen *gen;
-    WvList<WvString> keys, values;
-    WvList<WvString>::Iter ki, vi;
-    
-    ListIter(IUniConfGen *_gen);
-
-    /***** Overridden members *****/
-    virtual void rewind();
-    virtual bool next();
-    virtual UniConfKey key() const;
-    virtual WvString value() const;
-};
 
 #endif // __UNICONFGEN_H

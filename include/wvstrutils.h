@@ -15,6 +15,9 @@
 #include "wvstring.h"
 #include "wvstringlist.h"
 #include "wvhex.h"
+#ifndef _WIN32
+#include "wvregex.h"
+#endif
 
 /** \file
  * Various little string functions
@@ -146,6 +149,10 @@ WvString rfc822_date(time_t _when = -1);
 /** Returns an RFC1123-compatible date made out of _when */
 WvString rfc1123_date(time_t _when);
 
+/** Return the local date (TZ applied) out of _when */
+WvString local_date(time_t _when = -1);
+
+#ifndef _WIN32
 /**
  * Similar to crypt(), but this randomly selects its own salt.
  * This function is defined in strcrypt.cc.  It chooses to use the DES
@@ -153,6 +160,7 @@ WvString rfc1123_date(time_t _when);
  */
 WvString passwd_crypt(const char *str);
 
+#endif
 /**
  * Similar to crypt(), but this randomly selects its own salt.
  * This function is defined in strcrypt.cc.  It chooses to use the MD5
@@ -191,14 +199,46 @@ WvString nice_hostname(WvStringParm name);
 WvString getfilename(WvStringParm fullname);
 WvString getdirname(WvStringParm fullname);
 
+/*
+ * Possible rounding methods for numbers -- remember from school?
+ */
+enum RoundingMethod
+{
+    ROUND_DOWN,
+    ROUND_DOWN_AT_POINT_FIVE,
+    ROUND_UP_AT_POINT_FIVE,
+    ROUND_UP
+};
+
 /**
  * Given a number of blocks and a blocksize (default==1 byte), return a 
  * WvString containing a human-readable representation of blocks*blocksize.
+ * This function uses SI prefixes.
  */
-WvString sizetoa(unsigned long long blocks, unsigned int blocksize=1);
+WvString sizetoa(unsigned long long blocks, unsigned long blocksize = 1,
+		 RoundingMethod rounding_method = ROUND_UP_AT_POINT_FIVE);
 
-/** Give a size in Kilobyes gives a human readable size */
-WvString sizektoa(unsigned int kbytes);
+/**
+ * Given a size in kilobyes, return a human readable size.
+ * This function uses SI prefixes (1 MB = 1 000 KB = 1 000 000 B).
+ */
+WvString sizektoa(unsigned long long kbytes,
+		  RoundingMethod rounding_method = ROUND_UP_AT_POINT_FIVE);
+
+/**
+ * Given a number of blocks and a blocksize (default==1 byte), return a 
+ * WvString containing a human-readable representation of blocks*blocksize.
+ * This function uses IEC prefixes.
+ */
+WvString sizeitoa(unsigned long long blocks, unsigned long blocksize = 1,
+		  RoundingMethod rounding_method = ROUND_UP_AT_POINT_FIVE);
+
+/**
+ * Given a size in kilobytes, return a human readable size.
+ * This function uses IEC prefixes.
+ */
+WvString sizekitoa(unsigned long long kbytes,
+		   RoundingMethod rounding_method = ROUND_UP_AT_POINT_FIVE);
 
 /** Given a number of seconds, returns a formatted human-readable string
  * saying how long the period is.
@@ -314,6 +354,46 @@ void strcoll_splitstrict(StringCollection &coll, WvStringParm _s,
 }
 
 
+#ifndef _WIN32 // don't have regex on win32
+/**
+ * Splits a string and adds each substring to a collection.
+ *   coll       : the collection of strings to add to
+ *   _s         : the string to split
+ *   splitchars : the set of delimiter characters
+ *   limit      : the maximum number of elements to split
+ */
+template<class StringCollection>
+void strcoll_split(StringCollection &coll, WvStringParm s,
+    const WvRegex &regex, int limit = 0)
+{
+    int start = 0;
+    int match_start, match_end;
+    int count = 0;
+    
+    while ((limit == 0 || count < limit)
+    	    && regex.continuable_match(&s[start], match_start, match_end)
+    	    && match_end > 0)
+    {
+    	WvString *substr = new WvString;
+    	int len = match_start;
+    	substr->setsize(len+1);
+    	memcpy(substr->edit(), &s[start], len);
+    	substr->edit()[len] = '\0';
+    	coll.add(substr, true);
+    	start += match_end;
+    	++count;
+    }
+    
+    if (limit == 0 || count < limit)
+    {
+    	WvString *last = new WvString(&s[start]);
+    	last->unique();
+    	coll.add(last, true);
+    }
+}
+#endif
+
+
 /**
  * Concatenates all strings in a collection and returns the result.
  *   coll      : the collection of strings to read from
@@ -362,8 +442,14 @@ WvString strreplace(WvStringParm s, WvStringParm a, WvStringParm b);
 /** Replace any consecutive instances of character c with a single one */
 WvString undupe(WvStringParm s, char c);
 
+/** Do gethostname() without a fixed-length buffer */
 WvString hostname();
+
+/** Get the fqdn of the local host, using gethostbyname() and gethostname() */
 WvString fqdomainname();
+
+/** Get the current working directory without a fixed-length buffer */
+WvString wvgetcwd();
 
 /**
  * Inserts SI-style spacing into a number
@@ -391,6 +477,12 @@ WvString beforestr(WvStringParm line, WvStringParm a);
  */
 WvString substr(WvString line, unsigned int pos, unsigned int len);
 
+/** 
+ * Removes any trailing punctuation ('.', '?', or '!') from the line, and
+ * returns it in a new string.  Does not modify line.
+ */
+WvString depunctuate(WvStringParm line);
+
 // Converts a string in decimal to an arbitrary numeric type
 template<class T>
 bool wvstring_to_num(WvStringParm str, T &n)
@@ -417,5 +509,68 @@ bool wvstring_to_num(WvStringParm str, T &n)
 
     return true;
 }
-        
+
+/*
+ * Before using the C-style string escaping functions below, please consider
+ * using the functions in wvtclstring.h instead; they usualy lead to much more
+ * human readable and manageable results, and allow representation of
+ * lists of strings.
+ */
+
+struct CStrExtraEscape
+{
+    char ch;
+    const char *esc;
+};
+extern const CStrExtraEscape CSTR_TCLSTR_ESCAPES[];
+
+// Converts data into a C-style string constant.
+//
+// If data is NULL, returns WvString::null; otherwise, returns an allocated
+// WvString containing the C-style string constant that represents the data.
+//
+// All printable characters including space except " and \ are represented with
+// escaping.
+//
+// The usual C escapes are performed, such as \n, \r, \", \\ and \0.
+//
+// All other characters are escaped in uppercase hex form, eg. \x9E
+//
+// The extra_escapes parameter allows for additional characters beyond
+// the usual ones escaped in C; setting it to CSTR_TCLSTR_ESCAPES will
+// escape { and } as \< and \>, which allows the resulting strings to be
+// TCL-string coded without ridiculous double-escaping.
+//
+WvString cstr_escape(const void *data, size_t size,
+        const CStrExtraEscape extra_escapes[] = NULL);
+
+// Converts a C-style string constant into data.
+// 
+// This function does *not* include the trailing null that a C compiler would --
+//   if you want this null, put \0 at the end of the C-style string
+// 
+// If cstr is correctly formatted and max_size is large enough for the
+// resulting data, returns true and size will equal the size of the
+// resulting data.  If data is not NULL it will contain this data.
+//
+// If cstr is correctly formatted but max_size is too small for the resulting
+// data, returns false and size will equal the minimum value of min_size
+// for this function to have returned true.  If data is non-NULL it will
+// contain the first max_size bytes of resulting data.
+// 
+// If cstr is incorrectly formatted, returns false and size will equal 0.
+//
+// This functions works just as well on multiple, whitespace-separated
+// C-style strings as well.  This allows you to concatenate strings produced
+// by cstr_escape, and the result of cstr_unescape will be the data blocks
+// concatenated together.  This implies that the empty string corresponds
+// to a valid data block of length zero; however, a null string still returns
+// an error.
+//
+// The extra_escapes parameter must match that used in the call to 
+// cstr_escape used to produce the escaped strings.
+//
+bool cstr_unescape(WvStringParm cstr, void *data, size_t max_size, size_t &size,
+        const CStrExtraEscape extra_escapes[] = NULL);
+
 #endif // __WVSTRUTILS_H

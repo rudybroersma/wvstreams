@@ -1,8 +1,12 @@
 #include "wvtest.h"
-#include "wvlinklist.h"
 #include "wvfile.h"
 #include "strutils.h"
+#include "wvlinklist.h"
+#ifdef _WIN32
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 
 /**
  * Functions in strutils.h left untested:
@@ -210,8 +214,8 @@ WVTEST_MAIN("url_encode")
 {
     char *input = "http://www.free_email-account.com/~ponyman/mail.pl?name=\'to|\\|Y |)4|\\|Z4\'&pass=$!J83*p&folder=1N8()><";
     const char *desired = "http%3a//www.free_email-account.com/~ponyman/mail.pl%3fname%3d%27to%7c%5c%7cY%20%7c%294%7c%5c%7cZ4%27%26pass%3d%24%21J83%2ap%26folder%3d1N8%28%29%3e%3c";
-
     WVPASS(url_encode(input) == desired);
+
 }
 
 /** Tests backslash_escape().
@@ -303,122 +307,121 @@ WVTEST_MAIN("getdirname")
  * sizetoa() should return an appropriate text description of the size
  * of a given number of blocks with a given blocksize.
  */
-WVTEST_MAIN("sizetoa")
+WVTEST_MAIN("sizetoa simple")
 {
     // Check various blocksizes
     {
-        long blocks = 987654321;
-        long blocksize = 1000000;
-        char *desired[15] = {"987.7 TB", "98.8 TB", "9.9 TB", "987.7 GB",
-            "98.8 GB", "9.9 GB", "987.7 MB", "98.8 MB", "9.9 MB", "987.7 KB",
-            "98.8 KB", "9.9 KB", "987 bytes", "98 bytes", "9 bytes"};
-        int i = 0;
+	long blocks = 987654321;
+	long blocksize = 1000000;
+	char *desired[15] = {"987.7 TB", "98.8 TB", "9.9 TB", "987.7 GB",
+			     "98.8 GB", "9.9 GB", "987.7 MB", "98.8 MB",
+			     "9.9 MB", "987.7 kB", "98.8 kB", "9.9 kB",
+			     "987 bytes", "98 bytes", "9 bytes"};
+	int i = 0;
 
-        while(blocksize != 1)
-        {
-            if (!WVPASS(sizetoa(blocks, blocksize) == desired[i]))
-                printf("   because [%s] != [%s]\n",
-                        sizetoa(blocks, blocksize).cstr(), desired[i]);
-            blocksize /= 10;
-            i++;
-        }
+	while(blocksize != 1)
+	{
+	    WVPASSEQ(sizetoa(blocks, blocksize), desired[i]);
+	    blocksize /= 10;
+	    i++;
+	}
 
-        while(blocks)
-        {
-            if (!WVPASS(sizetoa(blocks, blocksize) == desired[i]))
-                printf("   because [%s] != [%s]\n",
-                        sizetoa(blocks, blocksize).cstr(), desired[i]);
-            blocks /= 10;
-            i++;
-        }
+	while(blocks)
+	{
+	    WVPASSEQ(sizetoa(blocks, blocksize), desired[i]);
+	    blocks /= 10;
+	    i++;
+	}
     }
 
     // Now check rounding
-    WVPASS(sizetoa(0) == "0 bytes");
-    WVPASS(sizetoa(1) == "1 bytes");
-    WVPASS(sizetoa(42) == "42 bytes");
-    WVPASS(sizetoa(666) == "666 bytes");
-    WVPASS(sizetoa(949) == "949 bytes");
-    WVPASS(sizetoa(999) == "999 bytes");
-    WVPASS(sizetoa(1000) == "1.0 KB");
-    WVPASS(sizetoa(1049) == "1.0 KB");
-    WVPASS(sizetoa(1050) == "1.1 KB");
-    WVPASS(sizetoa(1051) == "1.1 KB");
-    WVPASS(sizetoa(1099) == "1.1 KB");
-    WVPASS(sizetoa(1999) == "2.0 KB");
-    WVPASS(sizetoa(949999) == "950.0 KB");
-    WVPASS(sizetoa(999999) == "1.0 MB");
-    WVPASS(sizetoa(1000000) == "1.0 MB");
-    WVPASS(sizetoa(1049999) == "1.0 MB");
-    WVPASS(sizetoa(1050000) == "1.1 MB");
-    WVPASS(sizetoa(1050001) == "1.1 MB");
-    WVPASS(sizetoa(1099999) == "1.1 MB");
-    WVPASS(sizetoa(1999999) == "2.0 MB");
-    WVPASS(sizetoa(949999999) == "950.0 MB");
-    WVPASS(sizetoa(999999999) == "1.0 GB");
-    WVPASS(sizetoa(1000000000) == "1.0 GB");
-    WVPASS(sizetoa(1049999999) == "1.0 GB");
-    WVPASS(sizetoa(1050000000) == "1.1 GB");
-    WVPASS(sizetoa(1050000001) == "1.1 GB");
-    WVPASS(sizetoa(1099999999) == "1.1 GB");
-    WVPASS(sizetoa(1999999999) == "2.0 GB");
-    WVPASS(sizetoa(2147483647) == "2.1 GB");
-    WVPASS(sizetoa(0, 1000) == "0 bytes");
-    WVPASS(sizetoa(1, 1000) == "1.0 KB");
-    WVPASS(sizetoa(42, 1000) == "42.0 KB");
-    WVPASS(sizetoa(666, 1000) == "666.0 KB");
-    WVPASS(sizetoa(949, 1000) == "949.0 KB");
-    WVPASS(sizetoa(999, 1000) == "999.0 KB");
-    WVPASS(sizetoa(949999999, 1000) == "950.0 GB");
-    WVPASS(sizetoa(999999999, 1000) == "1.0 TB");
-    WVPASS(sizetoa(1000000000, 1000) == "1.0 TB");
-    WVPASS(sizetoa(1049999999, 1000) == "1.0 TB");
-    WVPASS(sizetoa(1050000000, 1000) == "1.1 TB");
-    WVPASS(sizetoa(1050000001, 1000) == "1.1 TB");
-    WVPASS(sizetoa(1099999999, 1000) == "1.1 TB");
-    WVPASS(sizetoa(1999999999, 1000) == "2.0 TB");
-    WVPASS(sizetoa(2147483647, 1000) == "2.1 TB");
-    WVPASS(sizetoa(949999999, 1000000) == "950.0 TB");
-    WVPASS(sizetoa(999999999, 1000000) == "1.0 PB");
-    WVPASS(sizetoa(1000000000, 1000000) == "1.0 PB");
-    WVPASS(sizetoa(1049999999, 1000000) == "1.0 PB");
-    WVPASS(sizetoa(1050000000, 1000000) == "1.1 PB");
-    WVPASS(sizetoa(1050000001, 1000000) == "1.1 PB");
-    WVPASS(sizetoa(1099999999, 1000000) == "1.1 PB");
-    WVPASS(sizetoa(1999999999, 1000000) == "2.0 PB");
-    WVPASS(sizetoa(2147483647, 1000000) == "2.1 PB");
-    WVPASS(sizetoa(949999999, 1000000000) == "950.0 PB");
-    WVPASS(sizetoa(999999999, 1000000000) == "1.0 EB");
-    WVPASS(sizetoa(1000000000, 1000000000) == "1.0 EB");
-    WVPASS(sizetoa(1049999999, 1000000000) == "1.0 EB");
-    WVPASS(sizetoa(1050000000, 1000000000) == "1.1 EB");
-    WVPASS(sizetoa(1050000001, 1000000000) == "1.1 EB");
-    WVPASS(sizetoa(1099999999, 1000000000) == "1.1 EB");
-    WVPASS(sizetoa(1999999999, 1000000000) == "2.0 EB");
-    WVPASS(sizetoa(2147483647, 1000000000) == "2.1 EB");
-/* Since sizetoa only currently takes signed long longs, then we will not be
-   able to test more than 2.1 exabytes.
-    WVPASS(sizetoa(949999999, 1000000000000) == "950.0 EB");
-    WVPASS(sizetoa(999999999, 1000000000000) == "1.0 EB");
-    WVPASS(sizetoa(1000000000, 1000000000000) == "1.0 EB");
-    WVPASS(sizetoa(1049999999, 1000000000000) == "1.0 EB");
-    WVPASS(sizetoa(1050000000, 1000000000000) == "1.1 EB");
-    WVPASS(sizetoa(1050000001, 1000000000000) == "1.1 EB");
-    WVPASS(sizetoa(1099999999, 1000000000000) == "1.1 EB");
-    WVPASS(sizetoa(1999999999, 1000000000000) == "2.0 EB");
-    WVPASS(sizetoa(2147483647, 1000000000000) == "2.1 EB");
-    WVPASS(sizetoa(949999999, 1000000000000000) == "950.0 EB");
-    WVPASS(sizetoa(999999999, 1000000000000000) == "1000.0 YB");
-    WVPASS(sizetoa(1000000000, 1000000000000000) == "1000.0 YB");
-    WVPASS(sizetoa(1049999999, 1000000000000000) == "1050.0 YB");
-    WVPASS(sizetoa(1050000000, 1000000000000000) == "1050.0 YB");
-    WVPASS(sizetoa(1050000001, 1000000000000000) == "1050.0 YB");
-    WVPASS(sizetoa(1099999999, 1000000000000000) == "1100.0 YB");
-    WVPASS(sizetoa(1999999999, 1000000000000000) == "2000.0 YB");
-    WVPASS(sizetoa(2147483647, 1000000000000000) == "2147.5 YB");
-    WVPASS(sizetoa(949999999, 10000000000000000) == "9500.0 YB");
-    WVPASS(sizetoa(999999999, 10000000000000000) == "10000.0 YB");
-*/
+    WVPASSEQ(sizetoa(0), "0 bytes");
+    WVPASSEQ(sizetoa(1), "1 bytes");
+    WVPASSEQ(sizetoa(42), "42 bytes");
+    WVPASSEQ(sizetoa(666), "666 bytes");
+    WVPASSEQ(sizetoa(949), "949 bytes");
+    WVPASSEQ(sizetoa(999), "999 bytes");
+    WVPASSEQ(sizetoa(1000), "1.0 kB");
+    WVPASSEQ(sizetoa(1049), "1.0 kB");
+    WVPASSEQ(sizetoa(1050), "1.1 kB");
+    WVPASSEQ(sizetoa(1051), "1.1 kB");
+    WVPASSEQ(sizetoa(1099), "1.1 kB");
+    WVPASSEQ(sizetoa(1999), "2.0 kB");
+    WVPASSEQ(sizetoa(949999), "950.0 kB");
+    WVPASSEQ(sizetoa(999999), "1.0 MB");
+    WVPASSEQ(sizetoa(1000000), "1.0 MB");
+    WVPASSEQ(sizetoa(1049999), "1.0 MB");
+    WVPASSEQ(sizetoa(1050000), "1.1 MB");
+    WVPASSEQ(sizetoa(1050001), "1.1 MB");
+    WVPASSEQ(sizetoa(1099999), "1.1 MB");
+    WVPASSEQ(sizetoa(1999999), "2.0 MB");
+    WVPASSEQ(sizetoa(949999999), "950.0 MB");
+    WVPASSEQ(sizetoa(999999999), "1.0 GB");
+    WVPASSEQ(sizetoa(1000000000), "1.0 GB");
+    WVPASSEQ(sizetoa(1049999999), "1.0 GB");
+    WVPASSEQ(sizetoa(1050000000), "1.1 GB");
+    WVPASSEQ(sizetoa(1050000001), "1.1 GB");
+    WVPASSEQ(sizetoa(1099999999), "1.1 GB");
+    WVPASSEQ(sizetoa(1999999999), "2.0 GB");
+    WVPASSEQ(sizetoa(4294967295ul), "4.3 GB");
+    WVPASSEQ(sizetoa(949999999999ull), "950.0 GB");
+    WVPASSEQ(sizetoa(999999999999ull), "1.0 TB");
+    WVPASSEQ(sizetoa(1000000000000ull), "1.0 TB");
+    WVPASSEQ(sizetoa(1049999999999ull), "1.0 TB");
+    WVPASSEQ(sizetoa(1050000000000ull), "1.1 TB");
+    WVPASSEQ(sizetoa(1050000000001ull), "1.1 TB");
+    WVPASSEQ(sizetoa(949999999999999ull), "950.0 TB");
+    WVPASSEQ(sizetoa(999999999999999ull), "1.0 PB");
+    WVPASSEQ(sizetoa(1000000000000000ull), "1.0 PB");
+    WVPASSEQ(sizetoa(1049999999999999ull), "1.0 PB");
+    WVPASSEQ(sizetoa(1050000000000000ull), "1.1 PB");
+    WVPASSEQ(sizetoa(1050000000000001ull), "1.1 PB");
+    WVPASSEQ(sizetoa(949999999999999999ull), "950.0 PB");
+    WVPASSEQ(sizetoa(999999999999999999ull), "1.0 EB");
+    WVPASSEQ(sizetoa(1000000000000000000ull), "1.0 EB");
+    WVPASSEQ(sizetoa(1049999999999999999ull), "1.0 EB");
+    WVPASSEQ(sizetoa(1050000000000000000ull), "1.1 EB");
+    WVPASSEQ(sizetoa(1050000000000000001ull), "1.1 EB");
+    WVPASSEQ(sizetoa(18446744073709551615ull), "18.4 EB");
+    WVPASSEQ(sizetoa(0, 1000), "0 bytes");
+    WVPASSEQ(sizetoa(1, 1000), "1.0 kB");
+    WVPASSEQ(sizetoa(42, 1000), "42.0 kB");
+    WVPASSEQ(sizetoa(666, 1000), "666.0 kB");
+    WVPASSEQ(sizetoa(949, 1000), "949.0 kB");
+    WVPASSEQ(sizetoa(999, 1000), "999.0 kB");
+    WVPASSEQ(sizetoa(949999999999999999ull, 1000), "950.0 EB");
+    WVPASSEQ(sizetoa(999999999999999999ull, 1000), "1.0 ZB");
+    WVPASSEQ(sizetoa(1000000000000000000ull, 1000), "1.0 ZB");
+    WVPASSEQ(sizetoa(1049999999999999999ull, 1000), "1.0 ZB");
+    WVPASSEQ(sizetoa(1050000000000000000ull, 1000), "1.1 ZB");
+    WVPASSEQ(sizetoa(1050000000000000001ull, 1000), "1.1 ZB");
+    WVPASSEQ(sizetoa(1099999999999999999ull, 1000), "1.1 ZB");
+    WVPASSEQ(sizetoa(1999999999999999999ull, 1000), "2.0 ZB");
+    WVPASSEQ(sizetoa(18446744073709551615ull, 1000), "18.4 ZB");
+    WVPASSEQ(sizetoa(949999999999999999ull, 1000000), "950.0 ZB");
+    WVPASSEQ(sizetoa(999999999999999999ull, 1000000), "1.0 YB");
+    WVPASSEQ(sizetoa(1000000000000000000ull, 1000000), "1.0 YB");
+    WVPASSEQ(sizetoa(1049999999999999999ull, 1000000), "1.0 YB");
+    WVPASSEQ(sizetoa(1050000000000000000ull, 1000000), "1.1 YB");
+    WVPASSEQ(sizetoa(1050000000000000001ull, 1000000), "1.1 YB");
+    WVPASSEQ(sizetoa(1099999999999999999ull, 1000000), "1.1 YB");
+    WVPASSEQ(sizetoa(1999999999999999999ull, 1000000), "2.0 YB");
+    WVPASSEQ(sizetoa(18446744073709551615ull, 1000000), "18.4 YB");
+    WVPASSEQ(sizetoa(949999999999999999ull, 1000000000), "950.0 YB");
+    WVPASSEQ(sizetoa(999999999999999999ull, 1000000000), "1000.0 YB");
+    WVPASSEQ(sizetoa(1000000000000000000ull, 1000000000), "1000.0 YB");
+    WVPASSEQ(sizetoa(1049999999999999999ull, 1000000000), "1050.0 YB");
+    WVPASSEQ(sizetoa(1050000000000000000ull, 1000000000), "1050.0 YB");
+    WVPASSEQ(sizetoa(1050000000000000001ull, 1000000000), "1050.0 YB");
+    WVPASSEQ(sizetoa(1099999999999999999ull, 1000000000), "1100.0 YB");
+    WVPASSEQ(sizetoa(1999999999999999999ull, 1000000000), "2000.0 YB");
+    WVPASSEQ(sizetoa(18446744073709551615ull, 1000000000), "18446.7 YB");
+
+    // Check that irregular block sizes round properly
+    WVPASSEQ(sizetoa(73887, 1000), "73.9 MB");
+    WVPASSEQ(sizetoa(73887, 1999), "147.7 MB");
+    WVPASSEQ(sizetoa(73887, 2000), "147.8 MB");
+    WVPASSEQ(sizetoa(73887, 4096), "302.7 MB");
 }
 
 /** Tests sizektoa(),
@@ -427,35 +430,123 @@ WVTEST_MAIN("sizetoa")
  */
 WVTEST_MAIN("sizektoa")
 {
-    WVPASS(sizektoa(0) == "0 KB");
-    WVPASS(sizektoa(1) == "1 KB");
-    WVPASS(sizektoa(42) == "42 KB");
-    WVPASS(sizektoa(666) == "666 KB");
-    WVPASS(sizektoa(949) == "949 KB");
-    WVPASS(sizektoa(999) == "999 KB");
-    WVPASS(sizektoa(1000) == "1.0 MB");
-    WVPASS(sizektoa(1049) == "1.0 MB");
-    WVPASS(sizektoa(1050) == "1.1 MB");
-    WVPASS(sizektoa(1051) == "1.1 MB");
-    WVPASS(sizektoa(1099) == "1.1 MB");
-    WVPASS(sizektoa(1999) == "2.0 MB");
-    WVPASS(sizektoa(949999) == "950.0 MB");
-    WVPASS(sizektoa(999999) == "1.0 GB");
-    WVPASS(sizektoa(1000000) == "1.0 GB");
-    WVPASS(sizektoa(1049999) == "1.0 GB");
-    WVPASS(sizektoa(1050000) == "1.1 GB");
-    WVPASS(sizektoa(1050001) == "1.1 GB");
-    WVPASS(sizektoa(1099999) == "1.1 GB");
-    WVPASS(sizektoa(1999999) == "2.0 GB");
-    WVPASS(sizektoa(949999999) == "950.0 GB");
-    WVPASS(sizektoa(999999999) == "1.0 TB");
-    WVPASS(sizektoa(1000000000) == "1.0 TB");
-    WVPASS(sizektoa(1049999999) == "1.0 TB");
-    WVPASS(sizektoa(1050000000) == "1.1 TB");
-    WVPASS(sizektoa(1050000001) == "1.1 TB");
-    WVPASS(sizektoa(1099999999) == "1.1 TB");
-    WVPASS(sizektoa(1999999999) == "2.0 TB");
-    WVPASS(sizektoa(2147483647) == "2.1 TB");
+    WVPASSEQ(sizektoa(0), "0 kB");
+    WVPASSEQ(sizektoa(1), "1 kB");
+    WVPASSEQ(sizektoa(42), "42 kB");
+    WVPASSEQ(sizektoa(666), "666 kB");
+    WVPASSEQ(sizektoa(949), "949 kB");
+    WVPASSEQ(sizektoa(999), "999 kB");
+    WVPASSEQ(sizektoa(1000), "1.0 MB");
+    WVPASSEQ(sizektoa(1049), "1.0 MB");
+    WVPASSEQ(sizektoa(1050), "1.1 MB");
+    WVPASSEQ(sizektoa(1051), "1.1 MB");
+    WVPASSEQ(sizektoa(1099), "1.1 MB");
+    WVPASSEQ(sizektoa(1999), "2.0 MB");
+    WVPASSEQ(sizektoa(949999), "950.0 MB");
+    WVPASSEQ(sizektoa(999999), "1.0 GB");
+    WVPASSEQ(sizektoa(1000000), "1.0 GB");
+    WVPASSEQ(sizektoa(1049999), "1.0 GB");
+    WVPASSEQ(sizektoa(1050000), "1.1 GB");
+    WVPASSEQ(sizektoa(1050001), "1.1 GB");
+    WVPASSEQ(sizektoa(1099999), "1.1 GB");
+    WVPASSEQ(sizektoa(1999999), "2.0 GB");
+    WVPASSEQ(sizektoa(949999999), "950.0 GB");
+    WVPASSEQ(sizektoa(999999999), "1.0 TB");
+    WVPASSEQ(sizektoa(1000000000), "1.0 TB");
+    WVPASSEQ(sizektoa(1049999999), "1.0 TB");
+    WVPASSEQ(sizektoa(1050000000), "1.1 TB");
+    WVPASSEQ(sizektoa(1050000001), "1.1 TB");
+    WVPASSEQ(sizektoa(1099999999), "1.1 TB");
+    WVPASSEQ(sizektoa(1999999999), "2.0 TB");
+    WVPASSEQ(sizektoa(4294967295ul), "4.3 TB");
+    WVPASSEQ(sizektoa(949999999999ull), "950.0 TB");
+    WVPASSEQ(sizektoa(999999999999ull), "1.0 PB");
+    WVPASSEQ(sizektoa(1000000000000ull), "1.0 PB");
+    WVPASSEQ(sizektoa(1049999999999ull), "1.0 PB");
+    WVPASSEQ(sizektoa(1050000000000ull), "1.1 PB");
+    WVPASSEQ(sizektoa(1050000000001ull), "1.1 PB");
+    WVPASSEQ(sizektoa(949999999999999ull), "950.0 PB");
+    WVPASSEQ(sizektoa(999999999999999ull), "1.0 EB");
+    WVPASSEQ(sizektoa(1000000000000000ull), "1.0 EB");
+    WVPASSEQ(sizektoa(1049999999999999ull), "1.0 EB");
+    WVPASSEQ(sizektoa(1050000000000000ull), "1.1 EB");
+    WVPASSEQ(sizektoa(1050000000000001ull), "1.1 EB");
+    WVPASSEQ(sizektoa(949999999999999999ull), "950.0 EB");
+    WVPASSEQ(sizektoa(999999999999999999ull), "1.0 ZB");
+    WVPASSEQ(sizektoa(1000000000000000000ull), "1.0 ZB");
+    WVPASSEQ(sizektoa(1049999999999999999ull), "1.0 ZB");
+    WVPASSEQ(sizektoa(1050000000000000000ull), "1.1 ZB");
+    WVPASSEQ(sizektoa(1050000000000000001ull), "1.1 ZB");
+    WVPASSEQ(sizektoa(18446744073709551615ull), "18.4 ZB");
+}
+
+/** Tests sizeitoa().
+ * sizeitoa() should return an appropriate text description of the size
+ * of a given number of blocks with a given blocksize.
+ */
+WVTEST_MAIN("sizeitoa")
+{
+    // Now check rounding
+    WVPASSEQ(sizeitoa(0), "0 bytes");
+    WVPASSEQ(sizeitoa(1), "1 bytes");
+    WVPASSEQ(sizeitoa(42), "42 bytes");
+    WVPASSEQ(sizeitoa(512), "512 bytes");
+    WVPASSEQ(sizeitoa(666), "666 bytes");
+    WVPASSEQ(sizeitoa(949), "949 bytes");
+    WVPASSEQ(sizeitoa(999), "999 bytes");
+    WVPASSEQ(sizeitoa(1000), "1000 bytes");
+    WVPASSEQ(sizeitoa(1023), "1023 bytes");
+    WVPASSEQ(sizeitoa(1024), "1.0 KiB");
+    WVPASSEQ(sizeitoa(1025), "1.0 KiB");
+    WVPASSEQ(sizeitoa(1075), "1.0 KiB");
+    WVPASSEQ(sizeitoa(1076), "1.1 KiB");
+    WVPASSEQ(sizeitoa(1116), "1.1 KiB");
+    WVPASSEQ(sizeitoa(2047), "2.0 KiB");
+    WVPASSEQ(sizeitoa(2048), "2.0 KiB");
+    WVPASSEQ(sizeitoa(972799), "950.0 KiB");
+    WVPASSEQ(sizeitoa(1048575), "1.0 MiB");
+    WVPASSEQ(sizeitoa(1048576), "1.0 MiB");
+    WVPASSEQ(sizeitoa(1049999), "1.0 MiB");
+    WVPASSEQ(sizeitoa(4294967295ul), "4.0 GiB");
+    WVPASSEQ(sizeitoa(18446744073709551615ull), "16.0 EiB");
+    WVPASSEQ(sizeitoa(0, 1024), "0 bytes");
+    WVPASSEQ(sizeitoa(1, 1024), "1.0 KiB");
+    WVPASSEQ(sizeitoa(42, 1024), "42.0 KiB");
+    WVPASSEQ(sizeitoa(666, 1024), "666.0 KiB");
+    WVPASSEQ(sizeitoa(949, 1024), "949.0 KiB");
+    WVPASSEQ(sizeitoa(999, 1024), "999.0 KiB");
+    WVPASSEQ(sizeitoa(18446744073709551615ull, 1048576), "16.0 YiB");
+    WVPASSEQ(sizeitoa(18446744073709551615ull, 1073741824), "16384.0 YiB");
+}
+
+/** Tests sizekitoa(),
+ * sizekitoa() should convert an integer of kilobytes
+ * into a string that describes how big it is, in a human-readable format.
+ */
+WVTEST_MAIN("sizekitoa")
+{
+    WVPASSEQ(sizekitoa(0), "0 KiB");
+    WVPASSEQ(sizekitoa(1), "1 KiB");
+    WVPASSEQ(sizekitoa(42), "42 KiB");
+    WVPASSEQ(sizekitoa(512), "512 KiB");
+    WVPASSEQ(sizekitoa(666), "666 KiB");
+    WVPASSEQ(sizekitoa(949), "949 KiB");
+    WVPASSEQ(sizekitoa(999), "999 KiB");
+    WVPASSEQ(sizekitoa(1000), "1000 KiB");
+    WVPASSEQ(sizekitoa(1023), "1023 KiB");
+    WVPASSEQ(sizekitoa(1024), "1.0 MiB");
+    WVPASSEQ(sizekitoa(1025), "1.0 MiB");
+    WVPASSEQ(sizekitoa(1075), "1.0 MiB");
+    WVPASSEQ(sizekitoa(1076), "1.1 MiB");
+    WVPASSEQ(sizekitoa(1116), "1.1 MiB");
+    WVPASSEQ(sizekitoa(2047), "2.0 MiB");
+    WVPASSEQ(sizekitoa(2048), "2.0 MiB");
+    WVPASSEQ(sizekitoa(972799), "950.0 MiB");
+    WVPASSEQ(sizekitoa(1048575), "1.0 GiB");
+    WVPASSEQ(sizekitoa(1048576), "1.0 GiB");
+    WVPASSEQ(sizekitoa(1049999), "1.0 GiB");
+    WVPASSEQ(sizekitoa(4294967295ul), "4.0 TiB");
+    WVPASSEQ(sizekitoa(18446744073709551615ull), "16.0 ZiB");
 }
 
 /** Tests lookup().
@@ -654,8 +745,10 @@ WVTEST_MAIN("undupe")
 WVTEST_MAIN("hostname")
 {
     char host[1024];
+    printf("running gethostname...\n"); fflush(stdout);
     gethostname(host, sizeof(host));
-    WVPASS(hostname() == host);
+    printf("got it.\n"); fflush(stdout);
+    WVPASSEQ(hostname(), host);
 }
 
 /** Tests fqdomainname().
@@ -683,7 +776,7 @@ WVTEST_MAIN("fqdomainname")
         gethostname(host, sizeof(host));
 
         printf("host='%s'  fqdomainname().host='%s'\n", host, n.cstr());
-        WVPASS(n == host);
+        WVPASSEQ(n, host);
     } 
     else
         printf("Work around for Segfault");
@@ -740,16 +833,75 @@ WVTEST_MAIN("substr")
     WVPASS(substr(big, 10, 1) == "");
 }
 
-WVTEST_MAIN("spacecat")
+WVTEST_MAIN("cstr_escape")
 {
-    WVPASSEQ(spacecat("xx", "yy"), "xx yy");
-    WVPASSEQ(spacecat("xx", "yy", ';'), "xx;yy");
-    WVPASSEQ(spacecat("xx;;", "yy", ';'), "xx;;;yy");
-    WVPASSEQ(spacecat("xx;;;", "yy", ';', true), "xx;yy");
-    WVPASSEQ(spacecat("xx;;;", ";yy", ';', true), "xx;yy");
-    WVPASSEQ(spacecat("", "yy"), " yy");
-    WVPASSEQ(spacecat("", "yy", ';', true), ";yy");
-    WVPASSEQ(spacecat("", ";;yy", ';', true), ";yy");
+    WVPASS(cstr_escape(NULL, 0).isnull());
+    WVPASS(cstr_escape("", 0) == "\"\"");
+    WVPASS(cstr_escape("\"", 1) == "\"\\\"\"");
+    WVPASS(cstr_escape("\\", 1) == "\"\\\\\"");
+    WVPASS(cstr_escape("\a", 1) == "\"\\a\"");
+    WVPASS(cstr_escape("\b", 1) == "\"\\b\"");
+    WVPASS(cstr_escape("\r", 1) == "\"\\r\"");
+    WVPASS(cstr_escape("\t", 1) == "\"\\t\"");
+    WVPASS(cstr_escape("\n", 1) == "\"\\n\"");
+    WVPASS(cstr_escape("\v", 1) == "\"\\v\"");
+    WVPASS(cstr_escape("\0", 1) == "\"\\0\"");
+    WVPASS(cstr_escape("a", 1) == "\"a\"");
+    WVPASS(cstr_escape("\xFF", 1) == "\"\\xFF\"");
+}
+
+WVTEST_MAIN("cstr_escape_unescape")
+{
+    int i;
+    const size_t max_size = 256;
+    char orig_data[max_size], data[max_size];
+    size_t size;
+   
+    for (i=0; i<256; ++i)
+        orig_data[i] = (char)i;
+   
+    // Regular escapes
+    WVPASS(cstr_unescape(cstr_escape(orig_data, max_size), data, max_size, size)
+            && size == max_size && memcmp(orig_data, data, size) == 0);
+   
+    // With TCL escapes
+    WVPASS(cstr_unescape(cstr_escape(orig_data, max_size, CSTR_TCLSTR_ESCAPES),
+                data, max_size, size, CSTR_TCLSTR_ESCAPES)
+            && size == max_size && memcmp(orig_data, data, size) == 0);
+}
+
+WVTEST_MAIN("cstr_unescape")
+{
+    const size_t max_size = 16;
+    char data[max_size];
+    size_t size;
+   
+    // Tests for detection of misformatting
+    WVFAIL(cstr_unescape(WvString::null, data, max_size, size) || size);
+    WVPASS(cstr_unescape("", data, max_size, size) && size == 0);
+    WVFAIL(cstr_unescape("garbage", data, max_size, size) || size);
+    WVFAIL(cstr_unescape("\"", data, max_size, size) || size);
+    WVPASS(cstr_unescape(" \"\" ", data, max_size, size) && size == 0);
+    WVPASS(cstr_unescape("\"\" ", data, max_size, size) && size == 0);
+    WVFAIL(cstr_unescape("\"\" \"", data, max_size, size) || size);
+
+    // Tests for correcly formatted strings with enough space
+    WVPASS(cstr_unescape("\"\"", data, max_size, size) && size == 0);
+    WVPASS(cstr_unescape("\"four\"", data, max_size, size)
+            && size == 4 && memcmp(data, "four", size) == 0);
+    WVPASS(cstr_unescape("\"sixteencharacter\"", data, max_size, size)
+            && size == 16 && memcmp(data, "sixteencharacter", size) == 0);
+
+    // Test for correctly formatted string without enough space
+    WVPASS(!cstr_unescape("\"nsixteencharacter\"", data, max_size, size)
+            && size == 17 && memcmp(data, "nsixteencharacter", max_size) == 0);
+    
+    // Test for passing data as a NULL
+    WVPASS(cstr_unescape("\"four\"", NULL, max_size, size) && size == 4);
+
+    // Tests for concatenation
+    WVPASS(cstr_unescape(" \r\"one\" \t\"two\"\v\n", data, max_size, size)
+            && size == 6 && memcmp(data, "onetwo", size) == 0);
 }
 
 void foo(WvStringParm s)
@@ -789,6 +941,7 @@ WVTEST_MAIN("WvString: circular reference")
 
     foo("     ");
 }
+
 
 WVTEST_MAIN("secondstoa")
 {
@@ -832,4 +985,109 @@ WVTEST_MAIN("secondstoa")
     WVPASSEQ(secondstoa(2*24*3600 + 23*3600 + 59*60 + 59), 
             "2 days, 23 hours and 59 minutes");
     WVPASSEQ(secondstoa(10*24*3600), "10 days");
+}
+
+WVTEST_MAIN("spacecat")
+{
+    WVPASSEQ(spacecat("xx", "yy"), "xx yy");
+    WVPASSEQ(spacecat("xx", "yy", ';'), "xx;yy");
+    WVPASSEQ(spacecat("xx;;", "yy", ';'), "xx;;;yy");
+    WVPASSEQ(spacecat("xx;;;", "yy", ';', true), "xx;yy");
+    WVPASSEQ(spacecat("xx;;;", ";yy", ';', true), "xx;yy");
+    WVPASSEQ(spacecat("", "yy"), " yy");
+    WVPASSEQ(spacecat("", "yy", ';', true), ";yy");
+    WVPASSEQ(spacecat("", ";;yy", ';', true), ";yy");
+}
+
+WVTEST_MAIN("depunctuate")
+{
+    WVPASSEQ(depunctuate(""), "");
+    WVPASSEQ(depunctuate("."), "");
+    WVPASSEQ(depunctuate("?"), "");
+    WVPASSEQ(depunctuate("!"), "");
+    WVPASSEQ(depunctuate("a"), "a");
+    WVPASSEQ(depunctuate("a."), "a");
+    WVPASSEQ(depunctuate("a?"), "a");
+    WVPASSEQ(depunctuate("a!"), "a");
+    WVPASSEQ(depunctuate("a.."), "a.");
+    WVPASSEQ(depunctuate("a. "), "a. ");
+}
+
+WVTEST_MAIN("sizetoa rounding")
+{
+    struct
+    {
+	unsigned long long value;
+	const char *round_down;
+	const char *round_down_at_point_five;
+	const char *round_up_at_point_five;
+	const char *round_up;
+    } tests[] =
+    {
+	{ 0, "0 bytes", "0 bytes", "0 bytes", "0 bytes" },
+	{ 999, "999 bytes", "999 bytes", "999 bytes", "999 bytes" },
+	{ 1000, "1.0 kB", "1.0 kB", "1.0 kB", "1.0 kB" },
+	{ 1001, "1.0 kB", "1.0 kB", "1.0 kB", "1.1 kB" },
+	{ 1049, "1.0 kB", "1.0 kB", "1.0 kB", "1.1 kB" },
+	{ 1050, "1.0 kB", "1.0 kB", "1.1 kB", "1.1 kB" },
+	{ 1051, "1.0 kB", "1.1 kB", "1.1 kB", "1.1 kB" },
+	{ 1099, "1.0 kB", "1.1 kB", "1.1 kB", "1.1 kB" },
+	{ 1100, "1.1 kB", "1.1 kB", "1.1 kB", "1.1 kB" },
+	{ 9900, "9.9 kB", "9.9 kB", "9.9 kB", "9.9 kB" },
+	{ 9901, "9.9 kB", "9.9 kB", "9.9 kB", "10.0 kB" },
+	{ 9949, "9.9 kB", "9.9 kB", "9.9 kB", "10.0 kB" },
+	{ 9950, "9.9 kB", "9.9 kB", "10.0 kB", "10.0 kB" },
+	{ 9951, "9.9 kB", "10.0 kB", "10.0 kB", "10.0 kB" },
+	{ 9999, "9.9 kB", "10.0 kB", "10.0 kB", "10.0 kB" },
+	{ 10000, "10.0 kB", "10.0 kB", "10.0 kB", "10.0 kB" },
+	{ 10049, "10.0 kB", "10.0 kB", "10.0 kB", "10.1 kB" },
+	{ 10050, "10.0 kB", "10.0 kB", "10.1 kB", "10.1 kB" },
+	{ 10051, "10.0 kB", "10.1 kB", "10.1 kB", "10.1 kB" },
+	{ 10099, "10.0 kB", "10.1 kB", "10.1 kB", "10.1 kB" },
+	{ 10100, "10.1 kB", "10.1 kB", "10.1 kB", "10.1 kB" },
+	{ 100000, "100.0 kB", "100.0 kB", "100.0 kB", "100.0 kB" },
+	{ 100049, "100.0 kB", "100.0 kB", "100.0 kB", "100.1 kB" },
+	{ 100050, "100.0 kB", "100.0 kB", "100.1 kB", "100.1 kB" },
+	{ 100051, "100.0 kB", "100.1 kB", "100.1 kB", "100.1 kB" },
+	{ 100099, "100.0 kB", "100.1 kB", "100.1 kB", "100.1 kB" },
+	{ 100100, "100.1 kB", "100.1 kB", "100.1 kB", "100.1 kB" },
+	{ 1000000, "1.0 MB", "1.0 MB", "1.0 MB", "1.0 MB" },
+	{ 1000049, "1.0 MB", "1.0 MB", "1.0 MB", "1.1 MB" },
+	{ 1000050, "1.0 MB", "1.0 MB", "1.0 MB", "1.1 MB" },
+	{ 1000051, "1.0 MB", "1.0 MB", "1.0 MB", "1.1 MB" },
+	{ 1000099, "1.0 MB", "1.0 MB", "1.0 MB", "1.1 MB" },
+	{ 1000100, "1.0 MB", "1.0 MB", "1.0 MB", "1.1 MB" },
+	{ 1049000, "1.0 MB", "1.0 MB", "1.0 MB", "1.1 MB" },
+	{ 1050000, "1.0 MB", "1.0 MB", "1.1 MB", "1.1 MB" },
+	{ 1051000, "1.0 MB", "1.1 MB", "1.1 MB", "1.1 MB" },
+	{ 1099000, "1.0 MB", "1.1 MB", "1.1 MB", "1.1 MB" },
+	{ 1100000, "1.1 MB", "1.1 MB", "1.1 MB", "1.1 MB" },
+	{ 10000000000000000000ull, "10.0 EB", "10.0 EB", "10.0 EB", "10.0 EB"},
+	{ 10000000000000000049ull, "10.0 EB", "10.0 EB", "10.0 EB", "10.1 EB"},
+	{ 10000000000000000050ull, "10.0 EB", "10.0 EB", "10.0 EB", "10.1 EB"},
+	{ 10000000000000000051ull, "10.0 EB", "10.0 EB", "10.0 EB", "10.1 EB"},
+	{ 10000000000000000099ull, "10.0 EB", "10.0 EB", "10.0 EB", "10.1 EB"},
+	{ 10000000000000000100ull, "10.0 EB", "10.0 EB", "10.0 EB", "10.1 EB"},
+	{ 10049000000000000000ull, "10.0 EB", "10.0 EB", "10.0 EB", "10.1 EB"},
+	{ 10050000000000000000ull, "10.0 EB", "10.0 EB", "10.1 EB", "10.1 EB"},
+	{ 10051000000000000000ull, "10.0 EB", "10.1 EB", "10.1 EB", "10.1 EB"},
+	{ 10099000000000000000ull, "10.0 EB", "10.1 EB", "10.1 EB", "10.1 EB"},
+	{ 10100000000000000000ull, "10.1 EB", "10.1 EB", "10.1 EB", "10.1 EB"},
+	{ 0, NULL, NULL, NULL, NULL }
+    };
+
+    int i;
+    for (i=0; tests[i].round_down; ++i)
+    {
+	wvout->print("ROUND_DOWN %s:\n", tests[i].value);
+	WVPASSEQ(sizetoa(tests[i].value, 1, ROUND_DOWN), tests[i].round_down);
+	wvout->print("ROUND_DOWN_AT_POINT_FIVE %s:\n", tests[i].value);
+	WVPASSEQ(sizetoa(tests[i].value, 1, ROUND_DOWN_AT_POINT_FIVE),
+		 tests[i].round_down_at_point_five);
+	wvout->print("ROUND_UP_AT_POINT_FIVE %s:\n", tests[i].value);
+	WVPASSEQ(sizetoa(tests[i].value, 1, ROUND_UP_AT_POINT_FIVE),
+		 tests[i].round_up_at_point_five);
+	wvout->print("ROUND_UP %s:\n", tests[i].value);
+	WVPASSEQ(sizetoa(tests[i].value, 1, ROUND_UP), tests[i].round_up);
+    }
 }

@@ -14,14 +14,20 @@
 
 
 /**
- * Create a directory and any subdirectories required along the way. (Equivalent
- * to mkdir -p).
- *
+ * Create a directory and any subdirectories required along the way.
+ * (Equivalent to mkdir -p).
+ * 
  * The default permissions on created directories is 0700, but this can be
  * changed at will.
  */
 bool mkdirp(WvStringParm _dir, int create_mode = 0700);
 
+/**
+ * Safely remove an entire filesystem directory hierarchy.
+ * (Equivalent to rm -rf).  Just like "rm -rf", it may or may not successfully
+ * delete everything.  It's your job to check that afterwards.
+ */
+void rm_rf(WvStringParm _dir);
 
 /**
  * Copy from src to dst preserving permissions and time stamp. This does not
@@ -49,6 +55,35 @@ bool samedate(WvStringParm dir1, WvStringParm dir2, WvStringParm relname);
  * Runs fnmatch against everything in the patterns list.  We also interpret
  * .cvsignore-style '!' patterns, which makes us very fancy.
  */
+#ifndef _WIN32
 bool wvfnmatch(WvStringList &patterns, WvStringParm name, int flags = 0);
+#endif
+
+/**
+ * Replacement for tmpfile() that works correctly in win32 as well as Unix.
+ */
+FILE *wvtmpfile();
+
+
+/* Returns a unique filename suitable for a temporary file. Obviously there is
+ * the caveat that someone else may claim this file name before you open it:
+ * do not use this routine where that race may be a real concern (this would
+ * apply only to security-sensitive code)
+ */
+WvString wvtmpfilename(WvStringParm prefix);
+
+
+/**
+ * Basically our own implementation of the NetBSD lchmod() call.
+ */
+#ifndef _WIN32
+int wvchmod(const char *path, mode_t mode);
+#endif
+
+
+/**
+ * A simple helper function to get the current umask.
+ */
+mode_t get_umask();
 
 #endif // __WVFILEUTILS_H

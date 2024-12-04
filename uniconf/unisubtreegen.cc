@@ -8,6 +8,10 @@
 #include "wvbuf.h"
 #include "wvtclstring.h"
 #include "wvmoniker.h"
+#include "wvlinkerhack.h"
+
+WV_LINK(UniSubtreeGen);
+
 
 static IUniConfGen *creator(WvStringParm s, IObject *obj, void *)
 {
@@ -37,7 +41,12 @@ UniSubtreeGen::UniSubtreeGen(IUniConfGen *gen, const UniConfKey &_subkey)
 
 UniConfKey UniSubtreeGen::keymap(const UniConfKey &key)
 {
-    return UniConfKey(subkey, key);
+    if (key == UniConfKey())
+        return subkey;
+    else if (subkey == UniConfKey())
+        return key;
+    else
+        return UniConfKey(subkey, key);
 }
 
 UniConfKey UniSubtreeGen::reversekeymap(const UniConfKey &key)

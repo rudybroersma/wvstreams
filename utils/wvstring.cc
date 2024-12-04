@@ -48,11 +48,17 @@ WvFastString::WvFastString(const WvString &s)
 }
 
 
-WvFastString::WvFastString(const char *_str)
+void WvFastString::construct(const char *_str)
 {
     // just copy the pointer - no need to allocate memory!
     str = (char *)_str; // I promise not to change anything!
     buf = NULL;
+}
+
+
+WvFastString::WvFastString(const char *_str)
+{
+    construct(_str);
 }
 
 
@@ -70,13 +76,89 @@ void WvString::copy_constructor(const WvFastString &s)
 
 WvString::WvString(const char *_str)
 {
-    link(&nullbuf, _str);
-    
-    // apenwarr (2002/04/24): from now on, all WvString objects are created
-    // with unique(), so you should _never_ have to call it explicitly.  We
-    // still can (and should!) use fast parameter passing via WvFastString.
-    unique();
+    construct(_str);
 }
+
+
+// This function returns the NULL of a reversed string representation
+// for unsigned integers
+template <typename T>
+inline static char *wv_uitoar(char *begin, T i)
+{
+    if (!begin)
+	return NULL;
+
+    char *end = begin;
+
+    if (i == 0)
+	*end++ = '0';
+    else
+    {
+	while (i > 0)
+	{
+	    switch (i % 10)
+	    {
+	    case 0: *end++ = '0'; break;
+	    case 1: *end++ = '1'; break;
+	    case 2: *end++ = '2'; break;
+	    case 3: *end++ = '3'; break;
+	    case 4: *end++ = '4'; break;
+	    case 5: *end++ = '5'; break;
+	    case 6: *end++ = '6'; break;
+	    case 7: *end++ = '7'; break;
+	    case 8: *end++ = '8'; break;
+	    case 9: *end++ = '9'; break;
+	    default: ;
+	    }
+	    i /= 10;
+	}
+    }
+
+    *end = '\0';
+    return end;
+}
+
+// This function returns the NULL of a reversed string representation
+// for signed integers
+template <typename T>
+inline static char *wv_itoar(char *begin, T i)
+{
+    if (!begin)
+	return NULL;
+
+    bool negative = false;
+    if (i < 0)
+    {
+	negative = true;
+	i = -i;
+    }
+    char *end = wv_uitoar(begin, i);
+    if (negative)
+    {
+	*end++ = '-';
+	*end = '\0';
+    }
+    return end;
+}
+
+
+inline static void wv_strrev(char *begin, char *end)
+{
+    if (!begin && !end)
+	return;
+
+    --end;
+
+    while (begin < end)
+    {
+	*begin ^= *end;
+	*end ^= *begin;
+	*begin ^= *end;
+	++begin;
+	--end;
+    }
+}
+
 
 
 // NOTE: make sure that 32 bytes is big enough for your longest int.
@@ -84,64 +166,56 @@ WvString::WvString(const char *_str)
 WvFastString::WvFastString(short i)
 {
     newbuf(32);
-    sprintf(str, "%hd", i);
+    wv_strrev(str, wv_itoar(str, i));
 }
 
 
 WvFastString::WvFastString(unsigned short i)
 {
     newbuf(32);
-    sprintf(str, "%hu", i);
+    wv_strrev(str, wv_uitoar(str, i));
 }
 
 
 WvFastString::WvFastString(int i)
 {
     newbuf(32);
-    sprintf(str, "%d", i);
+    wv_strrev(str, wv_itoar(str, i));
 }
 
 
 WvFastString::WvFastString(unsigned int i)
 {
     newbuf(32);
-    sprintf(str, "%u", i);
+    wv_strrev(str, wv_uitoar(str, i));
 }
 
 
 WvFastString::WvFastString(long i)
 {
     newbuf(32);
-    sprintf(str, "%ld", i);
+    wv_strrev(str, wv_itoar(str, i));
 }
 
 
 WvFastString::WvFastString(unsigned long i)
 {
     newbuf(32);
-    sprintf(str, "%lu", i);
+    wv_strrev(str, wv_uitoar(str, i));
 }
 
 
 WvFastString::WvFastString(long long i)
 {
     newbuf(32);
-#ifdef _WIN32
-    sprintf(str, "%I64d", i);
-#else
-    sprintf(str, "%lld", i);
-#endif
+    wv_strrev(str, wv_itoar(str, i));
 }
 
 
 WvFastString::WvFastString(unsigned long long i)
 {
     newbuf(32);
-#ifdef _WIN32
-    sprintf(str, "%I64u", i);
-#else
-    sprintf(str, "%llu", i);
-#endif
+    wv_strrev(str, wv_uitoar(str, i));
 }
 
 
@@ -179,8 +253,8 @@ void WvFastString::link(WvStringBuf *_buf, const char *_str)
 
 WvStringBuf *WvFastString::alloc(size_t size)
 { 
-    WvStringBuf *abuf = (WvStringBuf *)malloc(WVSTRINGBUF_SIZE(buf)
-					     + size + WVSTRING_EXTRA);
+    WvStringBuf *abuf = (WvStringBuf *)malloc(
+		      (WVSTRINGBUF_SIZE(buf) + size + WVSTRING_EXTRA) | 3);
     abuf->links = 0;
     abuf->size = size;
     return abuf;
@@ -219,7 +293,7 @@ void WvFastString::newbuf(size_t size)
 // of it.  If it was linked to only once, then it's already "unique".
 WvString &WvString::unique()
 {
-    if (buf->links > 1 && str)
+    if (!is_unique() && str)
     {
 	WvStringBuf *newb = alloc(len() + 1);
 	memcpy(newb->data, str, newb->size);
@@ -228,6 +302,12 @@ WvString &WvString::unique()
     }
 	    
     return *this; 
+}
+
+
+bool WvString::is_unique() const
+{
+    return (buf->links <= 1);
 }
 
 

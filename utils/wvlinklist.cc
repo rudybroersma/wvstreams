@@ -9,14 +9,14 @@
  */
 #include "wvlinklist.h"
 
-WvLink::WvLink(void *_data, WvLink *prev, WvLink *&tail, bool _auto_free,
+WvLink::WvLink(void *_data, WvLink *prev, WvLink *&tail, bool _autofree,
 	       char *_id)
 {
     data = _data;
     next = prev->next;
     if (!next) tail = this;
     prev->next = this;
-    auto_free = (unsigned)_auto_free;
+    autofree = _autofree;
     id = _id;
 }
 
@@ -58,11 +58,22 @@ void WvListBase::reverse()
 WvLink *WvListBase::IterBase::find(const void *data)
 {
     for (rewind(); next(); )
-    {
 	if (link->data == data)
 	    break;
+    return link;
+}
+
+WvLink *WvListBase::IterBase::find_next(const void *data)
+{
+    if (link)
+    {
+	if (link->data == data)
+	    return link;
+
+	for (rewind(); next(); )
+	    if (link->data == data)
+		break;
     }
-    
     return link;
 }
 

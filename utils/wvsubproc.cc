@@ -47,6 +47,7 @@ int WvSubProc::_startv(const char cmd[], const char * const *argv)
 	// unblock the parent.
 	close(waitfd);
 	
+#ifdef RLIMIT_AS
         // Set memory limit, if applicable
         if (memlimit > 0)
         {
@@ -56,6 +57,7 @@ int WvSubProc::_startv(const char cmd[], const char * const *argv)
             rlim.rlim_max = memlimit * 1024 * 1024;
             setrlimit(RLIMIT_AS, &rlim);
         }
+#endif
 
 	// run the subprocess.
 	execvp(cmd, (char * const *)argv);
@@ -196,7 +198,13 @@ int WvSubProc::fork(int *waitfd)
 				     getenv("LD_PRELOAD") + 11);
 		putenv(ldpreload.edit());
 	    }
-	    else
+	    else if (!strstr(*i, "="))
+	    {
+	    	// no equals? then we must want to unset it!
+	    	// This is evil, but this is the most simple
+	    	unsetenv(*i);
+	    } 
+	    else 
 		putenv(i->edit());
 	}
     }

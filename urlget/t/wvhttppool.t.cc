@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <netdb.h>
 
-static void close_callback(WvStream& s, void* userdata)
+static void close_callback(WvStream& s)
 {
     if (!s.isok())
         printf("%d", s.geterr());
@@ -22,7 +22,7 @@ WVTEST_MAIN("WvHttpPool GET")
 	WVPASS(buf = pool.addurl("http://www.google.com"));
 	WVPASS(buf->isok());
 	buf->autoforward(*wvcon);
-	buf->setclosecallback(close_callback, NULL);
+	buf->setclosecallback(close_callback);
 	l.append(buf, true);
 	while (buf->isok() && (wvcon->isok() || !pool.idle()))
 	    l.runonce();
@@ -47,7 +47,7 @@ WVTEST_MAIN("WvHttpPool HEAD")
 	WVPASS(buf = pool.addurl("http://www.google.com", "HEAD"));
 	WVPASS(buf->isok());
 	buf->autoforward(*wvcon);
-	buf->setclosecallback(close_callback, NULL);
+	buf->setclosecallback(close_callback);
 	l.append(buf, true);
 	while (buf->isok() && (wvcon->isok() || !pool.idle()))
 	{
@@ -74,7 +74,7 @@ void tcp_callback(WvStream &s, void*)
     char *line;
     do
     {
-        line = s.getline(0);
+        line = s.getline();
         if (line && (strncmp(line, "GET", 3) == 0 ||
                      strncmp(line, "HEAD", 4) == 0))
         {
@@ -130,7 +130,7 @@ void listener_callback(WvStream &s, void *userdata)
     WvTCPConn *newconn = l.accept();
     printf("Incoming connection (%u)\n", http_conns);
     newconn->setcallback(tcp_callback, NULL);
-    list.append(newconn, false, "incoming http conn");
+    list.append(newconn, true, "incoming http conn");
     expecting_request = true;
 }
 
@@ -153,7 +153,7 @@ static void do_test(WvIStreamList &l, unsigned int port,
 									 i)));
         WVPASS(buf->isok());
         buf->autoforward(*wvcon);
-        buf->setclosecallback(close_callback, NULL);
+        buf->setclosecallback(close_callback);
         bufs.append(buf, true, "poolbuf");
     }
 
@@ -174,6 +174,7 @@ static void do_test(WvIStreamList &l, unsigned int port,
     l.runonce(10);
     l.runonce(10);
     WVPASSEQ(bufs.count(), 0);
+
     l.unlink(&bufs);
     l.unlink(&pool);
 }
@@ -231,3 +232,4 @@ WVTEST_MAIN("WvHttpPool pipelining")
 
     WVPASS(listener->isok());
 }
+

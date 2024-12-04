@@ -1,13 +1,20 @@
 #include <fcntl.h>
+#ifdef _WIN32
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 #include <string.h>
 
-#include "wvtest.h"
-#include "wvstreamclone.h"
 #include "wvfdstream.h"
-#include "wvlog.h"
 #include "wvfile.h"
+#include "wvfileutils.h"
 #include "wvistreamlist.h"
+#include "wvlog.h"
+#include "wvsocketpair.h"
+#include "wvstreamclone.h"
+#include "wvtest.h"
+#include "wvfileutils.h"
 
 //FIXME: absolutely simple simple test right now, built from closeflushtest
 // BEGIN closeflushtest.cc definition
@@ -88,8 +95,39 @@ WVTEST_MAIN("open and close with null FDs")
     WVFAIL(fdstream.isreadable());
 }
 
+WVTEST_MAIN("stdout clone")
+{
+    {
+	WvFDStream s(dup(1));
+	WVPASS(s.isok());
+	WVPASSEQ(s.geterr(), 0);
+	s.print("This is stdout!\n");
+	WVPASS(s.isok());
+	WVPASSEQ(s.geterr(), 0);
+	s.close();
+	WVFAIL(s.isok());
+	WVPASSEQ(s.geterr(), 0);
+    }
+    
+    {
+	int fd = dup(1);
+	WvFDStream s(fd);
+	WVPASS(s.isok());
+	WVPASSEQ(s.geterr(), 0);
+	s.print("Boink!\n");
+	WVPASS(s.isok());
+	WVPASSEQ(s.geterr(), 0);
+	close(fd);
+	s.print("this will write to an invalid fd\n");
+	WVFAIL(s.isok());
+	WVPASSEQ(s.geterr(), EBADF);
+    }
+}
+
 WVTEST_MAIN("open, read, write and close between two WvFDStreams")
 {
+    ::unlink("wvfdstream.t.tmp");
+    
     // create temporary and empty file for testing
     printf("Trying to open wvfdstream.t.tmp to write\n");
     int file1 = open("wvfdstream.t.tmp", O_CREAT | O_TRUNC | O_WRONLY, 0666); 
@@ -112,7 +150,7 @@ WVTEST_MAIN("open, read, write and close between two WvFDStreams")
 
     // Writing to file
     WVPASSEQ(writestream.write("Bonjour, je m'appelle writestream\n"), 34);
-    WVPASSEQ(writestream.write("Bonjour, je m'appelle writestream"), 33);
+    WVPASSEQ(writestream.write("Bonjour! Je m'appelle writestream"), 33);
     WVPASS(writestream.iswritable());
     WVPASS(readstream.isreadable());
 
@@ -120,14 +158,17 @@ WVTEST_MAIN("open, read, write and close between two WvFDStreams")
     memset(buf, 0, 256);
     
     // Reading from file
-    writestream.select(0, false, true);
-    WvString line(readstream.getline(-1));
+    WVPASS(writestream.select(0, false, true));
+    WVPASS(1);
+    WvString line(readstream.blocking_getline(-1));
     WVPASSEQ(line, "Bonjour, je m'appelle writestream");
+    WVPASS(readstream.isreadable());
     
     WVPASSEQ(readstream.read(buf, 256), 33);
-    // read() is not supposed to insert the null terminator at the end of the char string, so do it manually
+    // read() is not supposed to insert the null terminator at the end of
+    // the char string, so do it manually
     buf[33] = '\0';
-    WVPASS(strcmp((const char*)buf, "Bonjour, je m'appelle writestream") == 0);
+    WVPASSEQ(buf, "Bonjour! Je m'appelle writestream");
    
     deletev buf;
     close(file1);
@@ -136,11 +177,12 @@ WVTEST_MAIN("open, read, write and close between two WvFDStreams")
 
 WVTEST_MAIN("outbuf_limit")
 {
-    int fd = open("/dev/null", O_WRONLY);
-    printf("Trying to open wvfdstream.t.tmp to read/write\n");
-    if(!WVPASS(fd > 2))
+    int fd = open("wvfdstream.t.tmp", O_WRONLY);
+    printf("Trying to open wvfdstream.t.tmp to write\n");
+    if (!WVPASS(fd > 2))
     {
-        printf("Are you sure we can write to wvfdstream.t.tmp?\n");
+        printf("(fd==%d) Are you sure we can write to wvfdstream.t.tmp?\n",
+	       fd);
     }
     WvFDStream fdstream1(dup(0), fd);
     
@@ -172,6 +214,47 @@ WVTEST_MAIN("outbuf_limit")
     WVPASS(fdstream1.iswritable());
 }
 
+
+static void myclosecb(int *i, WvStream &s)
+{
+    (*i)++;
+}
+
+WVTEST_MAIN("closecallback")
+{
+    WvFdStream s(dup(0), dup(1));
+    int i = 0;
+    s.setclosecallback(
+	       WvBoundCallback<IWvStreamCallback,int*>(&myclosecb, &i));
+    
+    WVPASS(s.isok());
+    s.nowrite();
+    WVPASS(s.isok());
+    WVPASSEQ(i, 0);
+    s.noread();
+    s.runonce(0);
+    WVFAIL(s.isok());
+    WVPASSEQ(i, 1);
+}
+
+
+WVTEST_MAIN("inbuf after read error")
+{
+    int socks[2];
+    WVPASS(!wvsocketpair(SOCK_STREAM, socks));
+    WvFdStream s1(socks[0]), s2(socks[1]);
+    s1.print("1\n2\n3\n4\n");
+    WVPASSEQ(s2.blocking_getline(1000, '\n', 1024), "1");
+    s1.close();
+    WVPASSEQ(s2.blocking_getline(1000, '\n', 1024), "2");
+    WVPASSEQ(s2.blocking_getline(1000, '\n', 1024), "3");
+    WVPASS(s2.isok());
+    WVPASSEQ(s2.blocking_getline(1000, '\n', 1024), "4");
+    WVFAIL(s2.blocking_getline(1000, '\n', 1024));
+    WVFAIL(s2.isok());
+}
+
+
 class FooFD : public WvStream {
 public:
     FooFD(int fd) : y(fd)
@@ -199,7 +282,7 @@ public:
 WVTEST_MAIN("Test undo_force_select() on a WvFDStream")
 {
     // create our test file
-    WvString testfile("/tmp/wvfdstream-testfile-%s", getpid());
+    WvString testfile = wvtmpfilename("wvfdstream-testfile-");
     WvFile x(testfile, O_CREAT|O_RDWR, 0666);
     x.print("moo\n");
     x.print("mow\n");
@@ -233,7 +316,6 @@ WVTEST_MAIN("Test undo_force_select() on a WvFDStream")
     foof.called = false;
     WVPASS(!foof.called);
 
-#if 0
     // undo_force_select() and make sure we're not called
     foof.y.undo_force_select(true, true, true);
 
@@ -242,5 +324,7 @@ WVTEST_MAIN("Test undo_force_select() on a WvFDStream")
 	WvIStreamList::globallist.callback();
 
     WVPASS(!foof.called);
-#endif
+
+    unlink(testfile);
 }
+

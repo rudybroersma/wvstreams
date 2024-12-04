@@ -35,6 +35,7 @@ char *alloca ();
 #include "wvtcp.h"
 #include "wvsslstream.h"
 #include "strutils.h"
+#include <malloc.h> // for alloca()... FIXME: which we shouldn't be using!
 
 WvFtpStream::WvFtpStream(const WvIPPortAddr &_remaddr, WvStringParm _username,
                 WvStringParm _password)
@@ -119,7 +120,7 @@ char *WvFtpStream::get_important_line()
     char *line;
     do
     {
-        line = getline(-1);
+        line = blocking_getline(-1);
         if (!line)
             return NULL;
     }
@@ -375,7 +376,7 @@ void *WvFtpStream::real_execute(void*)
     {
         if (curl->is_dir)
         {
-            line = data->getline(-1);
+            line = data->blocking_getline(-1);
             if (line && curl->outstream)
             {
                 WvString output_line(parse_for_links(line.edit()));
