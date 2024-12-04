@@ -2,31 +2,32 @@ Source: wvstreams
 Maintainer: Debian QA Group <packages@qa.debian.org>
 Section: libs
 Priority: optional
-Build-Depends: dpkg-dev (>= 1.22.5), debhelper-compat (= 10),
-               autoconf,
+Build-Depends: autoconf,
                autotools-dev,
+               debhelper-compat (= 10),
+               doxygen,
+               dpkg-dev (>= 1.22.5),
+               graphviz,
                libdb-dev,
+               libdbus-1-dev,
                libpam0g-dev,
+               libpopt-dev,
                libssl-dev,
                libxplc0.3.13-dev,
-               libpopt-dev,
                zlib1g-dev,
-               doxygen,
-               libdbus-1-dev,
-               graphviz
 Standards-Version: 4.7.0
 Homepage: https://github.com/apenwarr/wvstreams/
 Vcs-Browser: https://salsa.debian.org/debian/wvstreams
 Vcs-Git: https://salsa.debian.org/debian/wvstreams.git
 
 Package: libwvstreams4.6t64-base
-Provides: ${t64:Provides}
+Provides: ${t64:Provides},
 X-Time64-Compat: libwvstreams4.6-base
-Replaces: libwvstreams4.6-base
-Breaks: libwvstreams4.6-base (<< ${source:Version})
+Replaces: libwvstreams4.6-base,
+Breaks: libwvstreams4.6-base (<< ${source:Version}),
 Architecture: any
-Depends: ${shlibs:Depends},
-         ${misc:Depends}
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
 Description: C++ network libraries for rapid application development
  WvStreams is a library suite that is comprised of several parts.  Included
  in the base package are:
@@ -35,34 +36,34 @@ Description: C++ network libraries for rapid application development
   * WvHashTable: an efficient and easy-to-use hash table
   * WvFile: a WvStream wrapper for handling files
   * WvStreamClone: a base class which makes writing your own WvStreams easy
-  * WvLog: a log files handler 
+  * WvLog: a log files handler
   * UniIniGen: a tiny version of UniConf for simple configuration systems
 
 Package: libwvstreams4.6t64-extras
-Provides: ${t64:Provides}
+Provides: ${t64:Provides},
 X-Time64-Compat: libwvstreams4.6-extras
-Replaces: libwvstreams4.6-extras
-Breaks: libwvstreams4.6-extras (<< ${source:Version})
+Replaces: libwvstreams4.6-extras,
+Breaks: libwvstreams4.6-extras (<< ${source:Version}),
 Architecture: any
-Depends: ${shlibs:Depends},
-         ${misc:Depends}
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
 Description: C++ network libraries for rapid application development
  WvStreams is a library suite that is comprised of several parts.  Included
  in the extras package are:
   * WvIPStreams: which includes WvTCPStream and WvUDPStream
-  * WvCrypto streams: a REALLY easy way to add SSL support to applications 
+  * WvCrypto streams: a REALLY easy way to add SSL support to applications
  .
- These are the base classes used to build programs such as the ever popular 
- WvDial, TunnelVision, FastForward, KWvDial, retchmail, and many more yet 
- to come.  ;) 
+ These are the base classes used to build programs such as the ever popular
+ WvDial, TunnelVision, FastForward, KWvDial, retchmail, and many more yet
+ to come.  ;)
 
 Package: libuniconf4.6t64
-Provides: ${t64:Provides}
-Replaces: libuniconf4.6
-Breaks: libuniconf4.6 (<< ${source:Version})
+Provides: ${t64:Provides},
+Replaces: libuniconf4.6,
+Breaks: libuniconf4.6 (<< ${source:Version}),
 Architecture: any
-Depends: ${shlibs:Depends},
-         ${misc:Depends}
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
 Description: C++ network libraries for rapid application development
  UniConf is a configuration system that can serve as the centrepiece among
  many other, existing configuration systems, such as:
@@ -77,8 +78,8 @@ Description: C++ network libraries for rapid application development
 Package: libwvstreams4.6-doc
 Architecture: all
 Section: doc
-Depends: ${misc:Depends}
-Suggests: libwvstreams-dev (= ${binary:Version})
+Depends: ${misc:Depends},
+Suggests: libwvstreams-dev (= ${binary:Version}),
 Description: Documentation for WvStreams
  Contains all the documentation available to program with WvStreams.
  .
@@ -88,17 +89,17 @@ Description: Documentation for WvStreams
 Package: libwvstreams-dev
 Architecture: any
 Section: libdevel
-Depends: libwvstreams4.6t64-base (= ${binary:Version}),
+Depends: libuniconf4.6t64 (= ${binary:Version}),
+         libwvstreams4.6t64-base (= ${binary:Version}),
          libwvstreams4.6t64-extras (= ${binary:Version}),
-         libuniconf4.6t64 (= ${binary:Version}),
          libxplc0.3.13-dev,
-         ${misc:Depends}
-Suggests: tk8.5 | wish
-Provides: libwvstreams4.6-dev
+         ${misc:Depends},
+Suggests: tk8.5 | wish,
+Provides: libwvstreams4.6-dev,
 Description: Development libraries and header files for libwvstreams4.6
- Contains the header files and static libraries for use in rapid 
- application development using the WvStreams set of libraries.  It 
- includes everything that is needed to compile a program that needs 
+ Contains the header files and static libraries for use in rapid
+ application development using the WvStreams set of libraries.  It
+ includes everything that is needed to compile a program that needs
  WvStreams.
  .
  The WvStreams library suite is a set of C++ network libraries that

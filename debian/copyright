@@ -3,7 +3,7 @@ Source: http://alumnit.ca/
 Upstream-Contact: Net Integration Technologies Inc.
 
 Files: *
-Copyright: 
+Copyright:
  Copyright (C) 1997-2007, Net Integration Technologies Inc.
  Copyright (C) 1999 Red Hat, Inc.
  Copyright (C) 2000-2003, Pierre Phaneuf
@@ -39,7 +39,7 @@ License: GPL-2+
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  GNU General Public License for more details.
 Comment:
- On Debian systems, a copy of the GPL license can be found in 
+ On Debian systems, a copy of the GPL license can be found in
  /usr/share/common-licenses/GPL-2
 
 Files: include/ftpparse.h urlget/ftpparse.cc
