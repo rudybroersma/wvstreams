@@ -2,8 +2,6 @@ EXEEXT=@EXEEXT@
 CC=@CC@
 CFLAGS=@CFLAGS@
 CPP=@CPP@
-INCFLAGS=@INCFLAGS@
-DEPFLAGS=@DEPFLAGS@
 CPPFLAGS=@CPPFLAGS@
 CXX=@CXX@
 CXXCPP=@CXXCPP@
@@ -17,19 +15,27 @@ LN_S=@LN_S@
 LN=@LN@
 MOC=@MOC@
 VALGRIND=@VALGRIND@
-PACKAGE_BUGREPORT=@PACKAGE_BUGREPORT@
-PACKAGE_NAME=@PACKAGE_NAME@
-PACKAGE_STRING=@PACKAGE_STRING@
-PACKAGE_TARNAME=@PACKAGE_TARNAME@
-PACKAGE_VERSION=@PACKAGE_VERSION@
+WVPACKAGE_BUGREPORT=@PACKAGE_BUGREPORT@
+WVPACKAGE_NAME=@PACKAGE_NAME@
+WVPACKAGE_STRING=@PACKAGE_STRING@
+WVPACKAGE_TARNAME=@PACKAGE_TARNAME@
+WVPACKAGE_VERSION=@PACKAGE_VERSION@
 COMPILER_STANDARD=@COMPILER_STANDARD@
 SO_VERSION=@SO_VERSION@
 
+USE_WVSTREAMS_ARGP=@USE_WVSTREAMS_ARGP@
+
 target=@target@
+OS=@OS@
 ARCH_SUBDIRS=@ARCH_SUBDIRS@
-LIBS+=@ac_libs@
+LIBS=@LIBS@
+LIBS_DBUS=@LIBS_DBUS@
+LIBS_QT=@LIBS_QT@
+LIBS_PAM=@LIBS_PAM@
+LIBS_TCL=@LIBS_TCL@
 
 prefix=@prefix@
+datarootdir=@datarootdir@
 datadir=@datadir@
 includedir=@includedir@
 infodir=@infodir@
@@ -45,25 +51,15 @@ libexecdir=@libexecdir@
 sbindir=@sbindir@
 
 enable_debug=@enable_debug@
-enable_devel=@enable_devel@
-enable_efence=@enable_efence@
-enable_exceptions=@enable_exceptions@
-enable_fatal_warnings=@enable_fatal_warnings@
 enable_optimization=@enable_optimization@
 enable_resolver_fork=@enable_resolver_fork@
-enable_rtti=@enable_rtti@
-enable_verbose=@enable_verbose@
 enable_warnings=@enable_warnings@
 enable_testgui=@enable_testgui@
 
-with_gtk=@with_gtk@
+with_dbus=@with_dbus@
 with_openssl=@with_openssl@
 with_pam=@with_pam@
 with_tcl=@with_tcl@
 with_readline=@with_readline@
 with_qt=@with_qt@
-with_xplc=@with_xplc@
 with_zlib=@with_zlib@
-
-build_xplc=@build_xplc@
-

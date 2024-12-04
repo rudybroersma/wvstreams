@@ -29,7 +29,6 @@
 #include "wvresolver.h"
 
 
-class WvIStreamList;
 class WvTCPListener;
 
 /**
@@ -128,76 +127,6 @@ protected:
 
 public:
     const char *wstype() const { return "WvTCPConn"; }
-};
-
-/** Class to easily create the Server side of a TCPConn... */
-class WvTCPListener : public WvFDStream
-{
-public:
-    /**
-     * Create a WvStream that listens on _listenport of the current machine
-     * This is how you set up a TCP Server.
-     */
-    WvTCPListener(const WvIPPortAddr &_listenport);
-
-    /** Destructor - remember - close() is your friend ;) */
-    virtual ~WvTCPListener();
-    
-    /** Shut down the server, and disconnect from the port */
-    virtual void close();
-    
-    /**
-     * return a new WvTCPConn socket corresponding to a newly-accepted
-     * connection.  If no connection is ready immediately, we wait for
-     * one indefinitely.  You can use select(read=true) to check for a
-     * waiting connection.
-     */
-    WvTCPConn *accept();
-    
-    /**
-     * set a callback() function that automatically accepts new WvTCPConn
-     * connections, assigning them their own callback function 'callfunc'
-     * with parameter 'userdata.'  Pass list==NULL or define your own
-     * own callback function to disable auto-accepting.
-     *
-     * Be careful not to accept() connections yourself if you do this,
-     * or we may end up accept()ing twice, causing a hang the second time.
-     */
-    void auto_accept(WvIStreamList *list,
-		     WvStreamCallback callfunc = NULL, void *userdata = NULL);
-
-    /**
-     * set a callback() function that automatically accepts new WvTCPConn
-     * connections, assigning them their own callback function 'callfunc'
-     * with parameter 'userdata.' and add them to the global list.
-     * Note the absence of the initial WvStreamList * parameter.
-     *
-     * Be careful not to accept() connections yourself if you do this,
-     * or we may end up accept()ing twice, causing a hang the second time.
-     */
-    void auto_accept(WvStreamCallback callfunc = NULL, void *userdata = NULL);
-
-    /**
-     * these don't do anything, but they confuse the socket, so we'll
-     * ignore them on purpose.
-     */
-    virtual size_t uread(void *buf, size_t len);
-    virtual size_t uwrite(const void *buf, size_t len);
-    
-    /** src() is a bit of a misnomer, but it returns the listener port. */
-    virtual const WvIPPortAddr *src() const;
-    
-protected:
-    WvIPPortAddr listenport;
-    WvIStreamList *auto_list;
-    WvStreamCallback auto_callback;
-    void *auto_userdata;
-    
-    static void accept_callback(WvStream &s, void *userdata);
-    static void accept_global_callback(WvStream &s, void *userdata);
-
-public:
-    const char *wstype() const { return "WvTCPListener"; }
 };
 
 

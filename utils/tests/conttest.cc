@@ -7,7 +7,7 @@
 
 static void *nonfunc(void *_x)
 {
-    int x = (int)_x;
+    long x = (long)_x;
     
     return (void *)(1234560000 + x);
 }
@@ -15,7 +15,7 @@ static void *nonfunc(void *_x)
 
 static void *func(void *_x)
 {
-    int x = (int)_x;
+    long x = (long)_x;
     
     for (int count = 0; count < 4 && WvCont::isok(); count++)
 	WvCont::yield((void *)++x);
@@ -35,21 +35,20 @@ public:
     
     void honk_at(Honk &a)
     {
-	cb = WvCont(WvBoundCallback<WvContCallback, Honk &>
-		    (this, &Honk::honker, a));
+	cb = WvCont(wv::bind(&Honk::honker, this, a, _1));
     }
 
 private:
     void *honker(Honk &h, void *_x)
     {
-	int x = (int)_x;
-	printf("%s: STARTING (%d)\n", id, x);
+	long x = (long)_x;
+	printf("%s: STARTING (%ld)\n", id, x);
 	
 	for (x--; WvCont::isok() && x > 0; x--)
 	{
-	    printf("%s: --> Honking in (%d)\n", id, x);
+	    printf("%s: --> Honking in (%ld)\n", id, x);
 	    h.cb((void *)x);
-	    printf("%s: <-- Honking out (%d)\n", id, x);
+	    printf("%s: <-- Honking out (%ld)\n", id, x);
 	}
 	
 	printf("%s: DONE\n", id);
@@ -60,7 +59,7 @@ private:
 
 int main()
 {
-    typedef WvCallback<void *, void *> CbType;
+    typedef wv::function<void*(void*)> CbType;
     
     // basic functionality (including nested tasks)
     {
@@ -72,21 +71,21 @@ int main()
 	// 'func' actually gets called; there are no parallel running 'func's.
 	// cb2's task calls into cb1's task, however.
     
-	printf("zot1: %d\n", (int)cb1((void *)100));
-	printf("zot1: %d\n", (int)cb2((void *)200));
-	printf("zot1: %d\n", (int)cb3((void *)300));
+	printf("zot1: %ld\n", (long)cb1((void *)100));
+	printf("zot1: %ld\n", (long)cb2((void *)200));
+	printf("zot1: %ld\n", (long)cb3((void *)300));
 	cb1 = WvCont(nonfunc);
-	printf("zot2: %d\n", (int)cb1((void *)400));
-	printf("zot2: %d\n", (int)cb2((void *)500));
-	printf("zot2: %d\n", (int)cb3((void *)600));
+	printf("zot2: %ld\n", (long)cb1((void *)400));
+	printf("zot2: %ld\n", (long)cb2((void *)500));
+	printf("zot2: %ld\n", (long)cb3((void *)600));
 	cb2 = nonfunc;
-	printf("zot3: %d\n", (int)cb1((void *)700));
-	printf("zot3: %d\n", (int)cb2((void *)800));
-	printf("zot3: %d\n", (int)cb3((void *)900));
+	printf("zot3: %ld\n", (long)cb1((void *)700));
+	printf("zot3: %ld\n", (long)cb2((void *)800));
+	printf("zot3: %ld\n", (long)cb3((void *)900));
 	cb3 = nonfunc;
-	printf("zot4: %d\n", (int)cb1((void *)1000));
-	printf("zot4: %d\n", (int)cb2((void *)1100));
-	printf("zot4: %d\n", (int)cb3((void *)1200));
+	printf("zot4: %ld\n", (long)cb1((void *)1000));
+	printf("zot4: %ld\n", (long)cb2((void *)1100));
+	printf("zot4: %ld\n", (long)cb3((void *)1200));
     }
     
     // fun with recursive continuations.  If this doesn't do something

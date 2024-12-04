@@ -35,7 +35,7 @@ void UniConfTestDaemon::boring_server_cb(WvStringParm sockname,
         UniConfDaemon daemon(uniconf, false, NULL);
 
         unlink(sockname);
-        daemon.setupunixsocket(sockname);
+        daemon.listen(WvString("unix:%s", sockname));
 
         WvIStreamList::globallist.append(&daemon, false, "uniconfd");
         // Make sure to commit suicide after half an hour, just in case
@@ -60,7 +60,7 @@ void UniConfTestDaemon::autoinc_server_cb(WvStringParm sockname,
         UniConfDaemon daemon(uniconf, false, NULL);
 
         unlink(sockname);
-        daemon.setupunixsocket(sockname);
+        daemon.listen(WvString("unix:%s", sockname));
 
         WvIStreamList::globallist.append(&daemon, false, "uniconfd");
         // Make sure to commit suicide after half an hour, just in case
@@ -180,8 +180,9 @@ void UniConfGenSanityTester::test_haschildren_moniker(WvStringParm moniker)
     UniConfGenSanityTester::CbCounter notifywatcher;
 
     UniConfRoot cfg(moniker);
-    UniWatch watcher(cfg["/"], UniConfCallback(&notifywatcher,
-                 &UniConfGenSanityTester::CbCounter::callback));
+    UniWatch watcher(cfg["/"],
+		     wv::bind(&UniConfGenSanityTester::CbCounter::callback,
+			      &notifywatcher, _1, _2));
     WVFAIL(cfg.haschildren());
 
     WVPASSEQ(cfg.getme(), WvString::empty);
@@ -351,6 +352,14 @@ void UniConfGenSanityTester::test_trailing_slashes(IUniConfGen *g,
         WVFAIL(cfg[""]["simon"]["/"].haschildren());
 
         WVPASSEQ(cfg[""].getme(), "xyzzy");
+
+        // ensure keys with trailing slashes don't get created as blank
+        // keys
+        cfg["foo"]["bar"][""].setme("value");
+        WVFAIL(cfg["foo"]["bar"].haschildren());
+        WVPASSEQ(cfg["foo"]["bar"][""].getme(), WvString::null);
+        WVPASSEQ(cfg["foo"]["bar"].getme(), WvString::null);
+        WVPASSEQ(cfg["foo"].getme(), WvString::null);
     }
 
     clear_generator(g);

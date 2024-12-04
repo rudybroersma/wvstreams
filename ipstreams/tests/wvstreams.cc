@@ -1,12 +1,13 @@
 #include "wvistreamlist.h"
 #include "wvlog.h"
-#include "wvmoniker.h"
+#include "pwvstream.h"
 #include "wvstreamclone.h"
 #include "wvlinkerhack.h"
 #include <signal.h>
 
 WV_LINK_TO(WvConStream);
 WV_LINK_TO(WvTCPConn);
+
 
 volatile bool want_to_die = false;
 
@@ -18,30 +19,50 @@ static void signalhandler(int sig)
 }
 
 
-static void bounce_to_list(WvStream &s, void *userdata)
+static void bounce_to_list(IWvStream *in, WvIStreamList *list)
 {
-    WvIStreamList *list = (WvIStreamList *)userdata;
     char buf[4096];
     size_t len;
     
-    for (int i = 0; i < 1000; i++)
+    len = in->read(buf, sizeof(buf));
+    
+    WvIStreamList::Iter i(*list);
+    for (i.rewind(); i.next(); )
     {
-	len = s.read(buf, sizeof(buf));
-	if (!len) break;
-	
-	WvIStreamList::Iter i(*list);
-	for (i.rewind(); i.next(); )
+	if (in != i.ptr())
 	{
-	    if (&s != i.ptr())
-	    {
-		// you might think this assumes IWvStream has a buffer; but in
-		// fact, we already know that everything in the list is a
-		// WvStreamClone, and WvStreamClone *does* have an output
-		// buffer, so this is safe.
-		i->write(buf, len);
-	    }
+	    // you might think this assumes IWvStream has a buffer; but in
+	    // fact, we already know that everything in the list is a
+	    // WvStreamClone, and WvStreamClone *does* have an output
+	    // buffer, so this is safe.
+	    i->write(buf, len);
 	}
     }
+}
+
+
+static void died(WvLog &log, WvStringParm name, IWvStream *s)
+{
+    if (s->geterr())
+	log("%s: %s\n", name, s->errstr());
+}
+
+
+static void add(WvLog &log, WvIStreamList &list, const char *_mon)
+{
+    WvString mon(_mon);
+    if (mon == "-")
+	mon = "stdio";
+    log("Creating stream: '%s'\n", mon);
+    PWvStream s(mon);
+    if (!s->isok())
+	died(log, _mon, s.addRef());
+    else
+    {
+	s->setcallback(wv::bind(bounce_to_list, s.get(), &list));
+	s->setclosecallback(wv::bind(died, log, _mon, s.addRef()));
+    }
+    list.append(s.addRef(), true, _mon);
 }
 
 
@@ -60,29 +81,11 @@ int main(int argc, char **argv)
 	return 1;
     }
     
+    if (argc == 2) // talking to just one stream means send it to stdio
+	add(log, list, "-");
+    
     for (int count = 1; count < argc; count++)
-    {
-	log("Creating stream: '%s'\n", argv[count]);
-	IWvStream *s = wvcreate<IWvStream>(argv[count]);
-	if (!s)
-	{
-	    fprintf(stderr, "Can't create stream %s: no moniker!\n",
-		    argv[count]);
-	    return 2;
-	}
-	
-	if (!s->isok())
-	{
-	    fprintf(stderr, "Stream %s: %s\n",
-		    argv[count], s->errstr().cstr());
-	    return 3;
-	}
-	
-	WvStream *s2 = new WvStreamClone(s);
-	
-	s2->setcallback(bounce_to_list, &list);
-	list.append(s2, true, argv[count]);
-    }
+	add(log, list, argv[count]);
     
     while (!want_to_die && list.count() >= 2)
 	list.runonce();

@@ -13,10 +13,10 @@
 #include <signal.h>
 #endif
 
-void WvStreamsDaemon::init(WvStreamsDaemonCallback cb, void *ud)
+void WvStreamsDaemon::init(WvDaemonCallback cb)
 {
     do_full_close = false;
-    setcallback(cb, ud);
+    setcallback(cb);
 #ifndef _WIN32
     signal(SIGPIPE, SIG_IGN);
 #endif
@@ -26,7 +26,7 @@ void WvStreamsDaemon::do_start()
 {
     WvDaemon::do_start();
     
-    callback(*this, userdata);
+    callback();
 }
 
 void WvStreamsDaemon::do_run()
@@ -57,7 +57,7 @@ void WvStreamsDaemon::do_stop()
 }
 
 void WvStreamsDaemon::add_stream(IWvStream *istream,
-    	bool autofree, char *id)
+    	bool autofree, const char *id)
 {
     streams.append(istream, false, id);
     // FIXME: we should pass in "id" here, but things are not happy in
@@ -65,47 +65,48 @@ void WvStreamsDaemon::add_stream(IWvStream *istream,
     WvIStreamList::globallist.append(istream, autofree, id);
 }
 
-void WvStreamsDaemon::add_restart_stream(IWvStream *istream,
-    	bool autofree, char *id)
+void WvStreamsDaemon::add_restart_stream(IWvStream *istream, bool autofree,
+					 const char *id)
 {
     add_stream(istream, autofree, id);
     
-    istream->setclosecallback(
-	WvBoundCallback<IWvStreamCallback, const char*>(this, &WvStreamsDaemon::restart_close_cb, id));
+    istream->setclosecallback(wv::bind(&WvStreamsDaemon::restart_close_cb,
+				       this, istream, id));
 }
 
 void WvStreamsDaemon::add_die_stream(IWvStream *istream,
-    	bool autofree, char *id)
+    	bool autofree, const char *id)
 {
     add_stream(istream, autofree, id);
     
-    istream->setclosecallback(
-	WvBoundCallback<IWvStreamCallback, const char*>(this, &WvStreamsDaemon::die_close_cb, id));
+    istream->setclosecallback(wv::bind(&WvStreamsDaemon::die_close_cb, this,
+				       istream, id));
 }
 
-void WvStreamsDaemon::restart_close_cb(const char *id, WvStream &)
+void WvStreamsDaemon::restart_close_cb(IWvStream *s, const char *id)
 {
     if (should_run())
     {
-        log(WvLog::Error, "%s is stale; restarting\n",
-                id ? id : "Stream");
+	WvString err = s->geterr() ? s->errstr() : "no error";
+        log(WvLog::Error, "%s is closed (%s); restarting\n",
+                id ? id : "Stream", err);
         restart();
     }
 }
 
-void WvStreamsDaemon::die_close_cb(const char *id, WvStream &)
+void WvStreamsDaemon::die_close_cb(IWvStream *s, const char *id)
 {
     if (should_run())
     {
-        log(WvLog::Error, "%s is stale; dying\n",
-                id ? id : "Stream");
+	WvString err = s->geterr() ? s->errstr() : "no error";
+        log(WvLog::Error, "%s is closed (%s); dying\n",
+	    id ? id : "Stream", err);
         die();
     }
 }
 
-void WvStreamsDaemon::setcallback(WvStreamsDaemonCallback cb, void *ud)
+void WvStreamsDaemon::setcallback(WvDaemonCallback cb)
 {
     callback = cb;
-    userdata = ud;
 }
 

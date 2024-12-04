@@ -6,15 +6,12 @@
  */
 #include "uniconfdaemon.h"
 #include "uniconfdaemonconn.h"
+#include "wvlistener.h"
+#include "uninullgen.h"
 
 #ifndef _WIN32
 #include "uniconfpamconn.h"
-#include "wvunixsocket.h"
 #endif
-
-#include "wvtcp.h"
-#include "wvsslstream.h"
-#include "uninullgen.h"
 
 
 UniConfDaemon::UniConfDaemon(const UniConf &_cfg,
@@ -54,8 +51,6 @@ void UniConfDaemon::close()
 
 void UniConfDaemon::accept(WvStream *stream)
 {
-    debug("Accepting connection from %s.\n", *stream->src());
-    
     // FIXME: permgen should be used regardless of whether we authenticate,
     // and there should be a command to authenticate explicitly.  That way we
     // can support access control for anonymous connections.
@@ -69,87 +64,36 @@ void UniConfDaemon::accept(WvStream *stream)
 }
 
 
-#ifndef _WIN32
-void UniConfDaemon::unixcallback(WvStream &l, void *)
+void UniConfDaemon::listencallback(IWvStream *s)
 {
-    debug("Incoming Unix domain connection.\n");
-    WvUnixListener *listener = static_cast<WvUnixListener*>(& l);
-    WvStream *s = listener->accept();
-    accept(s);
-}
-#endif
-
-
-void UniConfDaemon::tcpcallback(WvStream &l, void *)
-{
-    WvTCPListener *listener = static_cast<WvTCPListener*>(& l);
-    WvStream *s = listener->accept();
-    debug("Incoming TCP connection from %s.\n", *s->src());
-    accept(s);
-}
-
-
-void UniConfDaemon::sslcallback(WvStream &l, void *userdata)
-{
-    WvX509Mgr *x509 = static_cast<WvX509Mgr *>(userdata);
-    WvTCPListener *listener = static_cast<WvTCPListener *>(&l);
-    WvStream *s = listener->accept();
-    debug("Incoming TCP/SSL connection from %s.\n", *s->src());
-    accept(new WvSSLStream(s, x509, 0, true));
-}
-
-
-#ifndef _WIN32
-bool UniConfDaemon::setupunixsocket(WvStringParm path, int create_mode)
-{
-    WvUnixListener *listener = new WvUnixListener(path, create_mode);
-    if (! listener->isok())
+    const WvAddr *a = s->src();
+    if (a)
+	debug("Incoming connection from %s.\n", *a);
+    else
+	debug("Incoming connection from UNKNOWN.\n");
+    if (s->geterr())
     {
-        log(WvLog::Error, "Could not create Unix domain socket: %s\n",
-            listener->errstr());
-        WVRELEASE(listener);
-        return false;
+	debug("Error: %s\n", s->errstr());
+	WVRELEASE(s);
     }
-    listener->setcallback(WvStreamCallback(this,
-        &UniConfDaemon::unixcallback), NULL);
-    append(listener, true, "unix listen");
-    debug("Listening on Unix socket '%s'\n", path);
-    return true;
-}
-#endif
-
-
-bool UniConfDaemon::setuptcpsocket(const WvIPPortAddr &addr)
-{
-    WvTCPListener *listener = new WvTCPListener(addr);
-    if (! listener->isok())
-    {
-        log(WvLog::Error, "Could not create TCP socket: %s\n",
-            listener->errstr());
-        WVRELEASE(listener);
-        return false;
-    }
-    listener->setcallback(WvStreamCallback(this,
-        &UniConfDaemon::tcpcallback), NULL);
-    append(listener, true, "tcp listen");
-    debug("Listening for TCP at %s.\n", addr);
-    return true;
+    else
+	accept(new WvStreamClone(s));
 }
 
 
-bool UniConfDaemon::setupsslsocket(const WvIPPortAddr &addr, WvX509Mgr *x509)
+void UniConfDaemon::listen(WvStringParm lmoniker)
 {
-    WvTCPListener *listener = new WvTCPListener(addr);
-    if (! listener->isok())
+    IWvListener *l = IWvListener::create(lmoniker);
+    debug("Listening on %s.\n", *l->src());
+    if (!l->isok())
     {
-        log(WvLog::Error, "Could not create SSL socket: %s\n",
-            listener->errstr());
-        WVRELEASE(listener);
-        return false;
+	log(WvLog::Error, "Can't listen: %s\n", l->errstr());
+	seterr_both(l->geterr(), l->errstr());
+	WVRELEASE(l);
     }
-    listener->setcallback(WvStreamCallback(this,
-        &UniConfDaemon::sslcallback), x509);
-    append(listener, true, "ssl listen");
-    debug("Listening for TCP/SSL at %s.\n", addr);
-    return true;
+    else
+    {
+	l->onaccept(wv::bind(&UniConfDaemon::listencallback, this, _1));
+	append(l, true, "listener");
+    }
 }

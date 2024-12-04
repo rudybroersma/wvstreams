@@ -1,9 +1,9 @@
 #include "wvcallbacklist.h"
 #include "wvtest.h"
-#include "wvcallback.h"
+#include "wvtr1.h"
 
 
-typedef WvCallback<int, int&> TestCallback;
+typedef wv::function<int(int&)> TestCallback;
 
 
 /* The return value will be ignored. */

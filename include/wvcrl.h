@@ -2,7 +2,7 @@
  * Worldvisions Weaver Software:
  *   Copyright (C) 1997-2007 Net Integration Technologies, Inc. and others.
  *
- * X.509v3 CRL management classes.
+ * X.509v3 CRL management class.
  */ 
 #ifndef __WVCRL_H
 #define __WVCRL_H
@@ -44,9 +44,9 @@ public:
     
     /**
      * Initialize a CRL object, signed and created by the certificate
-     * 'cacert'.
+     * 'ca'.
      */
-    WvCRL(const WvX509Mgr &cacert);
+    WvCRL(const WvX509Mgr &ca);
 
     /** Destructor */
     virtual ~WvCRL();
@@ -145,7 +145,7 @@ public:
      */
     int numcerts() const;
     
-private:
+private:    
     mutable WvLog debug;
     X509_CRL *crl;
 };

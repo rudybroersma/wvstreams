@@ -7,9 +7,9 @@
 #ifndef __UNICONFGEN_H
 #define __UNICONFGEN_H
  
-#include "wvcallback.h"
-#include "wvcallbacklist.h"
 #include "uniconfpair.h"
+#include "wvcallbacklist.h"
+#include "wvtr1.h"
 
 class UniConfGen;
 class UniListIter;
@@ -27,7 +27,7 @@ class UniListIter;
  *   gen - the externally visible generator whose key has changed
  *   key - the key that has changed
  */
-typedef WvCallback<void, const UniConfKey &, WvStringParm> 
+typedef wv::function<void(const UniConfKey&, WvStringParm)> 
     UniConfGenCallback;
 
 /**

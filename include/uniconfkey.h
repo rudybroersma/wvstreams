@@ -9,11 +9,7 @@
 
 #include "wvstring.h"
 #include "wvlinklist.h"
-
-
-// The Python headers try to #define ANY as void.  If we're building Python
-// wrappers, get rid of that.
-#undef ANY
+#include <limits.h>
 
 
 /**

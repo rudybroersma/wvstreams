@@ -7,9 +7,9 @@
 #ifndef __IWVSTREAM_H
 #define __IWVSTREAM_H
 
-#include "wverror.h"
-#include "wvcallback.h"
 #include "wvbuf.h"
+#include "wverror.h"
+#include "wvtr1.h"
 #include "wvxplc.h"
 
 
@@ -18,12 +18,14 @@ class WvStream;
 
 
 /* The stream gets passed back as a parameter. */
-typedef WvCallback<void, WvStream&> IWvStreamCallback;
+typedef wv::function<void()> IWvStreamCallback;
 typedef unsigned int WSID;
 
 class IWvStream : public WvErrorBase, public IObject
 {
 public:
+    static IWvStream *create(WvStringParm moniker, IObject *obj = NULL);
+    
     /**
      * A SelectRequest is a convenient way to remember what we want to do
      * to a particular stream: read from it, write to it, or check for
@@ -169,6 +171,7 @@ public:
      **/
 
      virtual void outbuf_limit(size_t size) = 0;
+     virtual WvString getattr(WvStringParm name) const = 0;
 };
 
 DEFINE_IID(IWvStream, {0x7ca76e98, 0xb653, 0x43d7,

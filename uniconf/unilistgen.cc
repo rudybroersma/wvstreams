@@ -38,7 +38,7 @@ public:
 
 
 
-static IUniConfGen *creator(WvStringParm s)
+static IUniConfGen *creator(WvStringParm s, IObject *_obj)
 {
     UniConfGenList *l = new UniConfGenList();
 
@@ -48,10 +48,12 @@ static IUniConfGen *creator(WvStringParm s)
 
     for (i.rewind(); i.next();)
     {
-	IUniConfGen *gen = wvcreate<IUniConfGen>(i());
+        if (_obj) _obj->addRef();
+	IUniConfGen *gen = wvcreate<IUniConfGen>(i(), _obj);
 	if (gen)
 	    l->append(gen, true);
     }
+    if (_obj) _obj->release();
 
     return new UniListGen(l);
 }
@@ -62,8 +64,7 @@ UniListGen::UniListGen(UniConfGenList *_l) : l(_l)
 {
     UniConfGenList::Iter i(*l);
     for (i.rewind(); i.next(); )
-        i->add_callback(this, 
-		UniConfGenCallback(this, &UniListGen::gencallback));
+        i->add_callback(this, wv::bind(&UniListGen::gencallback, this, _1, _2));
 }
 
 

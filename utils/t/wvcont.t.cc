@@ -5,7 +5,7 @@
 // START conttest.cc definitions
 static void *nonfunc(void *_x)
 {
-    int x = (int)_x;
+    long x = (long)_x;
     
     return (void *)(1234560000 + x);
 }
@@ -13,7 +13,7 @@ static void *nonfunc(void *_x)
 
 static void *func(void *_x)
 {
-    int x = (int)_x;
+    long x = (long)_x;
     
     for (int count = 0; count < 4 && WvCont::isok(); count++)
 	WvCont::yield((void *)++x);
@@ -33,14 +33,13 @@ public:
     
     void honk_at(Honk &a)
     {
-	cb = WvCont(WvBoundCallback<WvContCallback, Honk &>
-		    (this, &Honk::honker, a));
+	cb = WvCont(wv::bind(&Honk::honker, this, a, _1));
     }
 
 private:
     void *honker(Honk &h, void *_x)
     {
-	int x = (int)_x;
+	long x = (long)_x;
 //	printf("%s: STARTING (%d)\n", id, x);
 	
 	for (x--; WvCont::isok() && x > 0; x--)
@@ -58,7 +57,7 @@ private:
 
 WVTEST_MAIN("basics")
 {
-    typedef WvCallback<void *, void *> CbType;
+    typedef wv::function<void*(void*)> CbType;
     
     // basic functionality (including nested tasks)
     {
@@ -70,21 +69,21 @@ WVTEST_MAIN("basics")
 	// 'func' actually gets called; there are no parallel running 'func's.
 	// cb2's task calls into cb1's task, however.
     
-	WVPASS((int)cb1((void *)100) == 101);
-	WVPASS((int)cb2((void *)200) == 102);
-	WVPASS((int)cb3((void *)300) == 103);
+	WVPASS((long)cb1((void *)100) == 101);
+	WVPASS((long)cb2((void *)200) == 102);
+	WVPASS((long)cb3((void *)300) == 103);
 	cb1 = WvCont(nonfunc);
-	WVPASS((int)cb1((void *)400) == 1234560400);
-	WVPASS((int)cb2((void *)500) == 104);
-	WVPASS((int)cb3((void *)600) == -105);
+	WVPASS((long)cb1((void *)400) == 1234560400);
+	WVPASS((long)cb2((void *)500) == 104);
+	WVPASS((long)cb3((void *)600) == -105);
 	cb2 = nonfunc;
-        WVPASS((int)cb1((void *)700) == 1234560700);
-	WVPASS((int)cb2((void *)800) == 1234560800);
-	WVPASS((int)cb3((void *)900) == 901);
+        WVPASS((long)cb1((void *)700) == 1234560700);
+	WVPASS((long)cb2((void *)800) == 1234560800);
+	WVPASS((long)cb3((void *)900) == 901);
 	cb3 = nonfunc;
-	WVPASS((int)cb1((void *)1000) == 1234561000);
-	WVPASS((int)cb2((void *)1100) == 1234561100);
-	WVPASS((int)cb3((void *)1200) == 1234561200);
+	WVPASS((long)cb1((void *)1000) == 1234561000);
+	WVPASS((long)cb2((void *)1100) == 1234561100);
+	WVPASS((long)cb3((void *)1200) == 1234561200);
     }
 
 #ifdef CAN_UNITTEST_ASSERTION_FAILURE 
@@ -126,7 +125,7 @@ WVTEST_MAIN("basics")
 }
 
 
-static WvCallback<void*,void*> rcallback;
+static wv::function<void*(void*)> rcallback;
 static int rn = 0;
 
 static void *rfunc2(void *)

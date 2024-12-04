@@ -7,10 +7,10 @@
 #ifndef __WVSSLSTREAM_H
 #define __WVSSLSTREAM_H
 
-#include "wvstreamclone.h"
 #include "wvfdstream.h"
 #include "wvlog.h"
-#include "wvcallback.h"
+#include "wvstreamclone.h"
+#include "wvtr1.h"
 
 struct ssl_st;
 struct ssl_ctx_st;
@@ -22,8 +22,10 @@ typedef struct ssl_method_st SSL_METHOD;
 
 class WvX509;
 class WvX509Mgr;
+class WvSSLStream;
 
-typedef WvCallback<bool, WvX509*> WvSSLValidateCallback;
+typedef wv::function<bool(WvX509*)> WvSSLValidateCallback;
+typedef wv::function<bool(WvX509*, WvSSLStream *)> WvSSLGlobalValidateCallback;
 
 /**
  * SSL Stream, handles SSLv2, SSLv3, and TLS
@@ -33,6 +35,17 @@ typedef WvCallback<bool, WvX509*> WvSSLValidateCallback;
 class WvSSLStream : public WvStreamClone
 {
 public:
+    /* This ValidateCallback is purely more convenient to set (not passed in
+     * via constructor) than its local cousin.  It is used when you want an
+     * easy way to assign a validation function to any WvSSLStream you might
+     * be using.  NOTE:  It should be assigned before you instantiate a stream,
+     * and should never be changed while WvSSLStreams still linger.
+     *
+     * NOTE:  Using wv::bind can effectively bind an object with a particular
+     * function for this callback, so you can do all sorts of interesting stuff
+     * with it.
+     */
+    static WvSSLGlobalValidateCallback global_vcb;
     /**  
      * Start an SSL connection on the stream _slave.  The x509 structure
      * is optional for a client, and mandatory for a server.  You need to

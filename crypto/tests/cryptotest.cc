@@ -205,10 +205,9 @@ int main(int argc, char **argv)
 
     WvStreamClone *base;
     if (direction == Encrypt)
-        base = new WvStreamClone(out);
+        base = new WvStreamClone((out->addRef(), out));
     else
-        base = new WvStreamClone(in);
-    base->disassociate_on_close = true;
+        base = new WvStreamClone((in->addRef(), in));
     
     switch (crypt_type)
     {
@@ -240,7 +239,7 @@ int main(int argc, char **argv)
 
    case TripleDES:
    {
-	char *private_key = PRIVATE_KEY;
+	const char *private_key = PRIVATE_KEY;
 	log("Using %s-bit TripleDES encryption.\n", numbits);
 	
 	deskey1 = new unsigned char[DES_KEY_SZ];

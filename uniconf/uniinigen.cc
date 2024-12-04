@@ -17,7 +17,7 @@
 WV_LINK(UniIniGen);
 
 
-static IUniConfGen *creator(WvStringParm s)
+static IUniConfGen *creator(WvStringParm s, IObject*)
 {
     return new UniIniGen(s);
 }
@@ -196,8 +196,8 @@ bool UniIniGen::refresh()
     root = newtree;
     newgen->root = NULL;
     dirty = false;
-    oldtree->compare(newtree, UniConfValueTree::Comparator
-            (this, &UniIniGen::refreshcomparator), NULL);
+    oldtree->compare(newtree, wv::bind(&UniIniGen::refreshcomparator, this,
+				       _1, _2));
     
     delete oldtree;
     unhold_delta();
@@ -211,7 +211,7 @@ bool UniIniGen::refresh()
 
 // returns: true if a==b
 bool UniIniGen::refreshcomparator(const UniConfValueTree *a,
-    const UniConfValueTree *b, void *userdata)
+				  const UniConfValueTree *b)
 {
     if (a)
     {
@@ -229,8 +229,8 @@ bool UniIniGen::refreshcomparator(const UniConfValueTree *a,
         {
             // key removed
 	    // Issue notifications for every that is missing.
-            a->visit(UniConfValueTree::Visitor(this,
-                &UniIniGen::notify_deleted), NULL, false, true);
+            a->visit(wv::bind(&UniIniGen::notify_deleted, this, _1, _2),
+		     NULL, false, true);
             return false;
         }
     }

@@ -3,9 +3,9 @@
 #include "unilistiter.h"
 #include "wvmoniker.h"
 
-static IUniConfGen *creator(WvStringParm s)
+static IUniConfGen *creator(WvStringParm s, IObject *_obj)
 {
-    IUniConfGen *base = wvcreate<IUniConfGen>(s);
+    IUniConfGen *base = wvcreate<IUniConfGen>(s, _obj);
     if (base)
 	return new UniTransactionGen(base);
     else
@@ -202,16 +202,15 @@ private:
 UniTransactionGen::UniTransactionGen(IUniConfGen *_base)
     : root(NULL), base(_base)
 {
-    base->add_callback(this,
-	UniConfGenCallback(this, &UniTransactionGen::gencallback));
+    base->add_callback(this, wv::bind(&UniTransactionGen::gencallback, this,
+				      _1, _2));
 }
 
 UniTransactionGen::~UniTransactionGen()
 {
     base->del_callback(this);
     WVRELEASE(base);
-    if (root)
-	delete root;
+    WVDELETE(root);
 }
 
 WvString UniTransactionGen::get(const UniConfKey &key)
@@ -444,10 +443,9 @@ void UniTransactionGen::cancel_values(UniConfValueTree *newcontents,
 	    if (!base->exists(subkey))
 	    {
 		my_userdata data = { i.ptr(), subkey };
-		i->visit(
-		    UniConfValueTree::Visitor(
-			this, &UniTransactionGen::deletion_visitor),
-		    (void *)&data, false, true);
+		i->visit(wv::bind(&UniTransactionGen::deletion_visitor, this,
+				  _1, _2),
+			 (void*)&data, false, true);
 	    }
 	}
     }
@@ -476,8 +474,8 @@ void UniTransactionGen::cancel_changes(UniConfChangeTree *node,
 	    {
 		my_userdata data = { node->newtree, section };
 		node->newtree->visit(
-		    UniConfValueTree::Visitor(
-			this, &UniTransactionGen::deletion_visitor),
+		    wv::bind(&UniTransactionGen::deletion_visitor, this,
+			     _1, _2),
 		    (void *)&data, false, true);
 	    }
 	}
@@ -605,6 +603,11 @@ UniConfChangeTree *UniTransactionGen::create_change(UniConfChangeTree *parent,
 						    int seg,
 						    WvStringParm value)
 {
+    // if the key has a trailing slash, this should be a no-op: we don't
+    // want this to have any effect
+    if ((key.hastrailingslash()) && !value.isnull())
+        return parent;
+
     UniConfChangeTree *tree = 0;
     for (; seg != key.numsegments(); seg++)
     {
@@ -667,10 +670,9 @@ UniConfValueTree *UniTransactionGen::set_value(UniConfValueTree *node,
 	    {
 		hold_delta();
 		my_userdata data = { subnode, key };
-		subnode->visit(
-		    UniConfValueTree::Visitor(
-			this, &UniTransactionGen::deletion_visitor),
-		    (void *)&data, false, true);
+		subnode->visit(wv::bind(&UniTransactionGen::deletion_visitor,
+					this, _1, _2),
+			       (void *)&data, false, true);
 		// printf("DELETE SUBNODE!\n");
 		delete subnode;
 		unhold_delta();

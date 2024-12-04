@@ -18,8 +18,7 @@ UniWatch::UniWatch(const UniConf &_cfg, const UniConfCallback &_cb,
 
 
 UniWatch::UniWatch(const UniConf &_cfg, bool *b, bool _recurse)
-    : cfg(_cfg), cb(WvBoundCallback<UniConfCallback, bool *>
-		    (&UniConfRoot::setbool_callback, b)),
+    : cfg(_cfg), cb(wv::bind(&UniConfRoot::setbool_callback, b, _1, _2)),
     recurse(_recurse)
 {
     cfg.add_callback(this, cb, recurse);

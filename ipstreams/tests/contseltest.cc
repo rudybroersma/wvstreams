@@ -5,13 +5,14 @@
  * WvStream test using the new WvTask support.  This is in ipstreams
  * because there are more fun and stressful streams to test here.
  */
-#include "wvtcp.h"
+#include "wvtcplistener.h"
 #include "wvistreamlist.h"
 #include "wvlog.h"
 #include "strutils.h"
 #include "wvcont.h"
+#include "wvstreamclone.h"
 
-static void *stream_call(WvStream& s, void* contdata = 0)
+static void *stream_call(WvStream& s)
 {
     char *line;
     static int sc_count = 0;
@@ -40,17 +41,11 @@ static void *stream_call(WvStream& s, void* contdata = 0)
 }
 
 
-static void cont_call(WvCont cont, WvStream &s, void* userdata)
+static void setupcont_call(WvIStreamList *list, IWvStream *_conn)
 {
-    cont();
-}
-
-
-static void setupcont_call(WvStream &s, void* userdata)
-{
-    WvCont cont(WvBoundCallback<WvCallback<void*, void*>, WvStream&>(&stream_call, s));
-
-    s.setcallback(WvBoundCallback<WvStreamCallback, WvCont>(&cont_call, cont), NULL);
+    WvStreamClone *conn = new WvStreamClone(_conn);
+    conn->setcallback(WvCont(wv::bind(&stream_call, wv::ref(*conn))));
+    list->append(conn, true, "WvTCPConn");
 }
 
 
@@ -60,9 +55,9 @@ int main()
     WvIStreamList l;
     
     WvTCPListener listen(WvIPPortAddr("0.0.0.0:1129"));
-    listen.auto_accept(&l, setupcont_call, NULL);
+    listen.onaccept(wv::bind(setupcont_call, &l, _1));
 
-    wvcon->setcallback(setupcont_call, NULL);
+    wvcon->setcallback(WvCont(wv::bind(&stream_call, wv::ref(*wvcon))));
 
     log("Listening on port %s\n", *listen.src());
     

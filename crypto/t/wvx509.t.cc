@@ -4,7 +4,7 @@
 #include "wvtest.h"
 #include "wvx509.h"
 #include "wvx509mgr.h"
-
+#include "wvautoconf.h"
 
 // default keylen for where we're not using pre-existing certs
 const static int DEFAULT_KEYLEN = 512; 
@@ -122,7 +122,9 @@ WVTEST_MAIN("X509")
     // Setup a new DN entry, like a server would set.
     const WvString dName("cn=test.foo.com,dc=foo,dc=com");
     const WvString dName1("/CN=test.foo.com/DC=foo/DC=com");
-    const WvString dName2("/C=CA/ST=Quebec/L=Montreal/O=Testy One/CN=aria2.weavernet.null/DC=webmaster@weavernet.null");
+    const WvString dName2("/C=CA/ST=Quebec/L=Montreal/O=Testy One"
+			  "/CN=aria2.weavernet.null"
+			  "/DC=webmaster@weavernet.null");
     
     {
 	WvX509Mgr t509;
@@ -149,6 +151,28 @@ WVTEST_MAIN("X509")
                  certreqtext);
     }
     {
+        // test the copy constructor for x509
+        WvX509 t1;
+	t1.decode(WvX509::CertPEM, x509certtext);
+        basic_test(t1, dName1);
+
+        WvX509 t2(t1);
+        basic_test(t2, dName1);
+    }
+
+    {
+        // test the copy construct for x509mgr
+        WvX509Mgr t1;
+	t1.decode(WvX509::CertPEM, x509certtext);
+	t1.decode(WvRSAKey::RsaPEM, rsakeytext);
+        basic_test(t1, dName1);
+
+        WvX509Mgr t2(t1);
+        basic_test(t2, dName1);
+        WVPASSEQ(t1.encode(WvRSAKey::RsaPEM), t2.encode(WvRSAKey::RsaPEM));
+    }
+
+    {
 	WvX509Mgr t509(dName, 1024);
 	basic_test(t509, dName1);
     }
@@ -157,12 +181,14 @@ WVTEST_MAIN("X509")
 	t509.decode(WvX509::CertPEM, signedcerttext);
 	WVPASS(t509.isok()); 
         WVFAIL(t509.validate()); // this certificate has expired
-	WVPASSEQ(t509.get_subject(), "/C=CA/ST=Quebec/L=Montreal/O=Testy One/CN=aria2.weavernet.null");
+	WVPASSEQ(t509.get_subject(),
+		 "/C=CA/ST=Quebec/L=Montreal/O=Testy One"
+		 "/CN=aria2.weavernet.null");
 	WVPASSEQ(t509.get_issuer(), "/O=NITI-TEST");
         WVPASSEQ(t509.get_ski(), 
-                 "CE:91:F3:C6:00:78:26:21:ED:FC:46:ED:AA:07:C4:6D:2A:6C:4E:15");
+             "CE:91:F3:C6:00:78:26:21:ED:FC:46:ED:AA:07:C4:6D:2A:6C:4E:15");
         WVPASSEQ(t509.get_aki(), 
-                 "C7:51:02:BD:C8:1E:52:FA:70:40:93:50:B3:68:37:AA:AD:02:3F:35");
+             "C7:51:02:BD:C8:1E:52:FA:70:40:93:50:B3:68:37:AA:AD:02:3F:35");
     }    
     {
 	// Now we stress test it to make sure that it fails predictably...
@@ -234,7 +260,9 @@ WVTEST_MAIN("Hexified encoding/decoding")
     "453ec9a3cdbe2fe17e86b32e998fe8713066ed254a60390f7898e4e536dea92af7"
     "743d55a35fad75c14fe1e239251c471e133ca8e85ef3a1d3c5b6b288bfda";
 
-    const WvString dName2("/C=CA/ST=Quebec/L=Montreal/O=Testy One/CN=aria2.weavernet.null/DC=webmaster@weavernet.null");
+    const WvString dName2("/C=CA/ST=Quebec/L=Montreal"
+			  "/O=Testy One/CN=aria2.weavernet.null"
+			  "/DC=webmaster@weavernet.null");
 
     WvX509Mgr t509;
     t509.decode(WvX509Mgr::CertHex, cert_hex);
@@ -269,7 +297,8 @@ WVTEST_MAIN("Get extensions memory corruption")
     t509.decode(WvX509Mgr::CertPEM, carillon_cert);
 
     WVPASS(t509.isok());
-    WVPASSEQ("CA Issuers - URI:http://www.carillon.ca/caops/medium-test-ca.crt", 
+    WVPASSEQ("CA Issuers - "
+	     "URI:http://www.carillon.ca/caops/medium-test-ca.crt", 
              t509.get_aia());
 }
 
@@ -326,17 +355,23 @@ WVTEST_MAIN("certreq / signreq / signcert")
 {
     // certificate request
     WvRSAKey rsakey(DEFAULT_KEYLEN);
-    WvString certreq = WvX509Mgr::certreq("cn=test.signed.com,dc=signed,dc=com", 
-                                       rsakey);
+    WvString certreq 
+	= WvX509Mgr::certreq("cn=test.signed.com,dc=signed,dc=com", rsakey);
+
     WvX509Mgr cacert("CN=test.foo.com,DC=foo,DC=com", DEFAULT_KEYLEN, true);
-    WvString certpem = cacert.signreq(certreq);
+    WVPASS(cacert.isok());
+    WVPASS(cacert.validate());
     
     WvX509 cert;
+    WvString certpem = cacert.signreq(certreq);
     cert.decode(WvX509Mgr::CertPEM, certpem);
 
     // test that it initially checks out
+    WVPASS(cert.isok());
+    WVPASS(cert.validate());
     WVPASS(cert.issuedbyca(cacert));
     WVPASS(cert.signedbyca(cacert));
+    WVPASSEQ(cert.get_aki(), cacert.get_ski());
     
     // change some stuff, verify that tests fail
     WvStringList ca_in, ocsp_in;
@@ -421,12 +456,13 @@ WVTEST_MAIN("basic constraints")
 }
 
 
+#ifdef HAVE_OPENSSL_POLICY_MAPPING
 WVTEST_MAIN("get/set certificate policy extensions")
 {
     WvRSAKey rsakey(DEFAULT_KEYLEN);
 
-    WvString certreq = WvX509Mgr::certreq("cn=test.signed.com,dc=signed,dc=com", 
-                                       rsakey);
+    WvString certreq 
+	= WvX509Mgr::certreq("cn=test.signed.com,dc=signed,dc=com", rsakey);
     WvX509Mgr cacert("CN=test.foo.com, DC=foo, DC=com", DEFAULT_KEYLEN, true);
     WvString certpem = cacert.signreq(certreq);
     
@@ -468,8 +504,8 @@ WVTEST_MAIN("get/set certificate policy extensions")
 WVTEST_MAIN("ski / aki")
 {
     WvRSAKey rsakey(DEFAULT_KEYLEN);
-    WvString certreq = WvX509Mgr::certreq("cn=test.signed.com,dc=signed,dc=com", 
-                                          rsakey);
+    WvString certreq 
+	= WvX509Mgr::certreq("cn=test.signed.com,dc=signed,dc=com", rsakey);
     WvX509Mgr cacert("CN=test.foo.com, DC=foo, DC=com", DEFAULT_KEYLEN, true);
 
     WvString certpem = cacert.signreq(certreq);
@@ -482,7 +518,7 @@ WVTEST_MAIN("ski / aki")
     WVFAIL(!!cacert.get_aki());
     WVPASSEQ(cert.get_aki(), cacert.get_ski());
 }
-
+#endif // HAVE_OPENSSL_POLICY_MAPPING
 
 bool test_encode_decode_str(WvX509::DumpMode mode)
 {
@@ -572,3 +608,52 @@ WVTEST_MAIN("pkcs12")
 }
 
 
+const char random_cert[] = "-----BEGIN CERTIFICATE-----\n"
+"MIIDvzCCAqegAwIBAgIEShc7yDANBgkqhkiG9w0BAQUFADBWMR0wGwYDVQQDExRj\n"
+"b250aW5nZW5jeXdvcmtzLmNvbTEgMB4GCgmSJomT8ixkARkTEGNvbnRpbmdlbmN5\n"
+"d29ya3MxEzARBgoJkiaJk/IsZAEZEwNjb20wHhcNMDgwNzMxMjAyMzE4WhcNMTgw\n"
+"NzI5MjAyMzE4WjBWMR0wGwYDVQQDExRjb250aW5nZW5jeXdvcmtzLmNvbTEgMB4G\n"
+"CgmSJomT8ixkARkTEGNvbnRpbmdlbmN5d29ya3MxEzARBgoJkiaJk/IsZAEZEwNj\n"
+"b20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCrFneQgdQSoVfzCDNu\n"
+"IAXhFpaCJvxDzWPCCZXWPf1/OlncskrRs4FirMnrPUyvw74krPh4lVILKZxIp+Io\n"
+"s7DX8oPHct1ZjQoi7eK7r6iva38ghI3YFPtZSXC3z1DllKzUTezBzNJDkhg/SqUX\n"
+"ne4NNw1mZ90Q07Y8KgREyjJ8/A0+jUNoQ3TydXPWsdNevP6jcczyULbzhlZrCj5J\n"
+"7c21sSWkrm7HUegvJNPPv7vX67onYCMhj0f8Fsiw7TqacmmrJksrW3ifpCf5smIZ\n"
+"/W8F9RwSefnVLn1TA2UoNAFTPDxwPVWFuOEkP8ObDnZXzfWc5WHRbXeVLnTAKbab\n"
+"T6slAgMBAAGjgZQwgZEwHQYDVR0OBBYEFGryLpBlzbGgYCcpX/MbiAQj8nb8MBEG\n"
+"CWCGSAGG+EIBAQQEAwIGQDAjBglghkgBhvhCAQwEFhYUY29udGluZ2VuY3l3b3Jr\n"
+"cy5jb20wDgYDVR0PAQH/BAQDAgOoMAkGA1UdEwQCMAAwHQYDVR0lBBYwFAYIKwYB\n"
+"BQUHAwEGCCsGAQUFBwMCMA0GCSqGSIb3DQEBBQUAA4IBAQBkWsSLHPmDajwg12AT\n"
+"2QW3pxJKVu46nfdgLLTo6bQekAF+kYRERjbC9E/T5Eia5+6yTUbWR8xxDZoftkSK\n"
+"/m3h7/Y+mqb13XiOowTkiJWzL5kwdv3Pb4O5X7YYMcNC4Rnax806b5pplXmzDY9Z\n"
+"rqq/uP6wsRFiu5S7UcfA+KjoTrjMYsSLERAEus5RaP9J6uDvdBn0PwdfTT5rr2yb\n"
+"et8AuJcBLFfFuLXPKfUlbnMe29BUr9s1A01OfHDCmzVN8hAhndBs2xDI1FOy9xDt\n"
+"QXj9z/yvsK0AYwxknkHKqRboW//DVk6tcsL9dCiGSlZta5ob5yt6KK+R5X+rtQ0W\n"
+"InR4\n"
+"-----END CERTIFICATE-----";
+
+WVTEST_MAIN("get_fingerprint")
+{
+    WvX509 foo;
+    foo.decode(WvX509::CertPEM, random_cert);
+
+    WVPASSEQ(foo.get_fingerprint(WvX509::FingerSHA1),
+		"CA:49:50:D4:44:51:0B:AD:46:4F:E8:6C:3B:B2:3E:3F:61:31:27:ED");
+    WVPASSEQ(foo.get_fingerprint(WvX509::FingerMD5),
+		"53:FD:C7:D4:8F:45:AE:1D:90:14:45:B4:0C:1B:02:BD");
+}
+
+
+WVTEST_MAIN("extended key usage")
+{
+    WvX509Mgr ca("CN=test.foo.com,DC=foo,DC=com", DEFAULT_KEYLEN, true);
+
+    WVPASSEQ(ca.get_ext_key_usage(), "");
+    ca.set_ext_key_usage("TLS Web Server Authentication, "
+                         "TLS Web Client Authentication, OCSP Signing");
+    WVPASSEQ(ca.get_ext_key_usage(), "TLS Web Server Authentication;\n"
+             "TLS Web Client Authentication;\nOCSP Signing");
+
+    ca.set_ext_key_usage("OCSP Signing");
+    WVPASSEQ(ca.get_ext_key_usage(), "OCSP Signing");
+}

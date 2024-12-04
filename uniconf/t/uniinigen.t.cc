@@ -176,8 +176,7 @@ WVTEST_MAIN("ini callbacks")
     WvString ininame = inigen("a/b/c/1 = 11\n"
 			      "a/b/c/2 = 22\n");
     UniConfRoot cfg(WvString("ini:%s", ininame));
-    UniWatch w(cfg,
-	       WvBoundCallback<UniConfCallback,int*>(&count_cb, &i), true);
+    UniWatch w(cfg, wv::bind(&count_cb, &i, _1, _2), true);
 
     WVPASSEQ(i, 0);
     cfg.refresh();
@@ -276,8 +275,8 @@ static off_t size_of(const char *fname)
 WVTEST_MAIN("atomic updates")
 {
     WvString dirname("atomic-update-dir.tmp"), fname("%s/test.ini", dirname);
-    chmod(dirname, 0700);
-    WvSystem("rm", "-rf", dirname);
+    chmod(dirname, 0700);    
+    rm_rf(dirname);
     WVPASS(!mkdir(dirname, 0700)); // honours umask
     WVPASS(!chmod(dirname, 0700)); // doesn't include umask
     
@@ -313,7 +312,7 @@ WVTEST_MAIN("atomic updates")
     
     // clean up
     chmod(dirname, 0700);
-    WvSystem("rm", "-rf", dirname);
+    rm_rf(dirname);
 }
 
 

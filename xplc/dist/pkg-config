@@ -1,5 +1,0 @@
-#!/bin/sh
-# This shims out pkg-config so that complaints don't occur when building
-# examples and such.
-
-exit 0

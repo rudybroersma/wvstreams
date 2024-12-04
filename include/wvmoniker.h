@@ -14,7 +14,7 @@
 
 class WvMonikerRegistry;
 
-typedef void *WvMonikerCreateFunc(WvStringParm parms);
+typedef void *WvMonikerCreateFunc(WvStringParm parms, IObject *obj);
 
 /**
  * WvMonikerBase is an auto-registration class for putting things into
@@ -32,7 +32,7 @@ class WvMonikerBase
 {
 protected:
     WvMonikerBase(const UUID &iid, WvStringParm _id,
-		  WvMonikerCreateFunc *func);
+		  WvMonikerCreateFunc *func, const bool override = false);
     ~WvMonikerBase();
     
 public:
@@ -61,10 +61,11 @@ template <class T>
 class WvMoniker : public WvMonikerBase
 {
 public:
-    typedef T *CreateFunc(WvStringParm parms);
+    typedef T *CreateFunc(WvStringParm parms, IObject *obj);
     
-    WvMoniker(WvStringParm _id, CreateFunc *_func)
-	: WvMonikerBase(XPLC_IID<T>::get(), _id, (WvMonikerCreateFunc *)_func)
+    WvMoniker(WvStringParm _id, CreateFunc *_func, const bool override = false)
+	: WvMonikerBase(XPLC_IID<T>::get(), _id, (WvMonikerCreateFunc *)_func,
+			override)
     { 
 	// this looks pointless, but it ensures that T* can be safely,
 	// automatically downcast to IObject*.  That means T is really derived
@@ -85,7 +86,7 @@ public:
  * Most people don't use this function.  See the templated, type-safe version
  * of wvcreate() below.
  */
-void *wvcreate(const UUID &iid, WvStringParm s);
+void *wvcreate(const UUID &iid, WvStringParm s, IObject *obj);
 
 
 /**
@@ -100,9 +101,9 @@ void *wvcreate(const UUID &iid, WvStringParm s);
  *    IWvStream *s_ssl = wvcreate<IWvStream>("ssl:", s);
  */
 template <class T>
-inline T *wvcreate(WvStringParm s)
+inline T *wvcreate(WvStringParm s, IObject *obj = 0)
 {
-    return (T *)(wvcreate(XPLC_IID<T>::get(), s));
+    return (T *)(wvcreate(XPLC_IID<T>::get(), s, obj));
 }
 
 

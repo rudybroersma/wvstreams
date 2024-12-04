@@ -1,6 +1,7 @@
 #include "wvbase64.h"
 #include "wvsslhacks.h"
 #include "wvx509mgr.h"
+#include "wvautoconf.h"
 
 #include <openssl/pem.h>
 #include <openssl/x509v3.h>
@@ -36,6 +37,15 @@ WvX509Mgr::WvX509Mgr()
       debug("X509 Manager", WvLog::Debug5)
 {
     rsa = NULL;
+}
+
+
+WvX509Mgr::WvX509Mgr(const WvX509Mgr &x)
+    : WvX509(x), 
+      debug("X509 Manager", WvLog::Debug5)
+{
+    rsa = NULL;
+    set_rsa(x.rsa);
 }
 
 
@@ -123,7 +133,14 @@ void WvX509Mgr::create_selfissued(WvStringParm dname, bool is_ca)
 	debug("Setting Basic Constraints.\n");
 	set_extension(NID_basic_constraints, "critical, CA:TRUE");
 	debug("Setting Netscape Certificate Type.\n");
-	set_extension(NID_netscape_cert_type, "SSL CA, S/MIME CA, Object Signing CA");
+	set_extension(NID_netscape_cert_type,
+		      "SSL CA, S/MIME CA, Object Signing CA");
+#if 0
+        // uncomment this to allow certificate to be used as
+        // an OCSP signer (seems too obscure to enable by default
+        // right now).
+        set_ext_key_usage("OCSP Signing");
+#endif
 //	debug("Setting Constraints.\n");
 //	set_constraints("requireExplicitPolicy");
     }
@@ -131,7 +148,8 @@ void WvX509Mgr::create_selfissued(WvStringParm dname, bool is_ca)
     {
 	debug("Setting Key Usage with normal server parameters\n");
 	set_nsserver(dname);
-	set_key_usage("critical, digitalSignature, keyEncipherment, keyAgreement");
+	set_key_usage("critical, digitalSignature, keyEncipherment, "
+		      "keyAgreement");
 	set_extension(NID_basic_constraints, "CA:FALSE");
 	set_ext_key_usage("TLS Web Server Authentication,"
 			  "TLS Web Client Authentication");
@@ -148,13 +166,18 @@ WvX509Mgr::~WvX509Mgr()
 {
     debug("Deleting.\n");
     WVDELETE(rsa);
-    wvssl_free();
 }
 
 
 bool WvX509Mgr::isok() const
 {
     return WvX509::isok() && rsa && rsa->isok() && test();
+}
+
+
+bool WvX509Mgr::operator! () const
+{
+    return !isok();
 }
 
 
@@ -255,30 +278,12 @@ WvString WvX509Mgr::signreq(WvStringParm pkcs10req) const
     // this part up until the FIXME: is about.
     WvString pkcs10(pkcs10req);
     
-    char *begin = strstr(pkcs10.edit(), "\nMII");
-    if (!begin)
-    {
-	debug("This doesn't look like PEM Encoded information...\n");
-	return WvString::null;
-    }
-    char *end = strstr(begin + 1, "\n---");
-    if (!end)
-    {
-	debug("Is this a complete certificate request?\n");
-	return WvString::null;
-    }
-    *++end = '\0';
-    WvString body(begin); // just the PKCS#10 request, 
-                          // without the ---BEGIN and ---END
-    
-    WvDynBuf reqbuf;
-    WvBase64Decoder dec;
-    dec.flushstrbuf(body, reqbuf, true);
-    
-    // FIXME: Duplicates code from cert_selfsign
-    size_t reqlen = reqbuf.used();
-    const unsigned char *req = reqbuf.get(reqlen);
-    X509_REQ *certreq = wv_d2i_X509_REQ(NULL, &req, reqlen);
+    BIO *membuf = BIO_new(BIO_s_mem());
+    BIO_write(membuf, pkcs10req, pkcs10req.len());
+
+    X509_REQ *certreq = PEM_read_bio_X509_REQ(membuf, NULL, NULL, NULL);
+    BIO_free_all(membuf);
+
     if (certreq)
     {
 	WvX509 newcert(X509_new());
@@ -311,11 +316,12 @@ WvString WvX509Mgr::signreq(WvStringParm pkcs10req) const
 	// the usage of this cert to digital signature and key encipherment.
 	newcert.set_key_usage("critical, digitalSignature, keyEncipherment");
     
-	// This could cause Netscape to barf because if we set basicConstraints 
-	// to critical, we break RFC2459 compliance. Why they chose to enforce 
-	// that bit, and not the rest is beyond me... but oh well...
+	// This could cause Netscape to barf because if we set
+	// basicConstraints to critical, we break RFC2459 compliance. Why
+	// they chose to enforce that bit, and not the rest is beyond me...
+	// but oh well...
 	ex = X509V3_EXT_conf_nid(NULL, NULL, NID_basic_constraints,
-				 "CA:FALSE");
+				 (char*)"CA:FALSE");
 	
 	X509_add_ext(newcert.get_cert(), ex, -1);
 	X509_EXTENSION_free(ex);
@@ -348,12 +354,14 @@ bool WvX509Mgr::signcert(WvX509 &unsignedcert) const
     {
 	debug("Self Signing!\n");
     }
+#ifdef HAVE_OPENSSL_POLICY_MAPPING
     else if (!X509_check_ca(cert))
     {
         debug("This certificate is not a CA, and is thus not allowed to sign "
               "certificates!\n");
         return false;
     }
+#endif
     else if (!((cert->ex_flags & EXFLAG_KUSAGE) && 
                (cert->ex_kusage & KU_KEY_CERT_SIGN)))
     {
@@ -388,6 +396,7 @@ bool WvX509Mgr::signcrl(WvCRL &crl) const
               "both) not ok! Aborting.\n");
         return false;
     }
+#ifdef HAVE_OPENSSL_POLICY_MAPPING
     else if (!X509_check_ca(cert))
     {
         debug("This certificate is not a CA, and is thus not allowed to sign "
@@ -398,20 +407,16 @@ bool WvX509Mgr::signcrl(WvCRL &crl) const
 	  (cert->ex_kusage & KU_CRL_SIGN)))
     {
 	debug("Certificate not allowed to sign CRLs! (%s %s)\n", 
-              (cert->ex_flags & EXFLAG_KUSAGE), (cert->ex_kusage & KU_CRL_SIGN));
+              (cert->ex_flags & EXFLAG_KUSAGE),
+	      (cert->ex_kusage & KU_CRL_SIGN));
 	return false;
     }
+#endif
     
     EVP_PKEY *certkey = EVP_PKEY_new();
     bool cakeyok = EVP_PKEY_set1_RSA(certkey, rsa->rsa);
     if (cakeyok)
     {
-	// Use Version 2 CRLs - Of COURSE that means
-	// to set it to 1 here... grumble..
-	X509_CRL_set_version(crl.getcrl(), 1);
-
-	X509_CRL_set_issuer_name(crl.getcrl(), X509_get_subject_name(cert));
-
 	ASN1_TIME *tmptm = ASN1_TIME_new();
 	// Set the LastUpdate time to now.
 	X509_gmtime_adj(tmptm, 0);
@@ -491,7 +496,8 @@ bool WvX509Mgr::write_p12(WvStringParm _fname, WvStringParm _pkcs12pass) const
 
     if (!fp)
     {
-        debug(WvLog::Warning, "Unable to open file. Error: %s\n", strerror(errno));
+        debug(WvLog::Warning, "Unable to open file. Error: %s\n",
+	      strerror(errno));
         return false;
     }
 
@@ -511,9 +517,10 @@ bool WvX509Mgr::write_p12(WvStringParm _fname, WvStringParm _pkcs12pass) const
 	    else
 	    {
                 WvString pkcs12pass(_pkcs12pass);
-		PKCS12 *pkg = PKCS12_create(pkcs12pass.edit(), "foo", pk, 
-					    cert, NULL, 0, 0, 0, 
-                                            0, 0);
+		PKCS12 *pkg
+		    = PKCS12_create(pkcs12pass.edit(), (char*)"foo", pk, 
+				    cert, NULL, 0, 0, 0, 
+				    0, 0);
 		if (pkg)
 		{
 		    debug("Writing the PKCS12 object out...\n");
@@ -531,7 +538,8 @@ bool WvX509Mgr::write_p12(WvStringParm _fname, WvStringParm _pkcs12pass) const
 	}
 	else
 	{
-	    debug(WvLog::Warning, "The RSA key or the certificate is not present.");
+	    debug(WvLog::Warning,
+		  "The RSA key or the certificate is not present.");
 	    return false;
 	}
     }
@@ -547,7 +555,8 @@ bool WvX509Mgr::write_p12(WvStringParm _fname, WvStringParm _pkcs12pass) const
 
 void WvX509Mgr::read_p12(WvStringParm _fname, WvStringParm _pkcs12pass)
 {
-    debug("Reading Certificate and Private Key from PKCS12 file: %s\n", _fname);    
+    debug("Reading Certificate and Private Key from PKCS12 file: %s\n",
+	  _fname);
 
     if (rsa)
         WVDELETE(rsa);
