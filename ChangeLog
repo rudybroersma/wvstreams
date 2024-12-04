@@ -1,3 +1,106 @@
+commit eccc25c3da04b39e13fa5c1675bbf609a46565ae
+Author: William Lachance <wrlach@gmail.com>
+Date:   Tue Sep 29 12:11:42 2009 -0400
+
+    Slight cleanup to D-Bus detection in configure
+    
+    Put stuff that's only used inside an if, inside the if
+
+commit 135a5b682977d237e7e7e5c8cb0b044ab2328681
+Merge: 663871d... 5faa73b...
+Author: William Lachance <wrlach@gmail.com>
+Date:   Fri Sep 18 18:23:20 2009 -0400
+
+    Merge branch 'master' of git://github.com/apenwarr/wvstreams
+
+commit 5faa73bc30f0d4791f8f6ace7b0c3335ea66799c
+Author: Avery Pennarun <apenwarr@gmail.com>
+Date:   Fri Sep 18 16:16:35 2009 -0400
+
+    wvurl.cc: include ldap/ldaps default port numbers.
+    
+    As submitted by Patrick Patterson <ppatters@gmail.com>
+
+commit 663871dfe7d0f2c0d957a68852e3d9eada040017
+Merge: 7bea740... 8abcbcf...
+Author: William Lachance <wrlach@gmail.com>
+Date:   Tue Sep 15 15:53:51 2009 -0400
+
+    Merge git://github.com/apenwarr/wvstreams into apenwarr-integration
+
+commit 8abcbcf78070316395a32f797f1010721c909cfd
+Merge: a81ca7a... 658701e...
+Author: Avery Pennarun <apenwarr@gmail.com>
+Date:   Tue Sep 15 15:48:01 2009 -0400
+
+    Merge commit 'origin/master'
+    
+    * commit 'origin/master':
+      git-grafts-setup: a script for fixing up the git history.
+      Makefile: add 'autodep-test' target for testing autodependencies.
+      Fix autodependencies, which were broken by changes to gen-cc.
+
+commit a81ca7a348c0f676dcbaf3ca53d78e77a759268a
+Author: Avery Pennarun <apenwarr@gmail.com>
+Date:   Tue Sep 15 15:47:17 2009 -0400
+
+    configure.ac: fix support for linking a dbus from wvbuild.
+
+commit 7bea7407661924d4fc59a66fe244211fa6bbec8d
+Merge: 000fd0a... 658701e...
+Author: William Lachance <wrlach@gmail.com>
+Date:   Tue Sep 15 14:23:42 2009 -0400
+
+    Merge git://github.com/apenwarr/wvstreams into apenwarr-integration
+
+commit 000fd0a2ed1c6b86634f99435272612a2635964c
+Author: William Lachance <wrlach@gmail.com>
+Date:   Tue Sep 15 14:14:41 2009 -0400
+
+    Using an external dbus through pkg-config should now work
+    
+    This common case was not working before due to a misuse of the DBUS_LIBS
+    variable. We now set it in the right place, which will hopefully fix the
+    problem.
+
+commit 658701e2494ed4d363799173699f83daa7b7ca41
+Author: Avery Pennarun <apenwarr@gmail.com>
+Date:   Fri Jul 24 14:56:52 2009 -0400
+
+    git-grafts-setup: a script for fixing up the git history.
+    
+    The 'master' branch had a major bit of missing history (ie. everything
+    before 2007) due to a mis-import by git-svn.  This reattaches the missing
+    history to make things more linear.
+    
+    Of course, all the svn merges aren't known by git to be merges, so 'git
+    blame' will blame changes that appeared in a merge on the person who merged,
+    rather than the person who originally wrote them.  Oh well.
+
+commit 8166258e0e9acf88a775a5feb50d0ee4070b8deb
+Author: Avery Pennarun <apenwarr@gmail.com>
+Date:   Fri Jul 10 15:06:44 2009 -0400
+
+    Makefile: add 'autodep-test' target for testing autodependencies.
+    
+    People (including me, sometimes) keep on breaking header autodependencies
+    and not noticing, and it wastes a lot of time.  Now the Makefile has a
+    self-test to ensure the dependencies are (at least basically) working
+    correctly.
+    
+    'make test' now depends on the autodep-test target so that you can't forget
+    to run it.
+
+commit c47a91311b487bc2645d4bb9a28f20443bf16e41
+Author: Avery Pennarun <apenwarr@gmail.com>
+Date:   Fri Jul 10 14:46:48 2009 -0400
+
+    Fix autodependencies, which were broken by changes to gen-cc.
+    
+    These were broken earlier during the attempted portability fixes to gen-cc
+    by ppatters.  All it *really* needed was a change of $() syntax to backquote
+    syntax, but we got a terrible mess instead.
+
 commit 2da2550fec889b707e87931a01fcc096ba6027aa
 Author: William Lachance <wrlach@gmail.com>
 Date:   Wed Jun 3 23:23:37 2009 -0400
