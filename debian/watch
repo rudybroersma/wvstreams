@@ -1,3 +1,2 @@
-version=3
-https://github.com/apenwarr/wvstreams/releases?after=wvstreams-4.1  .*/archive/wvstreams-(\d[\d.-]+)\.(?:tar(?:\.gz|\.bz2)?|tgz)
-
+version=4
+https://github.com/apenwarr/wvstreams/tags?after=wv%2Fr2.02  .*/tags/wvstreams-@ANY_VERSION@@ARCHIVE_EXT@
