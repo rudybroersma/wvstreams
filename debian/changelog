@@ -1,3 +1,30 @@
+wvstreams (4.4.1) unstable; urgency=low
+
+  * New upstream version.
+
+ -- William Lachance <wrlach@gmail.com>  Thu, 30 Aug 2007 00:08:09 -0400
+
+wvstreams (4.4) unstable; urgency=low
+
+  * New upstream version.
+
+ -- William Lachance <wrlach@gmail.com>  Thu, 19 Jul 2007 19:30:09 -0400
+
+wvstreams (4.3) unstable; urgency=low
+
+  * New upstream version.
+    - Builds with gcc 4.2.  (Closes: Bug#387989)
+  * Remove useless lintian override in source for "source-contains-CVS-dir".
+  * Update uniconfd initscript to conform to LSB standards.
+
+ -- William Lachance <wrlach@gmail.com>  Fri, 2 Mar 2007 00:42:09 -0500
+
+wvstreams (4.2.2-2) unstable; urgency=low
+
+  * Fix FTBFS due to new GNU Make.  (Closes: Bug#348190)
+
+ -- Simon Law <sfllaw@debian.org>  Tue, 17 Jan 2006 07:37:09 -0500
+
 wvstreams (4.2.2-1) unstable; urgency=low
 
   * New upstream version.

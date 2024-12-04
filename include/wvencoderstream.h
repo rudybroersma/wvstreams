@@ -147,7 +147,8 @@ public:
     virtual size_t uwrite(const void *buf, size_t size);
     
 protected:
-    bool pre_select(SelectInfo &si);
+    void pre_select(SelectInfo &si);
+    bool post_select(SelectInfo &si);
     virtual bool flush_internal(time_t msec_timeout);
 
 private:
@@ -159,6 +160,9 @@ private:
 
     // pushes a chunk to the underlying stream
     bool push(bool flush, bool finish);
+
+public:
+    const char *wstype() const { return "WvEncoderStream"; }
 };
 
 #endif // __WVENCODERSTREAM_H

@@ -7,6 +7,13 @@
 #include "wvargs.h"
 #include "wvscatterhash.h"
 
+// Some screwy defines that show up in _WIN32 and cause problems
+#undef error_t
+#undef argc
+#undef argv
+#undef __argc
+#undef __argv
+
 #include <argp.h>
 
 
@@ -954,16 +961,12 @@ void WvArgs::remove_all_options()
 }
 
 
-static inline void add_arg_helper(WvArgs *args, WvStringParm desc)
-{
-}
-
-void WvArgs::add_required_arg(WvStringParm desc)
+void WvArgs::add_required_arg(WvStringParm desc, bool multiple)
 {
     data->add_required_arg();
     if (!!args_doc)
-	args_doc.append(" ");
-    args_doc.append(desc);
+        args_doc.append(" ", multiple);
+    args_doc.append(desc, multiple);
     if (data->maximum_args < LONG_MAX)
 	++(data->maximum_args);
 }

@@ -1,3 +1,1083 @@
+2007-08-17 01:26  apenwarr
+
+	* trunk/wvstreams, trunk/wvstreams/Makefile-win32,
+	  trunk/wvstreams/Win32WvStreams/dirent.h,
+	  trunk/wvstreams/Win32WvStreams/dirent.lib,
+	  trunk/wvstreams/Win32WvStreams/libuniconf/libuniconf.vcproj,
+	  trunk/wvstreams/Win32WvStreams/libuniconf/unipstoregen.cc,
+	  trunk/wvstreams/Win32WvStreams/libuniconf/uniregistrygen.cc,
+	  trunk/wvstreams/Win32WvStreams/libwvstreams/libwvstreams.vcproj,
+	  trunk/wvstreams/Win32WvStreams/libwvstreams/streams.cc,
+	  trunk/wvstreams/Win32WvStreams/libwvstreams/wvwinstreamclone.cc,
+	  trunk/wvstreams/Win32WvStreams/libwvutils/libwvutils.vcproj,
+	  trunk/wvstreams/Win32WvStreams/libwvutils/utils.cc,
+	  trunk/wvstreams/config.mk.in, trunk/wvstreams/configure-mingw32,
+	  trunk/wvstreams/configure-msvc.ac, trunk/wvstreams/configure.ac,
+	  trunk/wvstreams/crypto/t/wvcrl.t.cc,
+	  trunk/wvstreams/crypto/t/wvsslstream.t.cc,
+	  trunk/wvstreams/crypto/t/wvx509.t.cc,
+	  trunk/wvstreams/crypto/wvcrl.cc,
+	  trunk/wvstreams/crypto/wvdigest.cc,
+	  trunk/wvstreams/crypto/wvsslstream.cc,
+	  trunk/wvstreams/crypto/wvx509.cc,
+	  trunk/wvstreams/gnulib/argp-eexst.c,
+	  trunk/wvstreams/gnulib/argp-help.c,
+	  trunk/wvstreams/gnulib/argp-parse.c,
+	  trunk/wvstreams/gnulib/vasnprintf.c,
+	  trunk/wvstreams/include/iwvstream.h,
+	  trunk/wvstreams/include/unipstoregen.h,
+	  trunk/wvstreams/include/uniregistrygen.h,
+	  trunk/wvstreams/include/wvaddr.h,
+	  trunk/wvstreams/include/wvassert.h,
+	  trunk/wvstreams/include/wvconfemu.h,
+	  trunk/wvstreams/include/wvcrash.h,
+	  trunk/wvstreams/include/wvfile.h,
+	  trunk/wvstreams/include/wvfileutils.h,
+	  trunk/wvstreams/include/wvlog.h,
+	  trunk/wvstreams/include/wvlogfile.h,
+	  trunk/wvstreams/include/wvlogstream.h,
+	  trunk/wvstreams/include/wvserialize.h,
+	  trunk/wvstreams/include/wvsslstream.h,
+	  trunk/wvstreams/include/wvstream.h,
+	  trunk/wvstreams/include/wvstreamsdebuggerserver.h,
+	  trunk/wvstreams/include/wvstrutils.h,
+	  trunk/wvstreams/include/wvunixsocket.h,
+	  trunk/wvstreams/include/wvwin32-sanitize.h,
+	  trunk/wvstreams/include/wvwin32task.h,
+	  trunk/wvstreams/include/wvxplc.h,
+	  trunk/wvstreams/ipstreams/wvresolver.cc,
+	  trunk/wvstreams/ipstreams/wvstreamsdebuggerserver.cc,
+	  trunk/wvstreams/streams/fileutils.cc,
+	  trunk/wvstreams/streams/t/fileutils.t.cc,
+	  trunk/wvstreams/streams/t/wvfdstream.t.cc,
+	  trunk/wvstreams/streams/t/wvfile.t.cc,
+	  trunk/wvstreams/streams/t/wvistreamlist.t.cc,
+	  trunk/wvstreams/streams/t/wvlog.t.cc,
+	  trunk/wvstreams/streams/t/wvlogfile.t.cc,
+	  trunk/wvstreams/streams/wvcolorlogconsole.cc,
+	  trunk/wvstreams/streams/wvdaemon.cc,
+	  trunk/wvstreams/streams/wvfdstream.cc,
+	  trunk/wvstreams/streams/wvfile.cc,
+	  trunk/wvstreams/streams/wvistreamlist.cc,
+	  trunk/wvstreams/streams/wvlog.cc,
+	  trunk/wvstreams/streams/wvlogfile.cc,
+	  trunk/wvstreams/streams/wvlogstream.cc,
+	  trunk/wvstreams/streams/wvsocketpair.cc,
+	  trunk/wvstreams/streams/wvstream.cc,
+	  trunk/wvstreams/streams/wvstreamclone.cc,
+	  trunk/wvstreams/uniconf/t/uniclientgen.t.cc,
+	  trunk/wvstreams/uniconf/t/uniconfgen-sanitytest.cc,
+	  trunk/wvstreams/uniconf/t/uniinigen.t.cc,
+	  trunk/wvstreams/uniconf/t/uniretrygen.t.cc,
+	  trunk/wvstreams/uniconf/t/unisubtreegen.t.cc,
+	  trunk/wvstreams/uniconf/unigenhack.cc,
+	  trunk/wvstreams/uniconf/unigenhack_s.cc,
+	  trunk/wvstreams/uniconf/unislowgen.cc,
+	  trunk/wvstreams/urlget/t/wvhttppool.t.cc,
+	  trunk/wvstreams/utils/strutils.cc,
+	  trunk/wvstreams/utils/t/strutils.t.cc,
+	  trunk/wvstreams/utils/t/wvbuffer.t.cc,
+	  trunk/wvstreams/utils/t/wvdiriter.t.cc,
+	  trunk/wvstreams/utils/t/wvpushdir.t.cc,
+	  trunk/wvstreams/utils/t/wvsorter.t.cc,
+	  trunk/wvstreams/utils/t/wvtclstring.t.cc,
+	  trunk/wvstreams/utils/t/wvtimeutils.t.cc,
+	  trunk/wvstreams/utils/wvargs.cc, trunk/wvstreams/utils/wvcrash.cc,
+	  trunk/wvstreams/utils/wvcrashbase.cc,
+	  trunk/wvstreams/utils/wvdiriter.cc,
+	  trunk/wvstreams/utils/wvtest.cc, trunk/wvstreams/vars-msvc.mk,
+	  trunk/wvstreams/vars-posix.mk, trunk/wvstreams/vars.mk,
+	  trunk/wvstreams/wvrules-msvc.mk, trunk/wvstreams/wvrules-posix.mk,
+	  trunk/wvstreams/wvrules-win32.mk, trunk/wvstreams/wvrules.mk,
+	  trunk/wvstreams/wvtestmain.cc: Numerous changes to bring
+	  /trunk/wvstreams up to date with /branches/wvstreams-win32-2007
+	  (r11726). That branch has already had wvstreams-win32 and
+	  eithoneydew merged into it, so all three should now be mostly safe
+	  to discard. Unit tests pass in both win32-mingw32 and Linux
+	  (although some unit tests are disabled in windows right now,
+	  mostly because they use fork()). See the changelog in
+	  /branches/wvstreams-win32-2007 for more details.
+
+2007-07-20 16:40  wlach
+
+	* trunk/wvstreams/crypto/wvrsa.cc, trunk/wvstreams/include/wvrsa.h:
+	  Tweak wvrsa's encode methods to be const as well.
+
+2007-07-20 16:39  wlach
+
+	* trunk/wvstreams/crypto/t/wvcrl.t.cc,
+	  trunk/wvstreams/crypto/wvcrl.cc, trunk/wvstreams/crypto/wvrsa.cc,
+	  trunk/wvstreams/crypto/wvx509.cc, trunk/wvstreams/include/wvcrl.h:
+	  Some final tweaks to the crypto stuff: make WvCRL handle blank
+	  (null) CRLs better, tweak WvCRL's API for const correctness, a few
+	  more unit tests for wvcrl.
+
+2007-07-20 16:38  wlach
+
+	* trunk/wvstreams/Makefile: Pull out redhat packaging from dist
+	  target.
+
+2007-07-20 16:37  wlach
+
+	* trunk/wvstreams/debian/changelog, trunk/wvstreams/debian/control,
+	  trunk/wvstreams/debian/libuniconf4.3.install,
+	  trunk/wvstreams/debian/libuniconf4.4.install,
+	  trunk/wvstreams/debian/libwvstreams4.3-base.dirs,
+	  trunk/wvstreams/debian/libwvstreams4.3-base.install,
+	  trunk/wvstreams/debian/libwvstreams4.3-base.lintian-override,
+	  trunk/wvstreams/debian/libwvstreams4.3-extras.dirs,
+	  trunk/wvstreams/debian/libwvstreams4.3-extras.install,
+	  trunk/wvstreams/debian/libwvstreams4.3-extras.lintian-override,
+	  trunk/wvstreams/debian/libwvstreams4.3-qt.dirs,
+	  trunk/wvstreams/debian/libwvstreams4.3-qt.install,
+	  trunk/wvstreams/debian/libwvstreams4.3-qt.lintian-override,
+	  trunk/wvstreams/debian/libwvstreams4.4-base.dirs,
+	  trunk/wvstreams/debian/libwvstreams4.4-base.install,
+	  trunk/wvstreams/debian/libwvstreams4.4-base.lintian-override,
+	  trunk/wvstreams/debian/libwvstreams4.4-extras.dirs,
+	  trunk/wvstreams/debian/libwvstreams4.4-extras.install,
+	  trunk/wvstreams/debian/libwvstreams4.4-extras.lintian-override,
+	  trunk/wvstreams/debian/libwvstreams4.4-qt.dirs,
+	  trunk/wvstreams/debian/libwvstreams4.4-qt.install,
+	  trunk/wvstreams/debian/libwvstreams4.4-qt.lintian-override,
+	  trunk/wvstreams/debian/uniconfd.default: Updated debian packaging
+	  stuff for WvStreams 4.4.
+
+2007-07-20 16:32  wlach
+
+	* trunk/wvstreams/uniconf/t/uniconfgen-sanitytest.cc: Fix a warning
+	  in the uniconfgen sanitytest.
+
+2007-07-20 16:32  wlach
+
+	* trunk/wvstreams/gtk, trunk/wvstreams/uniconf/t/uniondiskgen.t.cc:
+	  Remove a few more unused files/dirs in wvstreams.
+
+2007-07-20 16:31  wlach
+
+	* trunk/wvstreams/redhat: Remove redhat packaging for wvstreams.
+
+2007-07-19 21:28  wlach
+
+	* trunk, trunk/wvports/openssl/Makefile,
+	  trunk/wvstreams/crypto/t/wvcrl.t.cc,
+	  trunk/wvstreams/crypto/t/wvrsa.t.cc,
+	  trunk/wvstreams/crypto/t/wvsslstream.t.cc,
+	  trunk/wvstreams/crypto/t/wvx509.t.cc,
+	  trunk/wvstreams/crypto/tests/cert2test.cc,
+	  trunk/wvstreams/crypto/tests/cert3test.cc,
+	  trunk/wvstreams/crypto/tests/certtest.cc,
+	  trunk/wvstreams/crypto/tests/crltest.cc,
+	  trunk/wvstreams/crypto/tests/printcert.cc,
+	  trunk/wvstreams/crypto/tests/reqtest.cc,
+	  trunk/wvstreams/crypto/tests/sslsrvtest.cc,
+	  trunk/wvstreams/crypto/tests/ssltest.cc,
+	  trunk/wvstreams/crypto/wvcrl.cc, trunk/wvstreams/crypto/wvrsa.cc,
+	  trunk/wvstreams/crypto/wvsslstream.cc,
+	  trunk/wvstreams/crypto/wvx509.cc,
+	  trunk/wvstreams/crypto/wvx509mgr.cc,
+	  trunk/wvstreams/include/wvcrl.h, trunk/wvstreams/include/wvrsa.h,
+	  trunk/wvstreams/include/wvsslstream.h,
+	  trunk/wvstreams/include/wvx509.h,
+	  trunk/wvstreams/include/wvx509mgr.h,
+	  trunk/wvstreams/uniconf/daemon/uniconfd.cc,
+	  trunk/wvstreams/wvtesthelper: Merge the crypto_refactoring branch
+	  into trunk, adding a ton of new X509 certificate management
+	  features, better CRL support, and lots of other goodies.
+
+2007-07-19 20:17  wlach
+
+	* trunk, trunk/retchmail/wvpopclient.cc,
+	  trunk/retchmail/wvpopclient.h, trunk/retchmail/wvsendmail.cc,
+	  trunk/retchmail/wvsendmail.h, trunk/wvdial/wvdial.cc,
+	  trunk/wvdial/wvdialer.cc, trunk/wvdial/wvdialer.h,
+	  trunk/wvstreams/crypto/wvsslstream.cc,
+	  trunk/wvstreams/include/iwvstream.h,
+	  trunk/wvstreams/include/uniclientconn.h,
+	  trunk/wvstreams/include/wvbufstream.h,
+	  trunk/wvstreams/include/wvdailyevent.h,
+	  trunk/wvstreams/include/wvdsp.h,
+	  trunk/wvstreams/include/wvencoderstream.h,
+	  trunk/wvstreams/include/wvfdstream.h,
+	  trunk/wvstreams/include/wvfile.h,
+	  trunk/wvstreams/include/wvhttppool.h,
+	  trunk/wvstreams/include/wvistreamlist.h,
+	  trunk/wvstreams/include/wvlog.h,
+	  trunk/wvstreams/include/wvmagicloopback.h,
+	  trunk/wvstreams/include/wvresolver.h,
+	  trunk/wvstreams/include/wvsslstream.h,
+	  trunk/wvstreams/include/wvstream.h,
+	  trunk/wvstreams/include/wvstreamclone.h,
+	  trunk/wvstreams/include/wvsyncstream.h,
+	  trunk/wvstreams/include/wvtcp.h,
+	  trunk/wvstreams/include/wvtimestream.h,
+	  trunk/wvstreams/include/wvunixdgsocket.h,
+	  trunk/wvstreams/include/wvwatcher.h,
+	  trunk/wvstreams/ipstreams/tests/ip2test.cc,
+	  trunk/wvstreams/ipstreams/tests/iptest.cc,
+	  trunk/wvstreams/ipstreams/tests/tcptest.cc,
+	  trunk/wvstreams/ipstreams/tests/udglistentest.cc,
+	  trunk/wvstreams/ipstreams/tests/udp2test.cc,
+	  trunk/wvstreams/ipstreams/tests/udptest.cc,
+	  trunk/wvstreams/ipstreams/tests/unixdgtest.cc,
+	  trunk/wvstreams/ipstreams/tests/unixtest.cc,
+	  trunk/wvstreams/ipstreams/tests/wsd.cc,
+	  trunk/wvstreams/ipstreams/wvresolver.cc,
+	  trunk/wvstreams/ipstreams/wvtcp.cc,
+	  trunk/wvstreams/ipstreams/wvunixdgsocket.cc,
+	  trunk/wvstreams/linuxstreams/wvdsp.cc,
+	  trunk/wvstreams/qt/wvqtstreamclone.cc,
+	  trunk/wvstreams/streams/t/wvstream.t.cc,
+	  trunk/wvstreams/streams/tests/watchtest.cc,
+	  trunk/wvstreams/streams/wvbufstream.cc,
+	  trunk/wvstreams/streams/wvdailyevent.cc,
+	  trunk/wvstreams/streams/wvencoderstream.cc,
+	  trunk/wvstreams/streams/wvfdstream.cc,
+	  trunk/wvstreams/streams/wvfile.cc,
+	  trunk/wvstreams/streams/wvistreamlist.cc,
+	  trunk/wvstreams/streams/wvlog.cc,
+	  trunk/wvstreams/streams/wvmagicloopback.cc,
+	  trunk/wvstreams/streams/wvstream.cc,
+	  trunk/wvstreams/streams/wvstreamclone.cc,
+	  trunk/wvstreams/streams/wvsyncstream.cc,
+	  trunk/wvstreams/streams/wvtimestream.cc,
+	  trunk/wvstreams/streams/wvwatcher.cc,
+	  trunk/wvstreams/uniconf/uniclientconn.cc,
+	  trunk/wvstreams/urlget/wvftpstream.cc,
+	  trunk/wvstreams/urlget/wvhttppool.cc,
+	  trunk/wvstreams/urlget/wvhttpstream.cc: Merge in inversion changes
+	  from 'wvstreams_inversion_2': pre_select now returns void.
+
+2007-07-02 20:27  wlach
+
+	* trunk/wvstreams/utils/wvcrash.cc: Apply sstasyuk's patch to make
+	  wvcrash.cc compile on 64bit machines.
+
+2007-05-13 10:49  pphaneuf
+
+	* trunk/wvstreams/uniconf/daemon/rules.mk: There was still traces of
+	  the OpenSLP support, which prevented me from building.
+
+2007-05-12 16:57  pmccurdy
+
+	* trunk/wvstreams/gnulib/argp.h: GCC 4.1 compatibility fix taken
+	  from RedHat's wvstreams package.
+
+2007-05-12 16:55  pmccurdy
+
+	* trunk/wvstreams/Makefile: Patch from RedHat's wvstreams packages
+	  to make multiarch support work.
+
+2007-05-12 16:54  pmccurdy
+
+	* trunk/wvstreams/include/wvaddr.h, trunk/wvstreams/utils/wvhash.cc:
+	  Compiler compatibility fixes taken from RedHat's wvstreams
+	  package.
+
+2007-05-12 16:44  pmccurdy
+
+	* trunk/wvstreams/include/wvvector.h: Fix for GCC 4 compatibility:
+	  explicitly dereference this-> in a few places so that we create a
+	  more obvious dependency for the template.
+
+2007-04-11 17:45  wlach
+
+	* trunk/wvstreams/include/uniondiskgen.h,
+	  trunk/wvstreams/include/wvondisklist.h,
+	  trunk/wvstreams/uniconf/uniondiskgen.cc,
+	  trunk/wvstreams/utils/t/wvondiskhash.t.cc,
+	  trunk/wvstreams/utils/tests/ondiskhashtest.cc,
+	  trunk/wvstreams/utils/tests/ondiskspeedtest.cc: Pull out more
+	  ondisk hash stuff I forgot to remove.
+
+2007-04-11 04:19  wlach
+
+	* trunk/wvstreams/uniconf/uniconf_c.cc, trunk/wvstreams/vars.mk:
+	  Remove one other artifact of the uniconf c bindings.
+
+2007-04-11 04:13  wlach
+
+	* trunk/wvstreams/Makefile-win32, trunk/wvstreams/config.mk.in,
+	  trunk/wvstreams/configure.ac, trunk/wvstreams/include/iwvstream.h,
+	  trunk/wvstreams/include/uniconf-csharp.h,
+	  trunk/wvstreams/include/uniconf.h,
+	  trunk/wvstreams/include/uniconfiter-csharp.h,
+	  trunk/wvstreams/include/uniconfkey-csharp.h,
+	  trunk/wvstreams/include/uniconfroot-csharp.h,
+	  trunk/wvstreams/include/uniconfroot.h,
+	  trunk/wvstreams/include/wvondiskhash.h,
+	  trunk/wvstreams/include/wvtest_filecountprefix.h,
+	  trunk/wvstreams/ipstreams/tests/slplisttest.cc,
+	  trunk/wvstreams/ipstreams/wvslp.cc, trunk/wvstreams/telephony,
+	  trunk/wvstreams/uniconf/uniconf-csharp.cc,
+	  trunk/wvstreams/uniconf/uniconfiter-csharp.cc,
+	  trunk/wvstreams/uniconf/uniconfroot-csharp.cc,
+	  trunk/wvstreams/utils/t/wvondiskhash.t.cc,
+	  trunk/wvstreams/utils/tests/bdbsillytest.cc,
+	  trunk/wvstreams/utils/tests/bdbtest.cc,
+	  trunk/wvstreams/utils/tests/ondisklisttest.cc,
+	  trunk/wvstreams/utils/wvbdbhash.cc,
+	  trunk/wvstreams/utils/wvtest_filecountprefix.cc,
+	  trunk/wvstreams/vars.mk: Remove various bits of unfinished or
+	  otherwise deprecated code: bdb hash, slp code, telephony code,
+	  SWIG wrappers, and UniConf C bindings.
+
+2007-04-11 03:42  wlach
+
+	* trunk/wvstreams/suppressions.wv: Add some suppressions for
+	  spurious valgrind errors in libdl and nss in modern Linux
+	  distributions. Add unit tests now pass.
+
+2007-04-11 03:40  wlach
+
+	* trunk/wvstreams/include/wvhttp.h,
+	  trunk/wvstreams/include/wvhttppool.h,
+	  trunk/wvstreams/ipstreams/t/wvhttp.t.cc,
+	  trunk/wvstreams/ipstreams/tests/httptest.cc,
+	  trunk/wvstreams/ipstreams/wvhttp.cc: Nuke wvhttp class, which is
+	  sort of broken and deprecated by wvhttppool.
+
+2007-03-21 20:09  wlach
+
+	* trunk/wvstreams/crypto/t/wvsslstream.t.cc,
+	  trunk/wvstreams/crypto/tests/cryptotest.cc,
+	  trunk/wvstreams/crypto/tests/sslsrvtest.cc,
+	  trunk/wvstreams/crypto/tests/ssltest.cc,
+	  trunk/wvstreams/crypto/wvsslstream.cc,
+	  trunk/wvstreams/include/uniclientconn.h,
+	  trunk/wvstreams/include/wvbufstream.h,
+	  trunk/wvstreams/include/wvcrash.h,
+	  trunk/wvstreams/include/wvdelayedcallback.h,
+	  trunk/wvstreams/include/wvhttppool.h,
+	  trunk/wvstreams/include/wvistreamlist.h,
+	  trunk/wvstreams/include/wvstreamclone.h,
+	  trunk/wvstreams/include/wvstreamsdaemon.h,
+	  trunk/wvstreams/include/wvstrutils.h,
+	  trunk/wvstreams/include/wvtimeutils.h,
+	  trunk/wvstreams/ipstreams/t/wvhttp.t.cc,
+	  trunk/wvstreams/ipstreams/tests/component2test.cc,
+	  trunk/wvstreams/ipstreams/tests/componenttest.cc,
+	  trunk/wvstreams/ipstreams/tests/contseltest.cc,
+	  trunk/wvstreams/ipstreams/tests/ip2test.cc,
+	  trunk/wvstreams/ipstreams/tests/iptest.cc,
+	  trunk/wvstreams/ipstreams/tests/listentest.cc,
+	  trunk/wvstreams/ipstreams/tests/simpleconntest.cc,
+	  trunk/wvstreams/ipstreams/tests/tcptest.cc,
+	  trunk/wvstreams/ipstreams/tests/udglistentest.cc,
+	  trunk/wvstreams/ipstreams/tests/udp2test.cc,
+	  trunk/wvstreams/ipstreams/tests/udptest.cc,
+	  trunk/wvstreams/ipstreams/tests/ulistentest.cc,
+	  trunk/wvstreams/ipstreams/tests/unixdgtest.cc,
+	  trunk/wvstreams/ipstreams/tests/unixtest.cc,
+	  trunk/wvstreams/ipstreams/wvtcp.cc,
+	  trunk/wvstreams/ipstreams/wvunixsocket.cc,
+	  trunk/wvstreams/linuxstreams/t/wvpty.t.cc,
+	  trunk/wvstreams/streams/t/wvfdstream.t.cc,
+	  trunk/wvstreams/streams/t/wvistreamlist.t.cc,
+	  trunk/wvstreams/streams/t/wvstream.t.cc,
+	  trunk/wvstreams/streams/t/wvsubprocqueuestream.t.cc,
+	  trunk/wvstreams/streams/tests/contseltest.cc,
+	  trunk/wvstreams/streams/tests/globaltest.cc,
+	  trunk/wvstreams/streams/tests/modemtest.cc,
+	  trunk/wvstreams/streams/tests/streamdaemontest.cc,
+	  trunk/wvstreams/streams/wvbufstream.cc,
+	  trunk/wvstreams/streams/wvdailyevent.cc,
+	  trunk/wvstreams/streams/wvfdstream.cc,
+	  trunk/wvstreams/streams/wvistreamlist.cc,
+	  trunk/wvstreams/streams/wvstream.cc,
+	  trunk/wvstreams/streams/wvstreamclone.cc,
+	  trunk/wvstreams/streams/wvstreamsdaemon.cc,
+	  trunk/wvstreams/streams/wvtimestream.cc,
+	  trunk/wvstreams/uniconf/t/uniclientgen.t.cc,
+	  trunk/wvstreams/uniconf/t/uniconfd.t.cc,
+	  trunk/wvstreams/uniconf/t/uniconfgen-sanitytest.cc,
+	  trunk/wvstreams/uniconf/uniclientconn.cc,
+	  trunk/wvstreams/urlget/t/wvhttppool.t.cc,
+	  trunk/wvstreams/urlget/tests/http2test.cc,
+	  trunk/wvstreams/urlget/wvhttppool.cc,
+	  trunk/wvstreams/urlget/wvhttpstream.cc,
+	  trunk/wvstreams/utils/strutils.cc,
+	  trunk/wvstreams/utils/t/wvpushdir.t.cc,
+	  trunk/wvstreams/utils/tests/backslashtest.cc,
+	  trunk/wvstreams/utils/tests/base64test.cc,
+	  trunk/wvstreams/utils/tests/hextest.cc,
+	  trunk/wvstreams/utils/tests/wordwraptest.cc,
+	  trunk/wvstreams/utils/wvcrash.cc,
+	  trunk/wvstreams/utils/wvcrashbase.cc,
+	  trunk/wvstreams/utils/wvtimeutils.cc: Manually merge in
+	  wvstreams_inversion_preselect (it wasn't branched from freesw, so
+	  this was unfortunately necessary).
+
+2007-03-19 21:52  wlach
+
+	* trunk/wvstreams/ipstreams/tests/httptest.cc: Fix httptest. Sorry.
+
+2007-03-19 19:22  wlach
+
+	* trunk/wvstreams/urlget/wvhttpstream.cc: Fix weird code in
+	  WvHTTPStream (not to be confused with WvHttpStream, sigh) which
+	  dumped a backtrace of the stack every time it was closed or
+	  destroyed.
+
+2007-03-19 19:13  wlach
+
+	* trunk/wvstreams/ipstreams/wvhttp.cc: Oops, fix a warning in my
+	  most recent commit.
+
+2007-03-19 19:05  wlach
+
+	* trunk/wvstreams/include/wvhttp.h,
+	  trunk/wvstreams/ipstreams/t/wvhttp.t.cc,
+	  trunk/wvstreams/ipstreams/wvhttp.cc: wvhttpstream was completely
+	  broken. rewrite it and add a unit test that verifies that it
+	  actually works.
+
+2007-03-16 20:10  wlach
+
+	* trunk/wvstreams/wvrules.mk: RTTI should be enabled by default. I'm
+	  pretty sure this was a simple bug.
+
+2007-03-11 19:20  pphaneuf
+
+	* trunk/wvstreams/wvrules.mk: No need to actually depend on
+	  libxplc-cxx.a, it doesn't change much. We still link with it,
+	  though.
+
+2007-03-11 14:54  pphaneuf
+
+	* trunk/Makefile, trunk/lib, trunk/wvports/subdir.mk,
+	  trunk/wvstreams: Trying to make some sense of the top-level
+	  makefiles. Made it not use the wvrules.mk, to make it simpler to
+	  understand (it shouldn't be doing much anyway). The "clean" target
+	  should not clean the ports, since that's rather expensive, leaving
+	  it for "mrclean". There's some attempt to make sense out of Darwin
+	  dynamic libraries, but I'm not fully up on there, still have to
+	  punt making symlinks properly (and I probably broke the Linux side
+	  in the meantime, whee!). Trying to do the "lib" directory thing,
+	  as part of a plan to make things more independent from each
+	  others.
+
+2007-03-07 15:46  pphaneuf
+
+	* trunk/wvstreams/README.TESTS: Fixed README.TESTS, which was using
+	  $PATH instead of $LD_LIBRARY_PATH in one instance, and removed an
+	  extraneous step (there is no instance of PURIFY in the OpenSSL
+	  headers, it's all in the internals of the implementation).
+
+2007-03-06 22:57  pphaneuf
+
+	* trunk, trunk/retchmail/retchmail.cc,
+	  trunk/wvstreams/include/unicallbackgen.h,
+	  trunk/wvstreams/include/uniconfdaemonconn.h,
+	  trunk/wvstreams/include/uniconfkey.h,
+	  trunk/wvstreams/include/uniconftree.h,
+	  trunk/wvstreams/include/unilistiter.h,
+	  trunk/wvstreams/include/uniondiskgen.h,
+	  trunk/wvstreams/include/wvargs.h,
+	  trunk/wvstreams/include/wvdaemon.h,
+	  trunk/wvstreams/include/wvstring.h,
+	  trunk/wvstreams/include/wvvector.h,
+	  trunk/wvstreams/uniconf/daemon/uniconfd.cc,
+	  trunk/wvstreams/uniconf/daemon/uniconfdaemonconn.cc,
+	  trunk/wvstreams/uniconf/t/unicachegen.t.cc,
+	  trunk/wvstreams/uniconf/t/unicallbackgen.t.cc,
+	  trunk/wvstreams/uniconf/t/uniclientgen.t.cc,
+	  trunk/wvstreams/uniconf/t/uniconfd.t.cc,
+	  trunk/wvstreams/uniconf/t/uniconfgen-sanitytest.cc,
+	  trunk/wvstreams/uniconf/t/uniconfgen-sanitytest.h,
+	  trunk/wvstreams/uniconf/t/uniconfkey.t.cc,
+	  trunk/wvstreams/uniconf/t/uniconfroot.t.cc,
+	  trunk/wvstreams/uniconf/t/unidefgen.t.cc,
+	  trunk/wvstreams/uniconf/t/unifastregetgen.t.cc,
+	  trunk/wvstreams/uniconf/t/uniinigen.t.cc,
+	  trunk/wvstreams/uniconf/t/unilistgen.t.cc,
+	  trunk/wvstreams/uniconf/t/unimountgen.t.cc,
+	  trunk/wvstreams/uniconf/t/uniondiskgen.t.cc,
+	  trunk/wvstreams/uniconf/t/unipermgen.t.cc,
+	  trunk/wvstreams/uniconf/t/unireadonlygen.t.cc,
+	  trunk/wvstreams/uniconf/t/unireplicategen.t.cc,
+	  trunk/wvstreams/uniconf/t/uniretrygen.t.cc,
+	  trunk/wvstreams/uniconf/t/unisubtreegen.t.cc,
+	  trunk/wvstreams/uniconf/t/unitempgen.t.cc,
+	  trunk/wvstreams/uniconf/t/unitempgenvsdaemon.t.cc,
+	  trunk/wvstreams/uniconf/t/unitransactiongen.t.cc,
+	  trunk/wvstreams/uniconf/t/uniunwrapgen.t.cc,
+	  trunk/wvstreams/uniconf/t/wvconfemu.t.cc,
+	  trunk/wvstreams/uniconf/uniclientconn.cc,
+	  trunk/wvstreams/uniconf/uniclientgen.cc,
+	  trunk/wvstreams/uniconf/uniconf-csharp.cc,
+	  trunk/wvstreams/uniconf/uniconfkey.cc,
+	  trunk/wvstreams/uniconf/uniconfroot-csharp.cc,
+	  trunk/wvstreams/uniconf/unifastregetgen.cc,
+	  trunk/wvstreams/uniconf/uniinigen.cc,
+	  trunk/wvstreams/uniconf/unilistiter.cc,
+	  trunk/wvstreams/uniconf/uniondiskgen.cc,
+	  trunk/wvstreams/uniconf/unireplicategen.cc,
+	  trunk/wvstreams/uniconf/uniretrygen.cc,
+	  trunk/wvstreams/uniconf/unisubtreegen.cc,
+	  trunk/wvstreams/uniconf/unitempgen.cc,
+	  trunk/wvstreams/uniconf/uniunwrapgen.cc,
+	  trunk/wvstreams/utils/t/wvstring.t.cc,
+	  trunk/wvstreams/utils/wvargs.cc,
+	  trunk/wvstreams/utils/wvstring.cc,
+	  trunk/wvstreams/utils/wvvector.cc: Merged from grapefruit.
+
+2007-03-04 18:14  pphaneuf
+
+	* trunk/wvstreams/crypto/tests, trunk/wvstreams/ipstreams/tests:
+	  Added a few items to svn:ignore properties.
+
+2007-03-03 12:09  pphaneuf
+
+	* trunk/wvstreams/debian/changelog,
+	  trunk/wvstreams/debian/copyright,
+	  trunk/wvstreams/debian/source.lintian-overrides,
+	  trunk/wvstreams/debian/uniconfd.init: Merged in r11511, apparently
+	  the only change done to the wvstreams_4_3 branch.
+
+2007-03-02 07:26  wlach
+
+	* trunk/wvstreams/uniconf/daemon/uniconfd.cc: Make uniconfd's
+	  argument handling identical to that of wvdaemon's.
+
+2007-02-27 12:55  pphaneuf
+
+	* releases/freesw, trunk: Moving the former /releases/freesw (which
+	  was the effective trunk) to /trunk proper.
+
+2007-02-25 22:16  pphaneuf
+
+	* releases/freesw/wvstreams/configure.ac,
+	  releases/freesw/wvstreams/crypto/wvdiffiehellman.cc,
+	  releases/freesw/wvstreams/urlget/wvftpstream.cc,
+	  releases/freesw/wvstreams/urlget/wvhttpstream.cc,
+	  releases/freesw/wvstreams/utils/wvtest.cc: Fixed a number of
+	  low-hanging fruits for Mac OS X.
+
+2007-02-22 07:05  pphaneuf
+
+	* releases/freesw/wvstreams/streams/wvstream.cc: Shut up gcc 4 about
+	  a possibly uninitialized variable.
+
+2007-02-22 05:33  wlach
+
+	* releases/freesw/wvstreams/configure.ac: Bump version to 4.4.
+
+2007-02-22 05:32  wlach
+
+	* releases/freesw/wvstreams/Makefile-win32,
+	  releases/freesw/wvstreams/config.mk.in,
+	  releases/freesw/wvstreams/configure.ac,
+	  releases/freesw/wvstreams/gnulib/Makefile.in,
+	  releases/freesw/wvstreams/include/wvondiskhash.h,
+	  releases/freesw/wvstreams/utils/t/wvondiskhash.t.cc,
+	  releases/freesw/wvstreams/utils/tests/bdbtest.cc,
+	  releases/freesw/wvstreams/utils/tests/ondiskhashtest.cc,
+	  releases/freesw/wvstreams/utils/tests/ondisklisttest.cc,
+	  releases/freesw/wvstreams/utils/tests/ondiskspeedtest.cc,
+	  releases/freesw/wvstreams/utils/tests/qdbmtest.cc,
+	  releases/freesw/wvstreams/utils/wvqdbmhash.cc,
+	  releases/freesw/wvstreams/vars.mk: Remove qdbm wrapper.
+
+2007-02-19 06:00  pmccurdy
+
+	* releases/freesw/wvstreams/wvtestcolour.pl: Merge in
+	  wvtestcolour.pl, a handy little filter that colourizes the output
+	  of WvTest. Invaluable for tracking down unit test failures.
+
+2007-02-07 18:35  wlach
+
+	* releases/freesw/wvstreams/include/wvfileutils.h,
+	  releases/freesw/wvstreams/streams/fileutils.cc: Manually merge my
+	  ftouch function from idb2 branch.
+
+2007-02-06 19:46  wlach
+
+	* releases/freesw/wvstreams/configure.ac: Don't fail to compile with
+	  system OpenSSL. Oops.
+
+2007-02-06 19:22  wlach
+
+	* releases/freesw/wvstreams/include/wvvector.h: Make the inheritance
+	  between WvVectorBase::Iter and WvVector::Iter more explicit to
+	  shut up gcc 4.2.
+
+2007-02-05 23:13  wlach
+
+	* releases/freesw/wvstreams/utils/t/wvgzip.t.cc: Forgot to commit
+	  updated unit test as well
+
+2007-02-05 22:50  wlach
+
+	* releases/freesw/wvstreams/utils/wvgzip.cc: Manually merge mcote
+	  and I's fixes to wvgzip from the idb2 branch.
+
+2007-01-17 21:29  wlach
+
+	* releases/freesw/wvstreams/README.TESTS,
+	  releases/freesw/wvstreams/configure.ac,
+	  releases/freesw/wvstreams/suppressions.wv: Make it more
+	  straightforward to use your own version of openssl. Put in better
+	  instructions for doing so. Add some more suppressions for
+	  openssl's stupid behaviour.
+
+2007-01-17 21:27  wlach
+
+	* releases/freesw/wvstreams/crypto/tests/printcert.cc,
+	  releases/freesw/wvstreams/crypto/wvcrl.cc,
+	  releases/freesw/wvstreams/crypto/wvx509.cc,
+	  releases/freesw/wvstreams/include/wvx509.h,
+	  releases/freesw/wvstreams/vars.mk: Add ppatters' patch to allow
+	  certificate revocation and improve initialization and finalization
+	  of the openssl library.
+
+2006-12-19 00:14  wlach
+
+	* releases/freesw/wvstreams/README.TESTS: Add a note about the unit
+	  tests failing when run with a stock build of OpenSSL 0.9.8, due to
+	  them using undefined memory by default...
+
+2006-12-18 23:46  wlach
+
+	* releases/freesw/wvstreams/ipstreams/tests/vars.mk: Let user run
+	  unit tests even if they don't have the readline library installed.
+	  You don't need the wsd executable to do so.
+
+2006-12-18 22:48  wlach
+
+	* releases/freesw/wvstreams/Makefile: Automatically install wsd if
+	  readline dependancy is satisfied.
+
+2006-12-15 00:13  wlach
+
+	* releases/freesw/wvstreams/Makefile: Add an install-wsd target, for
+	  install the wvstreams debugger.
+
+2006-12-14 23:24  wlach
+
+	* releases/freesw/wvstreams/configure.ac,
+	  releases/freesw/wvstreams/debian/changelog,
+	  releases/freesw/wvstreams/debian/control,
+	  releases/freesw/wvstreams/debian/libuniconf4.2.install,
+	  releases/freesw/wvstreams/debian/libuniconf4.3.install,
+	  releases/freesw/wvstreams/debian/libwvstreams4.2-base.dirs,
+	  releases/freesw/wvstreams/debian/libwvstreams4.2-base.install,
+	  releases/freesw/wvstreams/debian/libwvstreams4.2-base.lintian-override,
+	  releases/freesw/wvstreams/debian/libwvstreams4.2-extras.dirs,
+	  releases/freesw/wvstreams/debian/libwvstreams4.2-extras.install,
+	  releases/freesw/wvstreams/debian/libwvstreams4.2-extras.lintian-override,
+	  releases/freesw/wvstreams/debian/libwvstreams4.2-qt.dirs,
+	  releases/freesw/wvstreams/debian/libwvstreams4.2-qt.install,
+	  releases/freesw/wvstreams/debian/libwvstreams4.2-qt.lintian-override,
+	  releases/freesw/wvstreams/debian/libwvstreams4.3-base.dirs,
+	  releases/freesw/wvstreams/debian/libwvstreams4.3-base.install,
+	  releases/freesw/wvstreams/debian/libwvstreams4.3-base.lintian-override,
+	  releases/freesw/wvstreams/debian/libwvstreams4.3-extras.dirs,
+	  releases/freesw/wvstreams/debian/libwvstreams4.3-extras.install,
+	  releases/freesw/wvstreams/debian/libwvstreams4.3-extras.lintian-override,
+	  releases/freesw/wvstreams/debian/libwvstreams4.3-qt.dirs,
+	  releases/freesw/wvstreams/debian/libwvstreams4.3-qt.install,
+	  releases/freesw/wvstreams/debian/libwvstreams4.3-qt.lintian-override:
+	  Bump version, update debian packaging stuff for wvstreams 4.3.
+
+2006-12-13 03:54  wlach
+
+	* releases/freesw, releases/freesw/funfs/.cvsignore,
+	  releases/freesw/funfs/kernel/.cvsignore,
+	  releases/freesw/funfs/tests/.cvsignore,
+	  releases/freesw/funfs/util/.cvsignore,
+	  releases/freesw/gracefultavi/INSTALL.txt,
+	  releases/freesw/gracefultavi/action/captcha.php,
+	  releases/freesw/gracefultavi/action/conflict.php,
+	  releases/freesw/gracefultavi/action/content.php,
+	  releases/freesw/gracefultavi/action/edit.php,
+	  releases/freesw/gracefultavi/action/history.php,
+	  releases/freesw/gracefultavi/action/lock.php,
+	  releases/freesw/gracefultavi/action/prefs.php,
+	  releases/freesw/gracefultavi/action/preview.php,
+	  releases/freesw/gracefultavi/action/revert.php,
+	  releases/freesw/gracefultavi/action/save.php,
+	  releases/freesw/gracefultavi/action/style.php,
+	  releases/freesw/gracefultavi/action/tablecsv.php,
+	  releases/freesw/gracefultavi/action/view.php,
+	  releases/freesw/gracefultavi/attachments,
+	  releases/freesw/gracefultavi/images/csv.png,
+	  releases/freesw/gracefultavi/install/configure.pl,
+	  releases/freesw/gracefultavi/install/create-db.pl,
+	  releases/freesw/gracefultavi/install/crosswiki.sh,
+	  releases/freesw/gracefultavi/install/dbupgrade/upgrade1.php,
+	  releases/freesw/gracefultavi/install/dbupgrade/upgrade3.php,
+	  releases/freesw/gracefultavi/install/maint.pl,
+	  releases/freesw/gracefultavi/install/settings.cnf,
+	  releases/freesw/gracefultavi/js/common.js,
+	  releases/freesw/gracefultavi/lib/.htaccess,
+	  releases/freesw/gracefultavi/lib/captcha.php,
+	  releases/freesw/gracefultavi/lib/defaults.php,
+	  releases/freesw/gracefultavi/lib/difflib.php,
+	  releases/freesw/gracefultavi/lib/init.php,
+	  releases/freesw/gracefultavi/lib/main.php,
+	  releases/freesw/gracefultavi/lib/messages.php,
+	  releases/freesw/gracefultavi/lib/page.php,
+	  releases/freesw/gracefultavi/lib/pagestore.php,
+	  releases/freesw/gracefultavi/lib/url.php,
+	  releases/freesw/gracefultavi/macros/Attach.php,
+	  releases/freesw/gracefultavi/macros/BugReport.php,
+	  releases/freesw/gracefultavi/macros/ChecklistMaster.php,
+	  releases/freesw/gracefultavi/macros/CsvTable.php,
+	  releases/freesw/gracefultavi/macros/FogBugz.php,
+	  releases/freesw/gracefultavi/macros/Sched.php,
+	  releases/freesw/gracefultavi/macros/Toc.php,
+	  releases/freesw/gracefultavi/parse/html.php,
+	  releases/freesw/gracefultavi/parse/transforms.php,
+	  releases/freesw/gracefultavi/template/backlinks.php,
+	  releases/freesw/gracefultavi/template/common.php,
+	  releases/freesw/gracefultavi/template/conflict.php,
+	  releases/freesw/gracefultavi/template/edit.php,
+	  releases/freesw/gracefultavi/template/history.php,
+	  releases/freesw/gracefultavi/template/prefs.php,
+	  releases/freesw/gracefultavi/template/preview.php,
+	  releases/freesw/gracefultavi/template/rss.php,
+	  releases/freesw/gracefultavi/template/spamconfirm.php,
+	  releases/freesw/gracefultavi/template/subscriptions.php,
+	  releases/freesw/gracefultavi/template/wiki.css,
+	  releases/freesw/gracefultavi/template/wikiprint.css,
+	  releases/freesw/nss/.cvsignore,
+	  releases/freesw/photoreider/.cvsignore,
+	  releases/freesw/planit/rss_fetch.inc, releases/freesw/replytolist,
+	  releases/freesw/schedulator,
+	  releases/freesw/schedulator/schedules,
+	  releases/freesw/twc/src/.cvsignore,
+	  releases/freesw/twc/src/Dijkstra/.cvsignore,
+	  releases/freesw/unity/.cvsignore,
+	  releases/freesw/unity/dbus/.cvsignore,
+	  releases/freesw/unity/elektra/.cvsignore,
+	  releases/freesw/unity/gconf/.cvsignore,
+	  releases/freesw/unity/kconfig/.cvsignore,
+	  releases/freesw/unity/kconfig/kconfig.cpp,
+	  releases/freesw/unity/kconfig/kconfigunibackend.cpp,
+	  releases/freesw/unity/maildir/.cvsignore,
+	  releases/freesw/unity/vlan/.cvsignore,
+	  releases/freesw/wvdial/wvdialer.cc,
+	  releases/freesw/wvdial/wvdialer.h,
+	  releases/freesw/wvports/3w-9xxx, releases/freesw/wvports/adp94xx,
+	  releases/freesw/wvports/busybox/patches/busybox/79_Add_rdate_to_Config.h.diff,
+	  releases/freesw/wvports/cups/.cvsignore,
+	  releases/freesw/wvports/dosfstools/patches/dosfstools/03_automode-nosalvaging.diff,
+	  releases/freesw/wvports/etherboot/patches/etherboot/40_glibc_io_hackery.diff,
+	  releases/freesw/wvports/gettext,
+	  releases/freesw/wvports/horde/patches/horde/50_debian_security.patch,
+	  releases/freesw/wvports/horde/patches/imp/24_html_mail.patch,
+	  releases/freesw/wvports/howl/.cvsignore,
+	  releases/freesw/wvports/hpt3xx/patches/hpt3xx/11_dma-throttling.patch,
+	  releases/freesw/wvports/kernel/patches/linux/61_md-keep-disks-after-errors.diff,
+	  releases/freesw/wvports/kernel/patches/linux/65_promise-sata300-support.patch,
+	  releases/freesw/wvports/kernel/patches/linux/66_hotswap_memleak.diff,
+	  releases/freesw/wvports/kernel/patches/linux/67-libata-deadlock.patch,
+	  releases/freesw/wvports/kernel/patches/linux/68-SIAG-apic-hack.diff,
+	  releases/freesw/wvports/kqemu,
+	  releases/freesw/wvports/netatalk/Makefile,
+	  releases/freesw/wvports/nfs-server/patches/nfs-server/91_realpath_exploit.diff,
+	  releases/freesw/wvports/phpmyadmin/Makefile,
+	  releases/freesw/wvports/phpmyadmin/patches/phpmyadmin/20-auth-cookie.diff,
+	  releases/freesw/wvports/phpmyadmin/patches/phpmyadmin/20-cookie-absolute.diff,
+	  releases/freesw/wvports/phpmyadmin/patches/phpmyadmin/30-linked-tables-warning.diff,
+	  releases/freesw/wvports/phpmyadmin/patches/phpmyadmin/41-disable-create-db.diff,
+	  releases/freesw/wvports/phpmyadmin/sources/phpMyAdmin-2.7.0-pl2.tar.bz2,
+	  releases/freesw/wvports/readline,
+	  releases/freesw/wvports/samba/patches/samba/78_must_have_share_access.patch,
+	  releases/freesw/wvports/samba/patches/samba/79_dos_filemode_for_acls.patch,
+	  releases/freesw/wvports/sk98lin,
+	  releases/freesw/wvports/smartmon/patches,
+	  releases/freesw/wvports/sqlite/.cvsignore,
+	  releases/freesw/wvports/subdir.mk,
+	  releases/freesw/wvports/valgrind,
+	  releases/freesw/wvprint/Makefile, releases/freesw/wvprint/job.cc,
+	  releases/freesw/wvprint/job.h, releases/freesw/wvprint/queue.cc,
+	  releases/freesw/wvprint/t/.cvsignore,
+	  releases/freesw/wvprint/wvprint.cc,
+	  releases/freesw/wvprint/wvprintconfwatcher.cc,
+	  releases/freesw/wvprint/wvprintconfwatcher.h,
+	  releases/freesw/wvprint/wvprintcupsunigen.cc,
+	  releases/freesw/wvprint/wvprintd.cc,
+	  releases/freesw/wvstreams/Makefile,
+	  releases/freesw/wvstreams/Win32WvStreams/.cvsignore,
+	  releases/freesw/wvstreams/Win32WvStreams/libuniconf/t/.cvsignore,
+	  releases/freesw/wvstreams/Win32WvStreams/libwvstreams/wvwinstreamclone.cc,
+	  releases/freesw/wvstreams/Win32WvStreams/libwvtest/.cvsignore,
+	  releases/freesw/wvstreams/Win32WvStreams/uni/.cvsignore,
+	  releases/freesw/wvstreams/Win32WvStreams/uniconfd/.cvsignore,
+	  releases/freesw/wvstreams/Win32WvStreams/wvtest/.cvsignore,
+	  releases/freesw/wvstreams/config.mk.in,
+	  releases/freesw/wvstreams/configure.ac,
+	  releases/freesw/wvstreams/crypto/t/wvsslstream.t.cc,
+	  releases/freesw/wvstreams/crypto/tests/ssltest.cc,
+	  releases/freesw/wvstreams/crypto/wvsslstream.cc,
+	  releases/freesw/wvstreams/crypto/wvx509.cc,
+	  releases/freesw/wvstreams/examples/wvgrep/.cvsignore,
+	  releases/freesw/wvstreams/include/iwvstream.h,
+	  releases/freesw/wvstreams/include/uniclientgen.h,
+	  releases/freesw/wvstreams/include/uniconfkey.h,
+	  releases/freesw/wvstreams/include/unidefgen.h,
+	  releases/freesw/wvstreams/include/unifiltergen.h,
+	  releases/freesw/wvstreams/include/uniinigen.h,
+	  releases/freesw/wvstreams/include/unisubtreegen.h,
+	  releases/freesw/wvstreams/include/wvatomicfile.h,
+	  releases/freesw/wvstreams/include/wvbellpull.h,
+	  releases/freesw/wvstreams/include/wvcallback.h,
+	  releases/freesw/wvstreams/include/wvcolorlogconsole.h,
+	  releases/freesw/wvstreams/include/wvcont.h,
+	  releases/freesw/wvstreams/include/wvcrash.h,
+	  releases/freesw/wvstreams/include/wvcrashlog.h,
+	  releases/freesw/wvstreams/include/wvdaemon.h,
+	  releases/freesw/wvstreams/include/wvdailyevent.h,
+	  releases/freesw/wvstreams/include/wvdsp.h,
+	  releases/freesw/wvstreams/include/wvencoderstream.h,
+	  releases/freesw/wvstreams/include/wvfdstream.h,
+	  releases/freesw/wvstreams/include/wvfile.h,
+	  releases/freesw/wvstreams/include/wvgzip.h,
+	  releases/freesw/wvstreams/include/wvgzipstream.h,
+	  releases/freesw/wvstreams/include/wvhttp.h,
+	  releases/freesw/wvstreams/include/wvhttppool.h,
+	  releases/freesw/wvstreams/include/wvipraw.h,
+	  releases/freesw/wvstreams/include/wvistreamlist.h,
+	  releases/freesw/wvstreams/include/wvlink.h,
+	  releases/freesw/wvstreams/include/wvlinklist.h,
+	  releases/freesw/wvstreams/include/wvlog.h,
+	  releases/freesw/wvstreams/include/wvlogbuffer.h,
+	  releases/freesw/wvstreams/include/wvlogfile.h,
+	  releases/freesw/wvstreams/include/wvlogrcv.h,
+	  releases/freesw/wvstreams/include/wvloopback.h,
+	  releases/freesw/wvstreams/include/wvmagiccircle.h,
+	  releases/freesw/wvstreams/include/wvmagicloopback.h,
+	  releases/freesw/wvstreams/include/wvmodem.h,
+	  releases/freesw/wvstreams/include/wvpipe.h,
+	  releases/freesw/wvstreams/include/wvprotostream.h,
+	  releases/freesw/wvstreams/include/wvpty.h,
+	  releases/freesw/wvstreams/include/wvqtstreamclone.h,
+	  releases/freesw/wvstreams/include/wvsslstream.h,
+	  releases/freesw/wvstreams/include/wvstream.h,
+	  releases/freesw/wvstreams/include/wvstreamclone.h,
+	  releases/freesw/wvstreams/include/wvstreamsdaemon.h,
+	  releases/freesw/wvstreams/include/wvstreamsdebugger.h,
+	  releases/freesw/wvstreams/include/wvstreamsdebuggerserver.h,
+	  releases/freesw/wvstreams/include/wvstring.h,
+	  releases/freesw/wvstreams/include/wvstringmask.h,
+	  releases/freesw/wvstreams/include/wvstrutils.h,
+	  releases/freesw/wvstreams/include/wvsubprocqueuestream.h,
+	  releases/freesw/wvstreams/include/wvsyncstream.h,
+	  releases/freesw/wvstreams/include/wvtask.h,
+	  releases/freesw/wvstreams/include/wvtcp.h,
+	  releases/freesw/wvstreams/include/wvtest.h,
+	  releases/freesw/wvstreams/include/wvtimeoutstream.h,
+	  releases/freesw/wvstreams/include/wvtimestream.h,
+	  releases/freesw/wvstreams/include/wvtimeutils.h,
+	  releases/freesw/wvstreams/include/wvtundev.h,
+	  releases/freesw/wvstreams/include/wvudp.h,
+	  releases/freesw/wvstreams/include/wvunixdgsocket.h,
+	  releases/freesw/wvstreams/include/wvunixsocket.h,
+	  releases/freesw/wvstreams/include/wvwatcher.h,
+	  releases/freesw/wvstreams/include/wvwinstreamclone.h,
+	  releases/freesw/wvstreams/include/wvxor.h,
+	  releases/freesw/wvstreams/ipstreams/tests/vars.mk,
+	  releases/freesw/wvstreams/ipstreams/tests/wsd.cc,
+	  releases/freesw/wvstreams/ipstreams/wvstreamsdebuggerserver.cc,
+	  releases/freesw/wvstreams/ipstreams/wvunixdgsocket.cc,
+	  releases/freesw/wvstreams/linuxstreams/wvinterface.cc,
+	  releases/freesw/wvstreams/qt/wvqtstreamclone.cc,
+	  releases/freesw/wvstreams/streams/t/wvlog.t.cc,
+	  releases/freesw/wvstreams/streams/t/wvstreamclone.t.cc,
+	  releases/freesw/wvstreams/streams/wvcolorlogconsole.cc,
+	  releases/freesw/wvstreams/streams/wvconstream.cc,
+	  releases/freesw/wvstreams/streams/wvcrashlog.cc,
+	  releases/freesw/wvstreams/streams/wvdaemon.cc,
+	  releases/freesw/wvstreams/streams/wvdailyevent.cc,
+	  releases/freesw/wvstreams/streams/wvistreamlist.cc,
+	  releases/freesw/wvstreams/streams/wvlog.cc,
+	  releases/freesw/wvstreams/streams/wvlogbuffer.cc,
+	  releases/freesw/wvstreams/streams/wvlogfile.cc,
+	  releases/freesw/wvstreams/streams/wvmodem.cc,
+	  releases/freesw/wvstreams/streams/wvstream.cc,
+	  releases/freesw/wvstreams/streams/wvstreamclone.cc,
+	  releases/freesw/wvstreams/streams/wvstreamsdaemon.cc,
+	  releases/freesw/wvstreams/streams/wvtimestream.cc,
+	  releases/freesw/wvstreams/suppressions.wv,
+	  releases/freesw/wvstreams/uniconf/daemon/rules.mk,
+	  releases/freesw/wvstreams/uniconf/daemon/uniconfd.cc,
+	  releases/freesw/wvstreams/uniconf/t/uniclientgen.t.cc,
+	  releases/freesw/wvstreams/uniconf/t/unisubtreegen.t.cc,
+	  releases/freesw/wvstreams/uniconf/uniclientgen.cc,
+	  releases/freesw/wvstreams/uniconf/unidefgen.cc,
+	  releases/freesw/wvstreams/uniconf/unifastregetgen.cc,
+	  releases/freesw/wvstreams/uniconf/unifiltergen.cc,
+	  releases/freesw/wvstreams/uniconf/unifstreegen.cc,
+	  releases/freesw/wvstreams/uniconf/uniinigen.cc,
+	  releases/freesw/wvstreams/uniconf/unisubtreegen.cc,
+	  releases/freesw/wvstreams/utils/strutils.cc,
+	  releases/freesw/wvstreams/utils/t/strutils.t.cc,
+	  releases/freesw/wvstreams/utils/t/wvgzip.t.cc,
+	  releases/freesw/wvstreams/utils/t/wvondiskhash.t.cc,
+	  releases/freesw/wvstreams/utils/t/wvstreamsdebugger.t.cc,
+	  releases/freesw/wvstreams/utils/t/wvstring.t.cc,
+	  releases/freesw/wvstreams/utils/t/wvstringmask.t.cc,
+	  releases/freesw/wvstreams/utils/t/wvtask.t.cc,
+	  releases/freesw/wvstreams/utils/t/wvtimeutils.t.cc,
+	  releases/freesw/wvstreams/utils/wvcont.cc,
+	  releases/freesw/wvstreams/utils/wvcrash.cc,
+	  releases/freesw/wvstreams/utils/wvcrashbase.cc,
+	  releases/freesw/wvstreams/utils/wvgzip.cc,
+	  releases/freesw/wvstreams/utils/wvlinklist.cc,
+	  releases/freesw/wvstreams/utils/wvstreamsdebugger.cc,
+	  releases/freesw/wvstreams/utils/wvstring.cc,
+	  releases/freesw/wvstreams/utils/wvstringmask.cc,
+	  releases/freesw/wvstreams/utils/wvsubproc.cc,
+	  releases/freesw/wvstreams/utils/wvtask.cc,
+	  releases/freesw/wvstreams/utils/wvtest.cc,
+	  releases/freesw/wvstreams/utils/wvtimeutils.cc,
+	  releases/freesw/wvstreams/vars.mk,
+	  releases/freesw/wvstreams/wvtesthelper,
+	  releases/freesw/xplcidl/.cvsignore,
+	  releases/freesw/xplcidl/auto/.cvsignore,
+	  releases/freesw/xplcidl/stringbench/.cvsignore,
+	  releases/freesw/zen/.cvsignore, releases/freesw/zen/configure.in,
+	  releases/freesw/zen/debian/.cvsignore,
+	  releases/freesw/zen/po/.cvsignore,
+	  releases/freesw/zen/src/.cvsignore,
+	  releases/freesw/zen/src/find_in_files_cmd.c,
+	  releases/freesw/zen/src/make.c, releases/freesw/zen/src/make.h,
+	  releases/freesw/zen/src/make_cmd.c,
+	  releases/freesw/zen/src/man_cmd.c, releases/freesw/zen/src/zen.h:
+	  Merged revisions 10677-11457 via svnmerge from /trunk
+
+2006-08-09 14:30  ppatters
+
+	* releases/freesw/wvstreams/crypto/wvx509.cc: Update WvX509Mgr to
+	  correctly parse stack type extensions in get_extension().
+
+2006-05-25 12:15  sfllaw
+
+	* releases/freesw/wvstreams/streams/wvmodem.cc: If there is no
+	  device on the other side of a serial link, some kernel drivers
+	  will just hang forever trying to flush the output. Sadly, they do
+	  this on close(). We use tcflush() right before calling close()
+	  now, to prevent this from happening.
+
+2006-05-25 12:07  sfllaw
+
+	* releases/freesw/wvstreams/configure.ac: Make WvStreams compile
+	  with Automake 1.8.
+
+2006-05-25 11:26  sfllaw
+
+	* releases/freesw/wvstreams/include/uniconfkey.h,
+	  releases/freesw/wvstreams/include/wvhttppool.h,
+	  releases/freesw/wvstreams/include/wvstring.h,
+	  releases/freesw/wvstreams/include/wvx509.h: WvStreams now compiles
+	  with GCC 4.1. Thanks to Martin Michlmayr <tbm@cyrius.com> for
+	  pointing this out.
+
+2006-01-17 18:38  sfllaw
+
+	* releases/freesw/wvstreams/debian/changelog,
+	  releases/freesw/wvstreams/debian/rules: Rejiggered the comments,
+	  because GNU Make has changed its parsing.
+
+2006-01-13 18:03  sfllaw
+
+	* releases/freesw/wvstreams/configure.ac,
+	  releases/freesw/wvstreams/debian/changelog: Release WvStreams
+	  4.2.2.
+
+2006-01-12 20:12  sfllaw
+
+	* releases/freesw/wvstreams/examples/wvgrep/wvgrep.cc,
+	  releases/freesw/wvstreams/streams/wvdaemon.cc,
+	  releases/freesw/wvstreams/uniconf/daemon/uniconfd.cc,
+	  releases/freesw/wvstreams/uniconf/tests/uni.cc: Fix up the --help
+	  to show the right bug reporting address.
+
+2006-01-12 18:14  sfllaw
+
+	* releases/freesw/wvstreams/uniconf/tests/uni.cc: The uni command
+	  now gives you help, before it complains about the UNICONF variable
+	  being unset.
+
+2006-01-11 00:49  sfllaw
+
+	* releases/freesw/wvstreams/configure.ac: Modern valgrind no longer
+	  understands --logfile, but expects --log-file instead. BUGZID:
+	  17477
+
+2006-01-10 22:13  sfllaw
+
+	* releases/freesw/wvstreams/Makefile: Rebuilding aclocal.m4
+	  properly. BUGZID: 17477
+
+2006-01-10 22:12  sfllaw
+
+	* releases/freesw/wvstreams/include/wvserialize.h: G++ 4 is a little
+	  more strict about how it considers template parameters. This makes
+	  wvseralize.h compile again. BUGZID: 17477
+
+2006-01-10 22:11  sfllaw
+
+	* releases/freesw/wvstreams/crypto/wvx509.cc: The OpenSSL people
+	  have changed function signatures AGAIN! BUGZID: 17477
+
+2006-01-10 22:10  sfllaw
+
+	* releases/freesw/wvstreams/configure.ac: Modern versions of BDB
+	  don't ship with the dlopen() function anymore; they call it
+	  something else. And so configure.ac has to detect the real
+	  function name. BUGZID: 17477
+
+2006-01-10 18:54  sfllaw
+
+	* releases/freesw/wvstreams/crypto/wvcrl.cc,
+	  releases/freesw/wvstreams/streams/wvstream.cc: Fix parameter
+	  ordering issue, which led to bad behaviour depending on the order
+	  of evaluation. BUGZID: 17693
+
+2006-01-10 18:35  sfllaw
+
+	* releases/freesw/wvstreams/utils/wvhash.cc: Build on 64-bit
+	  architectures, where pointers are larger than ints.
+
+2006-01-09 22:50  sfllaw
+
+	* releases/freesw, releases/freesw/wvprint/wvprintconfwatcher.cc,
+	  releases/freesw/wvprint/wvprintconfwatcher.h,
+	  releases/freesw/wvstreams/crypto/t/wvcrl.t.cc,
+	  releases/freesw/wvstreams/crypto/tests/cert3test.cc,
+	  releases/freesw/wvstreams/crypto/tests/certtest.cc,
+	  releases/freesw/wvstreams/crypto/tests/crltest.cc,
+	  releases/freesw/wvstreams/crypto/wvx509.cc,
+	  releases/freesw/wvstreams/include/wvx509.h: Merged revisions
+	  10619-10919 via svnmerge from /branches/x509
+
+2006-01-09 19:58  sfllaw
+
+	* releases/freesw,
+	  releases/freesw/wvports/apache/patches/apache/60-CAN-2005-2088_content_length.patch,
+	  releases/freesw/wvports/apache/patches/mod_ssl,
+	  releases/freesw/wvports/hpt374/patches/hpt374/23_dma-throttling.patch,
+	  releases/freesw/wvports/openssl/patches/openssl/01_CVE-2005-2969.patch,
+	  releases/freesw/wvports/phpmyadmin/Makefile,
+	  releases/freesw/wvports/phpmyadmin/patches/phpmyadmin/10-lang.diff,
+	  releases/freesw/wvports/phpmyadmin/sources/phpMyAdmin-2.6.1-pl3.tar.bz2,
+	  releases/freesw/wvports/phpmyadmin/sources/phpMyAdmin-2.6.4-pl3.tar.bz2,
+	  releases/freesw/wvprint/wvprint.cc,
+	  releases/freesw/wvstreams/include/wvprociter.h,
+	  releases/freesw/wvstreams/include/wvstrutils.h,
+	  releases/freesw/wvstreams/uniconf/t/uniclientgen.t.cc,
+	  releases/freesw/wvstreams/uniconf/uniclientgen.cc,
+	  releases/freesw/wvstreams/utils/strutils.cc,
+	  releases/freesw/wvstreams/utils/t/strutils.t.cc,
+	  releases/freesw/wvstreams/utils/t/wvprociter.t.cc,
+	  releases/freesw/wvstreams/utils/t/wvtclstring.t.cc,
+	  releases/freesw/wvstreams/utils/wvprociter.cc,
+	  releases/freesw/wvstreams/utils/wvtclstring.cc: Merged revisions
+	  10868-10913 via svnmerge from /branches/kid_c
+
 2005-12-08 20:35  sfllaw
 
 	* releases/freesw/wvstreams/examples/wvgrep: Ignore *.d dependency

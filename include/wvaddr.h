@@ -46,6 +46,10 @@
 #define ETHER_ADDR_LEN		6
 #define IP_ALEN			4
 #endif
+#ifdef _MSC_VER
+typedef unsigned int uint32_t;
+typedef unsigned short uint16_t;
+#endif
 
 #include "wvstring.h"
 
@@ -249,7 +253,7 @@ protected:
 public:
     unsigned char binaddr[4];
 
-    WvIPAddr(const unsigned char _binaddr[4])
+    WvIPAddr(const unsigned char *_binaddr)
         { if (_binaddr) memcpy(binaddr, _binaddr, 4); }
     WvIPAddr(const uint32_t _binaddr = 0)
         { memcpy(binaddr, &_binaddr, 4); }

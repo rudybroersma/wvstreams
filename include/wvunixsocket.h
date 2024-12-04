@@ -11,6 +11,9 @@
 
 class WvIStreamList;
 class WvUnixListener;
+class WvUnixConn;
+
+#ifndef _WIN32
 
 /**
  * WvStream-based Unix domain socket connection class.
@@ -56,6 +59,9 @@ public:
      * return localaddr() instead.
      */
     virtual const WvUnixAddr *src() const;
+    
+public:
+    const char *wstype() const { return "WvUnixConn"; }
 };
 
 /** Server end of a Unix Sockets stream */
@@ -106,7 +112,11 @@ protected:
     void *auto_userdata;
 
     static void accept_callback(WvStream &s, void *userdata);
+
+public:
+    const char *wstype() const { return "WvUnixListener"; }
 };
 
+#endif // _WIN32
 
 #endif // __WVUNIXSOCKET_H

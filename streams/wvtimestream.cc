@@ -14,7 +14,7 @@ WvTimeStream::WvTimeStream():
 
 void WvTimeStream::set_timer(time_t msec)
 {
-    WvTime now = wvtime();
+    WvTime now = wvstime();
 
     ms_per_tick = msec > 0 ? msec : 0;
     next = msecadd(now, ms_per_tick);
@@ -28,18 +28,18 @@ bool WvTimeStream::isok() const
 }
 
 
-bool WvTimeStream::pre_select(SelectInfo &si)
+void WvTimeStream::pre_select(SelectInfo &si)
 {
     WvTime now;
     time_t diff;
-    bool ready = WvStream::pre_select(si);
+    WvStream::pre_select(si);
     
-    //fprintf(stderr, "%p: timestream pre_select ready=%d mspt=%ld msto=%ld\n",
-    //     this, ready, ms_per_tick, si.msec_timeout);
+    //fprintf(stderr, "%p: timestream pre_select mspt=%ld msto=%ld\n",
+    //     this, ms_per_tick, si.msec_timeout);
 
     if (ms_per_tick)
     {
-	now = wvtime();
+	now = wvstime();
 	
 	/* Are we going back in time? If so, adjust the due time. */
 	if (now < last)
@@ -47,10 +47,10 @@ bool WvTimeStream::pre_select(SelectInfo &si)
 	
 	last = now;
 
-	if (next < now || next == now)
+	if (next <= now)
 	{
 	    si.msec_timeout = 0;
-	    return true;
+	    return;
 	}
 
 	diff = msecdiff(next, now);
@@ -58,16 +58,14 @@ bool WvTimeStream::pre_select(SelectInfo &si)
 	if (diff < si.msec_timeout || si.msec_timeout < 0)
 	    si.msec_timeout = diff;
     }
-
-    return ready;
 }
 
 
 bool WvTimeStream::post_select(SelectInfo &si)
 {
-    WvTime now = wvtime();
+    WvTime now = wvstime();
 
-    return WvStream::post_select(si) || (ms_per_tick && next < now);
+    return WvStream::post_select(si) || (ms_per_tick && next <= now);
 }
 
 
@@ -80,12 +78,12 @@ void WvTimeStream::execute()
      * than because our timer expired. */
     if (!alarm_was_ticking)
     {
-	WvTime now = wvtime();
+	WvTime now = wvstime();
 
         next = msecadd(next, ms_per_tick);
         
-        if (msecdiff(next, now) > ms_per_tick * 100
-    	    	|| msecdiff(now, next) > ms_per_tick * 100)
+        if (msecdiff(next, now) > ms_per_tick * 100 || 
+            msecdiff(now, next) > ms_per_tick * 100)
         {
             // reset if we fall forward or behind WAY too excessively
             // This is usually due to a change in system time

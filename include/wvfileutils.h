@@ -1,6 +1,6 @@
 /* -*- Mode: C++ -*-
  * Worldvisions Weaver Software:
- *   Copyright (C) 1997-2002 Net Integration Technologies, Inc.
+ *   Copyright (C) 1997-2005 Net Integration Technologies, Inc.
  *
  * Various little file functions...
  *
@@ -12,6 +12,10 @@
 #include "wvstring.h"
 #include "wvstringlist.h"
 
+/**
+ * Like mkdir(), but has the same parameters in both Unix and Windows.
+ */
+int wvmkdir(WvStringParm _dir, int create_mode = 0700);
 
 /**
  * Create a directory and any subdirectories required along the way.
@@ -20,7 +24,7 @@
  * The default permissions on created directories is 0700, but this can be
  * changed at will.
  */
-bool mkdirp(WvStringParm _dir, int create_mode = 0700);
+int mkdirp(WvStringParm _dir, int create_mode = 0700);
 
 /**
  * Safely remove an entire filesystem directory hierarchy.
@@ -39,6 +43,12 @@ void rm_rf(WvStringParm _dir);
 bool fcopy(WvStringParm src, WvStringParm dst);
 bool fcopy(WvStringParm srcdir, WvStringParm dstdir, WvStringParm relname);
 
+/**
+ * Create the file if it doesn't exist, or update the file's modification and
+ * access times if it does.
+ * (Equivalent to touch).
+ */
+bool ftouch(WvStringParm file, time_t mtime = 0);
 
 /**
  * Check whether two files have the same date/time stamp. This can be used as a
@@ -64,7 +74,6 @@ bool wvfnmatch(WvStringList &patterns, WvStringParm name, int flags = 0);
  */
 FILE *wvtmpfile();
 
-
 /* Returns a unique filename suitable for a temporary file. Obviously there is
  * the caveat that someone else may claim this file name before you open it:
  * do not use this routine where that race may be a real concern (this would
@@ -72,18 +81,23 @@ FILE *wvtmpfile();
  */
 WvString wvtmpfilename(WvStringParm prefix);
 
-
+#ifndef _WIN32
 /**
  * Basically our own implementation of the NetBSD lchmod() call.
  */
-#ifndef _WIN32
 int wvchmod(const char *path, mode_t mode);
 #endif
-
 
 /**
  * A simple helper function to get the current umask.
  */
+#ifndef _WIN32
 mode_t get_umask();
+#endif
+
+/**
+ * Delay for a requested number of milliseconds.
+ */
+void wvdelay(int msec_delay);
 
 #endif // __WVFILEUTILS_H

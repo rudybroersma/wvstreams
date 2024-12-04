@@ -152,6 +152,17 @@ WvString rfc1123_date(time_t _when);
 /** Return the local date (TZ applied) out of _when */
 WvString local_date(time_t _when = -1);
 
+/** Return the local time (in format of ISO 8601) out of _when */
+WvString intl_time(time_t _when = -1);
+
+/** Return the local date (in format of ISO 8601) out of _when */
+WvString intl_date(time_t _when = -1);
+
+/** Return the local date and time (in format of ISO 8601) out of _when */
+WvString intl_datetime(time_t _when = -1);
+
+time_t intl_gmtoff(time_t t);
+
 #ifndef _WIN32
 /**
  * Similar to crypt(), but this randomly selects its own salt.
@@ -524,7 +535,7 @@ struct CStrExtraEscape
 };
 extern const CStrExtraEscape CSTR_TCLSTR_ESCAPES[];
 
-// Converts data into a C-style string constant.
+/// Converts data into a C-style string constant.
 //
 // If data is NULL, returns WvString::null; otherwise, returns an allocated
 // WvString containing the C-style string constant that represents the data.
@@ -544,7 +555,7 @@ extern const CStrExtraEscape CSTR_TCLSTR_ESCAPES[];
 WvString cstr_escape(const void *data, size_t size,
         const CStrExtraEscape extra_escapes[] = NULL);
 
-// Converts a C-style string constant into data.
+/// Converts a C-style string constant into data.
 // 
 // This function does *not* include the trailing null that a C compiler would --
 //   if you want this null, put \0 at the end of the C-style string
@@ -573,7 +584,30 @@ WvString cstr_escape(const void *data, size_t size,
 bool cstr_unescape(WvStringParm cstr, void *data, size_t max_size, size_t &size,
         const CStrExtraEscape extra_escapes[] = NULL);
 
-// Reads the contents of a symlink.  Returns the contents, or WvString::null on error.
+static inline bool is_int(const char *str)
+{
+    if (!str)
+        return false;
+    
+    if (*str == '-')
+        ++str;
+    
+    if (!*str)
+        return false;
+    
+    while (*str)
+    	if (!isdigit(*str++))
+    	    return false;
+    	    
+    return true;
+}
+
+/// Converts a pointer into a string, like glibc's %p formatter would
+/// do.
+WvString ptr2str(void* ptr);
+
+/// Reads the contents of a symlink.  Returns the contents, or
+/// WvString::null on error.
 WvString wvreadlink(WvStringParm path);
 
 #endif // __WVSTRUTILS_H
