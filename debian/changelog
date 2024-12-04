@@ -342,7 +342,7 @@ wvstreams (4.0.2-2) unstable; urgency=low
 
   * Depend on libxplc0.3.10. (Closes: #301168)
 
- -- James Morrison <phython@debian.org>  Wed, 24 Mar 2005 07:50:07 -0500
+ -- James Morrison <phython@debian.org>  Thu, 24 Mar 2005 07:50:07 -0500
 
 wvstreams (4.0.2-1) unstable; urgency=low
 
@@ -442,7 +442,7 @@ wvstreams (3.80+20040623-1) unstable; urgency=low
 
   * New upstream snapshot.
 
- -- Simon Law <sfllaw@debian.org>  Tue, 23 Jun 2004 12:20:21 -0400
+ -- Simon Law <sfllaw@debian.org>  Wed, 23 Jun 2004 12:20:21 -0400
 
 wvstreams (3.75.0-1) unstable; urgency=low
 
