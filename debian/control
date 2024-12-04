@@ -77,6 +77,7 @@ Description: C++ network libraries for rapid application development
 
 Package: libwvstreams4.6-doc
 Architecture: all
+Multi-Arch: foreign
 Section: doc
 Depends: ${misc:Depends},
 Suggests: libwvstreams-dev (= ${binary:Version}),
