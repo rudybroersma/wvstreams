@@ -23,7 +23,7 @@ WV_LINK(UniClientGen);
 
 #ifndef _WIN32
 #include "wvunixsocket.h"
-static IUniConfGen *unixcreator(WvStringParm s, IObject *, void *)
+static IUniConfGen *unixcreator(WvStringParm s)
 {
     return new UniClientGen(new WvUnixConn(s));
 }
@@ -31,7 +31,7 @@ static WvMoniker<IUniConfGen> unixreg("unix", unixcreator);
 #endif
 
 
-static IUniConfGen *tcpcreator(WvStringParm _s, IObject *, void *)
+static IUniConfGen *tcpcreator(WvStringParm _s)
 {
     WvString s(_s);
     char *cptr = s.edit();
@@ -43,7 +43,7 @@ static IUniConfGen *tcpcreator(WvStringParm _s, IObject *, void *)
 }
 
 
-static IUniConfGen *sslcreator(WvStringParm _s, IObject *, void *)
+static IUniConfGen *sslcreator(WvStringParm _s)
 {
     WvString s(_s);
     char *cptr = s.edit();
@@ -55,23 +55,16 @@ static IUniConfGen *sslcreator(WvStringParm _s, IObject *, void *)
 }
 
 
-// if 'obj' is a WvStream, build the uniconf connection around that;
-// otherwise, create a new WvStream using 's' as the wvstream moniker.
-static IUniConfGen *wvstreamcreator(WvStringParm s, IObject *obj, void *)
+static IUniConfGen *wvstreamcreator(WvStringParm s)
 {
-    IWvStream *stream = NULL;
-    if (obj)
-	stream = mutate<IWvStream>(obj);
-    if (!stream)
-	stream = wvcreate<IWvStream>(s);
-    return new UniClientGen(stream);
+    return new UniClientGen(wvcreate<IWvStream>(s));
 }
 
 #ifdef WITH_SLP
 #include "wvslp.h"
 
 // FIXME: Only gets the first
-static IUniConfGen *slpcreator(WvStringParm s, IObject *obj, void *)
+static IUniConfGen *slpcreator(WvStringParm s)
 {
     WvStringList serverlist;
     
@@ -269,17 +262,6 @@ time_t uptime()
 
 void UniClientGen::conncallback(WvStream &stream, void *userdata)
 {
-    if (conn->alarm_was_ticking && timeout_activity+(TIMEOUT/1000) < uptime())
-    {
-        // command response took too long!
-        log(WvLog::Warning, "Command timeout; connection closed.\n");
-        cmdinprogress = false;
-        cmdsuccess = false;
-        conn->close();
-        
-        return;
-    }
-
     UniClientConn::Command command = conn->readcmd();
     static const WvStringMask nasty_space(' ');
     switch (command)
@@ -392,21 +374,30 @@ bool UniClientGen::do_select()
     cmdsuccess = false;
 
     timeout_activity = uptime();
-    conn->alarm(TIMEOUT);
     while (conn->isok() && cmdinprogress)
     {
 	// We would really like to run the "real" wvstreams globallist
 	// select loop here, but we can't because we may already be inside
 	// someone else's callback or something.  So we'll wait on *only* this
 	// connection.
-        if (conn->select(-1, true, false))
+        //
+        // We could do this using alarm()s, but because of very strage behaviour
+        // due to inherit_request in post_select when calling the long WvStream::select()
+        // prototype as we do here we have to do the timeout stuff outselves
+        if (conn->select(TIMEOUT, true, false))
         {
             conn->callback();
             timeout_activity = uptime();
-            conn->alarm(TIMEOUT);
+        }
+        else if (timeout_activity+3*(TIMEOUT/1000)/4 <= uptime())
+        {
+            // command response took too long!
+            log(WvLog::Warning, "Command timeout; connection closed.\n");
+            cmdinprogress = false;
+            cmdsuccess = false;
+            conn->close();
         }
     }
-    conn->alarm(-1);
 
 //    if (!cmdsuccess)
 //        seterror("Error: server timed out on response.");

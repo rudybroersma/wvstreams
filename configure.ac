@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-AC_INIT(WvStreams, 4.2, wvstreams-dev@nit.ca, wvstreams)
+AC_INIT(WvStreams, 4.2.2, wvstreams-bugs@nit.ca, wvstreams)
 SO_VERSION=4.2
 
 save_args() {
@@ -382,25 +382,28 @@ fi
 
 # bdb
 if test "$with_bdb" != "no"; then
-    AC_CHECK_HEADERS(db.h,, [with_bdb_header=no],
+    AC_CHECK_HEADERS(db.h, [with_bdb_header=db.h], [with_bdb_header=no],
                      [#include <db.h>
                       #ifdef DB_VERSION_MAJOR
                       #error "this is Berkeley DB 2.x or newer"
                       #endif])
     if test "$with_bdb_header" = "no"; then
-        AC_CHECK_HEADERS(db_185.h,, [with_bdb=no])
+        AC_CHECK_HEADERS(db_185.h, [with_bdb_header=db_185.h], [with_bdb=no])
     fi
-    AC_CHECK_LIB(db, dbopen,, [with_bdb_lib=no])
+fi
+if test "$with_bdb" != "no"; then
+    dbopen=`echo -e "#include <$with_bdb_header>\ndbopen" | gcc -E - | tail -1`
+    AC_CHECK_LIB(db, $dbopen,, [with_bdb_lib=no])
     if test "$with_bdb_lib" = "no"; then
-        AC_CHECK_LIB(db1, dbopen, [with_bdb_lib=yes],)
+        AC_CHECK_LIB(db1, $dbopen, [with_bdb_lib=yes],)
     fi
     if test "$with_bdb_lib" = "no"; then
         with_bdb=no
     fi
-    if test "$with_bdb" != "no"; then
-        AC_DEFINE(WITH_BDB,,
-                  [Define to enable Berkeley DB support.])
-    fi
+fi
+if test "$with_bdb" != "no"; then
+    AC_DEFINE(WITH_BDB,,
+	      [Define to enable Berkeley DB support.])
 fi
 
 # qdbm
@@ -626,7 +629,12 @@ if test "$enable_devel" = "yes"; then
 fi
 
 if test "$VALGRIND" != ""; then
-    VALGRIND="valgrind --tool=memcheck --leak-check=yes --num-callers=10 --logfile=valgrind.log --suppressions=\$(WVSTREAMS_SRC)/suppressions.wv"
+    VALGRIND="valgrind --tool=memcheck --leak-check=yes --num-callers=10 --suppressions=\$(WVSTREAMS_SRC)/suppressions.wv"
+    if valgrind --help | grep log-file >/dev/null; then
+	VALGRIND="$VALGRIND --log-file=valgrind.log"
+    else
+	VALGRIND="$VALGRIND --logfile=valgrind.log"
+    fi
 fi
 
 AC_SUBST(SO_VERSION)

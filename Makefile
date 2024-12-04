@@ -85,12 +85,12 @@ gnulib/Makefile: gnulib/Makefile.in
 # FIXME: there is some confusion here
 ifdef WE_ARE_DIST
 aclocal.m4: $(wildcard gnulib/m4/*.m4) acinclude.m4
-	$(warning "$@" is old, please run "autoconf")
+	$(warning "$@" is old, please run "aclocal -I gnulib/m4")
 
 configure: configure.ac config.mk.in include/wvautoconf.h.in aclocal.m4
 	$(warning "$@" is old, please run "autoconf")
 
-include/wvautoconf.h.in: configure.ac
+include/wvautoconf.h.in: configure.ac aclocal.m4
 	$(warning "$@" is old, please run "autoheader")
 else
 aclocal.m4: $(wildcard gnulib/m4/*.m4) acinclude.m4
@@ -102,7 +102,7 @@ configure: configure.ac include/wvautoconf.h.in aclocal.m4
 	@rm -f config.mk include/wvautoconf.h gnulib/Makefile
 	@touch $@
 
-include/wvautoconf.h.in: configure.ac
+include/wvautoconf.h.in: configure.ac aclocal.m4
 	autoheader
 	@touch $@
 endif
@@ -125,12 +125,15 @@ realclean: distclean
 
 distclean: clean
 	$(call wild_clean,$(DISTCLEAN))
-	@rm -f aclocal.m4
+	@rm -rf autom4te.cache
+	@rm -f gnulib/Makefile
 	@rm -f pkgconfig/*.pc
 	@rm -f .xplc
 
 clean: depend dust xplc/clean
+	@if ! test -f gnulib/Makefile; then echo 'clean:' >gnulib/Makefile; fi
 	$(subdirs)
+	@if test `wc -c <gnulib/Makefile` = '7'; then rm gnulib/Makefile; fi
 	$(call wild_clean,$(TARGETS) uniconf/daemon/uniconfd \
 		$(GARBAGE) $(TESTS) tmp.ini \
 		$(shell find . -name '*.o' -o -name '*.moc'))
