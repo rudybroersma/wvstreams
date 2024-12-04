@@ -1,6 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Source: http://alumnit.ca/
 Upstream-Contact: Net Integration Technologies Inc.
+Upstream-Name: WvStreams
 
 Files: *
 Copyright:
