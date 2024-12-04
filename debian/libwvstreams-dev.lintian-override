@@ -1,1 +1,2 @@
-libwvstreams-dev binary: binary-without-manpage usr/bin/wvtestrun
+libwvstreams-dev: no-manual-page [usr/bin/wvtestrun]
+
