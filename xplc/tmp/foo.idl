@@ -1,0 +1,6 @@
+
+interface IFoo
+{
+  void get_value();
+};
+
