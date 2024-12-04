@@ -1,0 +1,100 @@
+Description: Avoid assert() with required side effect.
+ Make sure the getcontext() call is always made, even if -DNDEBUG is
+ used.
+Author: Dave Martin
+Bug-Ubuntu: https://bugs.launchpad.net/ubuntu/+source/wvstreams/+bug/383974
+Forwarded: no
+Last-Update: 2024-12-04
+Index: wvstreams-salsa/utils/wvtask.cc
+===================================================================
+--- wvstreams-salsa.orig/utils/wvtask.cc	2024-12-04 07:22:35.977322607 +0000
++++ wvstreams-salsa/utils/wvtask.cc	2024-12-04 07:22:35.973322562 +0000
+@@ -67,6 +67,16 @@
+ 
+ static int context_return;
+ 
++// asserting wrapper for getcontext(3).
++static int assert_getcontext(ucontext_t *__ucp)
++{
++    int result;
++
++    result = getcontext(__ucp);
++    assert(result == 0);
++
++    return result;
++}
+ 
+ static bool use_shared_stack()
+ {
+@@ -199,7 +209,7 @@
+     stacktop = (char *)alloca(0);
+     
+     context_return = 0;
+-    assert(getcontext(&get_stack_return) == 0);
++    assert_getcontext(&get_stack_return);
+     if (context_return == 0)
+     {
+ 	// initial setup - start the stackmaster() task (never returns!)
+@@ -265,7 +275,7 @@
+ 	state = &old_task->mystate;
+     
+     context_return = 0;
+-    assert(getcontext(state) == 0);
++    assert_getcontext(state);
+     int newval = context_return;
+     if (newval == 0)
+     {
+@@ -319,7 +329,7 @@
+ #endif
+ 		
+     context_return = 0;
+-    assert(getcontext(&current_task->mystate) == 0);
++    assert_getcontext(&current_task->mystate);
+     int newval = context_return;
+     if (newval == 0)
+     {
+@@ -341,7 +351,7 @@
+ void WvTaskMan::get_stack(WvTask &task, size_t size)
+ {
+     context_return = 0;
+-    assert(getcontext(&get_stack_return) == 0);
++    assert_getcontext(&get_stack_return);
+     if (context_return == 0)
+     {
+ 	assert(magic_number == -WVTASK_MAGIC);
+@@ -409,7 +419,7 @@
+ 	assert(magic_number == -WVTASK_MAGIC);
+ 	
+         context_return = 0;
+-        assert(getcontext(&stackmaster_task) == 0);
++        assert_getcontext(&stackmaster_task);
+         val = context_return;
+ 	if (val == 0)
+ 	{
+@@ -474,7 +484,7 @@
+ 	
+     // back here from longjmp; someone wants stack space.    
+     context_return = 0;
+-    assert(getcontext(&task->mystate) == 0);
++    assert_getcontext(&task->mystate);
+     if (context_return == 0)
+     {
+ 	// done the setjmp; that means the target task now has
+@@ -510,7 +520,7 @@
+                 }
+                 else
+                 {
+-                    assert(getcontext(&task->func_call) == 0);
++                    assert_getcontext(&task->func_call);
+                     task->func_call.uc_stack.ss_size = task->stacksize;
+                     task->func_call.uc_stack.ss_sp = task->stack;
+                     task->func_call.uc_stack.ss_flags = 0;
+@@ -521,7 +531,7 @@
+                             (void (*)(void))call_func, 1, task);
+ 
+                     context_return = 0;
+-                    assert(getcontext(&task->func_return) == 0);
++                    assert_getcontext(&task->func_return);
+                     if (context_return == 0)
+                         setcontext(&task->func_call);
+                 }
