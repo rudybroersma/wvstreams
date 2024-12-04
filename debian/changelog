@@ -77,13 +77,13 @@ wvstreams (4.6.1-9) unstable; urgency=medium
 
   * QA upload.
   * d/p/gcc-6: Patch to fix compilation with gcc-6, Closes: #811659
-  * run 'cme fix dpkg-control', updated standards version to 3.9.8 
+  * run 'cme fix dpkg-control', updated standards version to 3.9.8
   * d/compat, d/control: update compat level to 9
-  * d/watch: Point to new github source location 
-  * d/control: add new Github home page 
+  * d/watch: Point to new github source location
+  * d/control: add new Github home page
   * d/uniconfd.init: source /lib/lsb/init-functions if available
-  * d/rules: Add and install overrides for missing manpage of dev test 
-    program and the Doxygen created embedded javascript library 
+  * d/rules: Add and install overrides for missing manpage of dev test
+    program and the Doxygen created embedded javascript library
   * d/rules: remove irrelevant *.md5 files from -doc package
 
  -- Gert Wollny <gw.fossdev@gmail.com>  Mon, 11 Jul 2016 15:34:22 +0000
@@ -136,7 +136,7 @@ wvstreams (4.6.1-5) unstable; urgency=low
 
   * QA upload.
   * Disable some gcc-4.7 optimization flags to fix wrong magic_number bug.
-    Thanks to Peter Drysdale <drysdalepete@gmail.com>. (Closes: #674006) 
+    Thanks to Peter Drysdale <drysdalepete@gmail.com>. (Closes: #674006)
   * Disable parallel build.
   * Add Build-Depends: graphviz.
 
@@ -178,8 +178,8 @@ wvstreams (4.6.1-1) unstable; urgency=low
   * debian/libwvstreams4.6-extra.install
     - add "debian/tmp/usr/lib/libwvdbus.so*" to inclde libwvdubs.so.4.6
   * debian/control
-    - add "(= ${binary:Version})" to libwvstreams-dev package to fix 
-     "weak-library-dev-dependency" 
+    - add "(= ${binary:Version})" to libwvstreams-dev package to fix
+     "weak-library-dev-dependency"
     - add Build-Depends: libdbus-1-dev to correspond to "--with-dbus" in rules.
 
  -- Hideki Yamane (Debian-JP) <henrich@debian.or.jp>  Thu, 05 Nov 2009 09:12:48 +0900
@@ -489,9 +489,9 @@ wvstreams (3.73+20030404-1) unstable; urgency=low
   * Move libwvstreams3-dev to the new libdevel section.
 
   * Acknowledge NMU. (Closes: #141409)
-  
+
   * Add Debian revision number. (Closes: #141456)
-  
+
   * Additional packaging fixes to move libwvstreams-dev into the devel
     section, and libwvstreams-doc into the doc section, also fixed a
     problem with the installer. (Closes: #166208, #166210)
@@ -513,7 +513,7 @@ wvstreams (3.73+20030404-1) unstable; urgency=low
   * Fixes to build the documentation properly (Closes: #158326)
 
   * Clarify package descriptions. (Closes: #184829)
-  
+
  -- James Morrison <phython@debian.org>  Sat, 05 Apr 2003 19:35:49 -0500
 
 wvstreams (3.70.1) unstable; urgency=low
@@ -529,7 +529,7 @@ wvstreams (3.70) unstable; urgency=high
 
   * Fix to WvString formatter to fix retchmail crasher
 
-  * Various other fixes and cleanups. 
+  * Various other fixes and cleanups.
 
  -- Patrick Patterson <ppatters@debian.org>  Fri,  5 Apr 2002 13:39:21 -0500
 
@@ -555,4 +555,3 @@ libwvstreams3.60 (3.60f) unstable; urgency=low
   * Initial Release.
 
  -- Patrick Patterson <ppatters@nit.ca>  Tue,  9 Dec 1997 01:39:45 -0500
-
