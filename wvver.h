@@ -16,7 +16,7 @@
 //  valid string, eg "4.5 beta 6"
 // 
 
-#define WVSTREAMS_VER		0x00040001
-#define WVSTREAMS_VER_STRING	"4.0.1"
+#define WVSTREAMS_VER		0x00040002
+#define WVSTREAMS_VER_STRING	"4.0.2"
 
 #endif // __WVVER_H

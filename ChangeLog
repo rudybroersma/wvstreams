@@ -1,3 +1,2947 @@
+2005-03-24 01:37  wlach
+
+	* uniconf/uniconf-csharp.cc: HEAD: Commit fixed (but memory
+	  leaking!) uniconf-csharp uniconf key getting functions.
+
+2005-03-23 19:54  jdeboer
+
+	* include/uniconf-csharp.h: HEAD: csharp balls
+
+2005-03-23 18:57  jdeboer
+
+	* uniconf/uniconf-csharp.cc: HEAD: Added more uniconf-sharp
+	  patches.
+
+2005-03-23 02:39  apenwarr
+
+	* uniconf/uniinigen.cc:
+	  r4_1+ns3: oops, my uniinigen change had a minor valgrind problem.
+
+2005-03-23 02:26  apenwarr
+
+	* include/uniclientgen.h, include/uniinigen.h,
+	  uniconf/uniinigen.cc, uniconf/daemon/uniconfdaemonconn.cc:
+	  r4_1+ns3: BUGZID:10995: fix minimai-bogs-down-in-uniconfd problem
+	  by using continue_select() in the middle of uniconfd iterator
+	  requests.  Also make UniClientGen timeout 60 seconds instead of
+	  the rather-too-optimistic 30, just in case.  To save CPU load
+	  with giant config files, have UniIniGen::refresh() do nothing if
+	  the file's stat() information hasn't changed since the last time
+	  you loaded it.
+
+2005-03-23 00:17  pphaneuf
+
+	* suppressions.wv, crypto/wvsslstream.cc, include/wvatomicfile.h,
+	  streams/wvatomicfile.cc: Merged from carambola.  BUGZID:11338
+
+2005-03-22 21:12  pphaneuf
+
+	* urlget/t/wvhttppool.t.cc: The pipelining test of wvhttppool.t.cc
+	  was leaking connections.
+
+2005-03-22 19:17  pphaneuf
+
+	* utils/wvtest.cc: carambola: ungeneralized my fix to the unit
+	  tests, as WvTest cannot depend on WvStreams.	BUGZID:11317
+
+2005-03-22 17:00  andrew
+
+	* suppressions.wv, crypto/t/wvsslstream.t.cc: carambola: Fixed
+	  wvsslstream.t.cc unit test with Pat's help, modified
+	  suppressions.wv. BUGZID:10781
+
+2005-03-22 03:31  pphaneuf
+
+	* utils/wvtest.cc: carambola: create a WvLogConsole in wvtest.cc,
+	  so that WvLog doesn't instantiate a global one that adds an
+	  unknown file descriptor.  BUGZID:11317
+
+2005-03-22 02:19  andrew
+
+	* crypto/t/wvsslstream.t.cc: carambola: Check in wvsslstream.t.cc
+	  unit test, commented out until I can figure out what to do about
+	  the valgrind errors that openssl seems to cause. BUGZID:10781
+
+2005-03-22 02:19  andrew
+
+	* uniconf/t/uniinigen.t.cc: carambola: uniinigen.t.cc should clean
+	  up its perm.ini file.
+
+2005-03-22 01:49  andrew
+
+	* crypto/wvsslstream.cc: carambola: Checing in WvSSLStream fix to
+	  datavault problem. BUGZID:10781
+
+2005-03-21 22:41  mrwise
+
+	* uniconf/uniinigen.cc: HEAD: did some profiling of the inigen to
+	  try and find reasons writing large ini files might be slow, made
+	  a small change in how the inigen writes that sped it up 4-5% but
+	  didn't see any glaring reasons for slowness, saved profiling
+	  results under src/wvstreams/uniconf/profiling BUGZID:10141
+
+2005-03-17 20:05  jdeboer
+
+	* utils/: wvtest_filecountprefix.cc, t/wvondiskhash.t.cc:
+	  carambola: Nothing like fixing a problem twice. The WvOnDiskHash
+	  test was timing out on machines with high load and a large number
+	  of files in /tmp. To fix this problem, I added a 'ls | wc' at the
+	  beginning of the test. This should bring /tmp into cache for the
+	  *much* slower WvDirIter. Second, I added a WVPASS for every five
+	  hundredth file wvtest_filecountprefix checks, this resets the 40
+	  second timer. BUGZID:11070
+
+2005-03-15 02:49  mrwise
+
+	* configure.ac, wvrules.mk, crypto/tests/ssltest.cc,
+	  include/wvargs.h, include/wvatomicfile.h, include/wvdaemon.h,
+	  include/wvfile.h, include/wvlinklist.h, include/wvlogrotator.h,
+	  include/wvregex.h, include/wvstrutils.h,
+	  include/wvsubprocqueue.h, include/wvsubprocqueuestream.h,
+	  include/wvsystem.h, ipstreams/wvunixsocket.cc,
+	  ipstreams/t/wvunixsocket.t.cc, streams/wvatomicfile.cc,
+	  streams/wvdaemon.cc, streams/wvfile.cc, streams/wvlogrotator.cc,
+	  streams/wvstream.cc, streams/wvsubprocqueuestream.cc,
+	  streams/t/wvatomicfile.t.cc, streams/t/wvlogrotator.t.cc,
+	  streams/t/wvsubprocqueuestream.t.cc, uniconf/unimountgen.cc,
+	  uniconf/unisubtreegen.cc, uniconf/t/unitempgenvsdaemon.t.cc,
+	  utils/strutils.cc, utils/wvargs.cc, utils/wvsubprocqueue.cc,
+	  utils/wvsystem.cc, utils/t/strutils.t.cc, utils/t/wvgzip.t.cc,
+	  utils/t/wvregex.t.cc, utils/t/wvsubprocqueue.t.cc,
+	  utils/t/wvsystem.t.cc: HEAD: merged from carambola, had to merge
+	  wvdnsconfig along with its tests by hand but it should now be
+	  completely up to date with wvnamed BUGZID:11130
+
+2005-03-14 22:25  jklink
+
+	* include/wvatomicfile.h, streams/wvatomicfile.cc: BUGZID: 9829
+
+	  Carambola : some umask hairiness and more rename()'d files to
+	  cover
+
+2005-03-12 20:25  pzion
+
+	* include/wvdaemon.h, streams/wvdaemon.cc: carambola: wvstreams:
+	  added support to .pid files to WvDaemon; removed hackiness from
+	  wvdiskd to ensure only one is running at once, since this is
+	  taken care of now by wvdaemon; run wd cfgdisk-mount *after*
+	  running disk-dirs.sh from rc.usr.sh since disk-dirs wipes out
+	  /var/run
+
+2005-03-12 05:18  mrwise
+
+	* streams/t/wvsubprocqueuestream.t.cc,
+	  uniconf/t/unitempgenvsdaemon.t.cc, utils/t/wvsubprocqueue.t.cc,
+	  utils/t/wvsystem.t.cc: carambola: merged from r4_1+ns3
+	  BUGZID:11130
+
+2005-03-11 16:24  pzion
+
+	* utils/wvargs.cc: carambola: wvstreams: WvArgs: fixed dangling
+	  pointers to temporary strings
+
+2005-03-11 02:35  pmccurdy
+
+	* utils/t/: wvsubprocqueue.t.cc, wvsystem.t.cc: r4_1+ns3: Make the
+	  wvsystem.t.cc and wvsubprocqueue.t.cc use pid numbers in the temp
+	  files they create, so they can have two instances running
+	  simultaneously in the same directory.  BUGZID:11112
+
+2005-03-11 02:01  pmccurdy
+
+	* streams/t/wvsubprocqueuestream.t.cc,
+	  uniconf/t/unitempgenvsdaemon.t.cc: r4_1+ns3: BUGZID:11111 Merged
+	  changes from r4_1_1.	And I got bug number 11111.  It was
+	  one-one-one-one-wonderful.
+
+2005-03-10 01:28  wlach
+
+	* Makefile, configure.ac, pkgconfig/liboggspeex-uninstalled.pc.in,
+	  pkgconfig/liboggspeex.pc.in,
+	  pkgconfig/liboggvorbis-uninstalled.pc.in,
+	  pkgconfig/liboggvorbis.pc.in,
+	  pkgconfig/libuniconf-uninstalled.pc.in,
+	  pkgconfig/libuniconf.pc.in,
+	  pkgconfig/libwvbase-uninstalled.pc.in, pkgconfig/libwvbase.pc.in,
+	  pkgconfig/libwvfft-uninstalled.pc.in, pkgconfig/libwvfft.pc.in,
+	  pkgconfig/libwvqt-uninstalled.pc.in, pkgconfig/libwvqt.pc.in,
+	  pkgconfig/libwvstreams-uninstalled.pc.in,
+	  pkgconfig/libwvtest-uninstalled.pc.in, pkgconfig/libwvtest.pc.in,
+	  pkgconfig/libwvutils-uninstalled.pc.in,
+	  pkgconfig/libwvutils.pc.in, pkgconfig/wvxplc.pc.in: HEAD: Add
+	  "uninstalled" versions of our pkgconfig files, so you can use
+	  pkgconfig with WvStreams without installing it on your system
+	  (gee, I wonder who does that?) :-) Minor cleanup of our existing
+	  pkgconfig files to be more idiomatic.
+
+2005-03-09 22:04  jdeboer
+
+	* utils/wvmoniker.cc: HEAD: And that [wvmoniker.cc] should stay
+	  behind.
+
+2005-03-09 21:55  jdeboer
+
+	* include/uniconf-csharp.h, uniconf/uniconf-csharp.cc,
+	  uniconf/uniconfroot-csharp.cc, utils/wvmoniker.cc: HEAD: UniConf#
+	  now has working events.
+
+2005-03-09 19:54  dcoombs
+
+	* linuxstreams/tests/pamtest.cc: carambola-dcoombs: Merging my
+	  WvLicenseMgr work from r4_2-dcoombs.	Let's stop renaming
+	  branches now.
+
+2005-03-09 19:25  jdeboer
+
+	* include/uniconf-csharp.h, include/uniconf.h,
+	  include/uniconfiter-csharp.h, include/uniconfkey-csharp.h,
+	  include/uniconfroot-csharp.h, uniconf/uniconf-csharp.cc,
+	  uniconf/uniconf_c.cc, uniconf/uniconfiter-csharp.cc,
+	  uniconf/uniconfroot-csharp.cc, uniconf/uniconfroot.cc,
+	  uniconf/tests/basictest.cc: HEAD: Added C declarations of certain
+	  functions for UniConf#
+
+2005-03-09 03:38  wlach
+
+	* pkgconfig/libwvtest.pc.in: HEAD: Forgot to add a file, broke the
+	  build, blah blah blah
+
+2005-03-09 03:14  wlach
+
+	* wvrules.mk: carambola: Modify dist rule to handle pierre's
+	  VER_STRING_EXTRA stuff in wvver.h gracefully..
+
+2005-03-09 00:43  wlach
+
+	* Makefile, configure.ac, vars.mk, wvrules.mk, debian/rules: HEAD:
+	  Create a libwvtest library for testing, instead of a static
+	  wvtestmain.o object. Add a pkgconfig library so it's easy to
+	  create your own unit tests outside the niti tree. Those using the
+	  standard wvrules macros to create testing suites don't need to
+	  worry about this, others should see what I did to acltest.
+
+2005-03-08 20:40  pzion
+
+	* include/wvatomicfile.h, streams/wvatomicfile.cc,
+	  streams/t/wvatomicfile.t.cc: carambola: wvstreams: wvatomicfile:
+	  spam scanner PDR test was failing due to permission handling bugs
+	  in WvAtomicFile; also, added good unit tests for wvatomicfile
+	  BUGZID:11014
+
+2005-03-08 17:45  pzion
+
+	* streams/wvatomicfile.cc: carambola: wvstreams: wvatomicfile: use
+	  fchmod instead of wvchmod to guarantee file permissions because,
+	  well, it actually works
+
+2005-03-08 15:45  pzion
+
+	* streams/wvatomicfile.cc: carambola: wvstreams: WvAtomicFile:
+	  removed referece to NITIX in temporary filename
+
+2005-03-08 07:56  jklink
+
+	* uniconf/t/unitempgenvsdaemon.t.cc: BUGZID: 10926
+
+	  Carambola : Changes to unitempgenvsdaemon because of sudden
+	  unitest failures.  Added per-pid UNIX sockets unlinking of
+	  sockets and ini files.
+
+2005-03-08 01:33  pphaneuf
+
+	* configure.ac: carambola: put " (username@hostname)" at the end of
+	  the version strings when in debug mode.  BUGZID:10909
+
+2005-03-07 22:18  jklink
+
+	* streams/wvatomicfile.cc, include/wvatomicfile.h: BUGZID: 9829
+
+	  Carambola : taking out renaming of files across filesystems and
+	  deletion of tmp files on close
+
+2005-03-07 20:24  pzion
+
+	* include/wvregex.h: carambola: added doxygen info for WvRegex
+	  BUGZID:10254
+
+2005-03-07 19:51  pzion
+
+	* include/wvregex.h, utils/t/wvregex.t.cc: r4_3: BUGZID:10254
+	  WvRegex: renamed certain overloads of WvRegex::match to avoid
+	  confusion
+
+2005-03-07 16:54  jdeboer
+
+	* include/wvcallback.h: idb2: Fixed a memory leak in my one-line
+	  fix to WvCallback. Read the diff, shake your head, then come
+	  visit my desk with a sharpened metal rod.
+
+2005-03-06 22:56  wlach
+
+	* crypto/tests/ssltest.cc: caramabola: make ssltest use wvargs, so
+	  you can immediately see how to use it without examining the
+	  source code.
+
+2005-03-06 18:28  wlach
+
+	* configure.ac, debian/control, include/wvargs.h,
+	  include/wvdaemon.h, include/wvstreamsdaemon.h,
+	  streams/wvdaemon.cc, streams/tests/daemontest.cc,
+	  streams/tests/streamdaemontest.cc, utils/wvargs.cc: HEAD: popt is
+	  now required for externally built wvstreams packages-- remove the
+	  conditional stuff in wvargs and wv(streams)daemon as a result.
+	  debian packages now updated to build depend on libpopt-dev. add
+	  daemontest and streamsdaemontest (useful as sanity tests and
+	  quick example code) to streams/test.	NB: None of this affects
+	  Weaver in any way.
+
+2005-03-06 01:40  apenwarr
+
+	* utils/t/wvbase64.t.cc: HEAD: an extra unit test for wvbase64 that
+	  I forgot to check in a while ago.
+
+2005-03-06 01:26  apenwarr
+
+	* streams/: wvistreamlist.cc, t/wvistreamlist.t.cc: HEAD:
+	  WvIStreamList would not call pre_select() on its children if its
+	  alarm was ticking.  This would cause loss of events sometimes,
+	  particularly if the alarm() was frequent enough to go off *every*
+	  time through the event loop.	Added a unit test for this.  (This
+	  probably didn't hurt anything except my debugging for my
+	  experimental new hostotron program, but it might have confused
+	  some people.)
+
+2005-03-06 01:09  apenwarr
+
+	* utils/wvtest.cc: HEAD: someone (maybe me) had introduced buggy
+	  pathname stripping in wvtest.cc, leading to ugly-looking (but
+	  valid) test output that includes directory names.
+
+2005-03-04 21:11  pphaneuf
+
+	* include/wvlinklist.h, include/wvstrutils.h,
+	  include/wvsubprocqueue.h, include/wvsubprocqueuestream.h,
+	  include/wvsystem.h, streams/wvsubprocqueuestream.cc,
+	  streams/t/wvsubprocqueuestream.t.cc, utils/strutils.cc,
+	  utils/wvsubprocqueue.cc, utils/wvsystem.cc,
+	  utils/t/strutils.t.cc, utils/t/wvsubprocqueue.t.cc,
+	  utils/t/wvsystem.t.cc: carambola: merged from r4_1+n3.
+	  BUGZID:10840
+
+2005-03-04 20:47  wlach
+
+	* include/wvargs.h: carambola: Add documentation for
+	  add_required_arg and add_optional_arg to WvArgs.  BUGZID:10252
+
+2005-03-03 22:22  pzion
+
+	* include/wvargs.h: carambola: BUGZID:10252 added docs for WvArgs
+
+2005-03-03 20:45  mcote
+
+	* configure.ac, crypto/tests/ssltest.cc, debian/control,
+	  include/wvargs.h, include/wvhttppool.h, include/wvlogrotator.h,
+	  include/wvstrutils.h, ipstreams/t/wvunixdgsocket.t.cc,
+	  linuxstreams/tests/pamtest.cc, streams/wvistreamlist.cc,
+	  streams/wvlogrotator.cc, streams/wvpam.cc,
+	  streams/t/wvfdstream.t.cc, streams/t/wvlogrotator.t.cc,
+	  streams/tests/pamtest.cc, uniconf/uniconfkey.cc,
+	  uniconf/unisubtreegen.cc, uniconf/unitempgen.cc,
+	  uniconf/unitransactiongen.cc, uniconf/t/uniconfkey.t.cc,
+	  uniconf/t/uniconfroot.t.cc, uniconf/t/uniinigen.t.cc,
+	  uniconf/t/unitempgen.t.cc, uniconf/t/unitempgenvsdaemon.t.cc,
+	  uniconf/t/unitransactiongen.t.cc, uniconf/t/uniunwrapgen.t.cc,
+	  uniconf/tests/.cvsignore, urlget/wvhttpstream.cc,
+	  urlget/t/wvhttppool.t.cc, utils/strutils.cc, utils/wvargs.cc,
+	  utils/t/strutils.t.cc, utils/tests/wvargstest.cc: idb2: Merge
+	  from head.
+
+2005-03-03 15:14  jdeboer
+
+	* include/wvcallback.h: idb2: Webconfig now uses the restoretool to
+	  read the toplevel index.  BUGZID:10839 Also fixed a bug in
+	  WvCallback that causes a crash in WvLCDConfig
+
+2005-03-03 02:21  jklink
+
+	* include/wvatomicfile.h, streams/wvatomicfile.cc: BUGZID: 9829
+
+	  Carambola : wvqmail wvfile (.new) invocations are finally removed
+	  and have been replaced with calls to wvatomicfile calls.
+
+2005-03-02 23:02  jklink
+
+	* streams/: wvatomicfile.cc, t/wvatomicfile.t.cc: BUGZID: 9829
+
+	  Carambola : Unit tests for wvatomicfile
+
+2005-03-02 21:55  jklink
+
+	* include/wvatomicfile.h, include/wvfile.h,
+	  streams/wvatomicfile.cc, streams/wvfile.cc: BUGZID: 9829
+
+	  Carambola : more additions to the wvatomic file.  It now uses
+	  mkstemp and wvfile now supports latching onto an open fd.
+
+2005-03-02 17:42  mrwise
+
+	* uniconf/unisubtreegen.cc: carambola: a fix I made for a crash in
+	  unisubtreegen sort of broke it, but it didn't crash anymore!	so
+	  now it's fixed the "correct" way.. bah.  BUGZID:10847
+
+2005-03-02 02:06  apenwarr
+
+	* streams/t/wvsubprocqueuestream.t.cc:
+	  r4_1_1: BUGZID:10896: more logging in wvsubprocqueuestream.t.cc
+	  unit test to help track down sporadic test failure.
+
+2005-02-25 23:39  pzion
+
+	* crypto/tests/ssltest.cc, include/wvlinklist.h,
+	  include/wvstrutils.h, include/wvsubprocqueue.h,
+	  include/wvsubprocqueuestream.h, include/wvsystem.h,
+	  ipstreams/t/wvtcp.t.cc, ipstreams/t/wvunixdgsocket.t.cc,
+	  streams/wvsubprocqueuestream.cc, streams/t/wvfdstream.t.cc,
+	  streams/t/wvsubprocqueuestream.t.cc, uniconf/uniretrygen.cc,
+	  uniconf/unitransactiongen.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/uniretrygen.t.cc, uniconf/t/unitransactiongen.t.cc,
+	  urlget/t/wvhttppool.t.cc, utils/strutils.cc,
+	  utils/wvsubprocqueue.cc, utils/wvsystem.cc,
+	  utils/t/strutils.t.cc, utils/t/wvsubprocqueue.t.cc,
+	  utils/t/wvsystem.t.cc: asterisk: merged from r4_1_1
+
+2005-02-23 04:22  wlach
+
+	* utils/t/wvgzip.t.cc: carambola: Commit test for wvgzip (currently
+	  commented out, as there are valgrind is reporting some errors
+	  which merit further investigation) BUGZID:3856
+
+2005-02-23 03:05  wlach
+
+	* uniconf/unimountgen.cc: carambola: unimountgen will now generate
+	  an assert if DEBUG=1 and it can not resolve a moniker
+	  BUGZID:10767
+
+2005-02-21 23:37  build
+
+	* ipstreams/t/wvtcp.t.cc: r4_1: removing wvtcp.t.cc, which andrew
+	  added after 4.1.0c #0 was built.
+
+2005-02-21 23:25  jklink
+
+	* include/wvatomicfile.h, streams/wvatomicfile.cc: BUGZID: 9829
+
+	  Carambola : new WvAtomicFile class to combat the everlasting
+	  "writing over symlink" problem.
+
+2005-02-21 22:53  pmccurdy
+
+	* include/wvstrutils.h, utils/strutils.cc, utils/t/strutils.t.cc:
+	  r4_1+ns3: Add another horrible function to strutils,
+	  depunctuate().  This removes trailing punctuation ('.', '?', or
+	  '!') from a string.  BUGZID:9879
+
+2005-02-21 22:42  mrwise
+
+	* include/wvlogrotator.h, streams/wvlogrotator.cc,
+	  streams/t/wvlogrotator.t.cc: carambola: fixed occasional bug with
+	  wvlogrotator unit test where it wasn't waiting for children of
+	  the logrotator to finish their work before checking the results.
+	  BUGZID:10661
+
+2005-02-21 22:10  sfllaw
+
+	* streams/wvmodem.cc, configure.ac: wvstreams_4_0: Don't have
+	  WvModem treat IOCTL failures as fatal.
+
+	  BUGZID: 10634
+
+2005-02-21 21:09  pzion
+
+	* crypto/tests/ssltest.cc, include/wvlinklist.h,
+	  include/wvsubprocqueue.h, include/wvsubprocqueuestream.h,
+	  include/wvsystem.h, ipstreams/t/wvtcp.t.cc,
+	  ipstreams/t/wvunixdgsocket.t.cc, streams/wvsubprocqueuestream.cc,
+	  streams/t/wvsubprocqueuestream.t.cc,
+	  uniconf/unitransactiongen.cc, uniconf/t/uniretrygen.t.cc,
+	  uniconf/t/unitransactiongen.t.cc, utils/wvsubprocqueue.cc,
+	  utils/wvsystem.cc, utils/t/wvsubprocqueue.t.cc,
+	  utils/t/wvsystem.t.cc: r4_1: reverted r4_1 branch to moment of
+	  4.1.0c#0 bounce
+
+2005-02-21 19:12  pzion
+
+	* ipstreams/: wvunixsocket.cc, t/wvunixsocket.t.cc: carambola:
+	  wvstreams: BUGZID:10714 WvUnixConn::WvUnixConn would block in
+	  connect() if the socket connection backlog was full; fixed, with
+	  unit test to prove it
+
+2005-02-21 17:07  hub
+
+	* uniconf/: uniretrygen.cc, t/uniretrygen.t.cc: wvstreams_4_0: fix
+	  UniRetryGen::get() to be consistent with exists(). BUGZID:9769
+
+2005-02-21 08:07  apenwarr
+
+	* include/wvlinklist.h, include/wvsubprocqueue.h,
+	  include/wvsubprocqueuestream.h, include/wvsystem.h,
+	  streams/wvsubprocqueuestream.cc,
+	  streams/t/wvsubprocqueuestream.t.cc, uniconf/t/uniretrygen.t.cc,
+	  utils/wvsubprocqueue.cc, utils/wvsystem.cc,
+	  utils/t/wvsubprocqueue.t.cc, utils/t/wvsystem.t.cc:
+	  r4_1+ns3: merged recent changes from r4_1_1.
+
+2005-02-21 06:18  apenwarr
+
+	* include/wvsubprocqueue.h, utils/wvsubprocqueue.cc:
+	  r4_1_1: merged recent changes from r4_1.  Yes, again.
+
+2005-02-21 05:04  apenwarr
+
+	* include/wvsubprocqueue.h, utils/wvsubprocqueue.cc:
+	  r4_1: hmm.  Fixed an autobuilder compile problem (missing
+	  assert.h) I introduced that looks like it ought to happen to
+	  everyone, but certainly doesn't happen to me.  Whatever.
+
+2005-02-21 02:58  apenwarr
+
+	* include/wvlinklist.h, include/wvsubprocqueue.h,
+	  include/wvsubprocqueuestream.h, include/wvsystem.h,
+	  streams/wvsubprocqueuestream.cc,
+	  streams/t/wvsubprocqueuestream.t.cc, uniconf/t/uniretrygen.t.cc,
+	  utils/wvsubprocqueue.cc, utils/wvsystem.cc,
+	  utils/t/wvsubprocqueue.t.cc, utils/t/wvsystem.t.cc:
+	  r4_1_1: merged recent changes from r4_1.
+
+2005-02-21 00:15  apenwarr
+
+	* include/wvlinklist.h, include/wvsubprocqueue.h,
+	  include/wvsubprocqueuestream.h, include/wvsystem.h,
+	  streams/wvsubprocqueuestream.cc,
+	  streams/t/wvsubprocqueuestream.t.cc, utils/wvsubprocqueue.cc,
+	  utils/wvsystem.cc, utils/t/wvsubprocqueue.t.cc,
+	  utils/t/wvsystem.t.cc:
+	  r4_1: BUGZID:10563: WvLinkList::Iter::xunlink() and unlink() now
+	  take an optional bool parameter "destroy", so you can remove from
+	  the list and force items not to be destroyed.  I thought this
+	  existed already, but apparently not.
+
+	  Added WvSystem, a safer alternative to system() that doesn't call
+	  the shell but is still almost as syntactically nice-looking (ie.
+	  the *real* reason people call system()).  Added WvSubProcQueue,
+	  which manages an ordered queue of WvSubProc objects, and
+	  WvSubProcQueueStream, which pushes the queue using WvStreams
+	  timer events.  Currently nothing uses these new classes except
+	  their unit tests, so they can't hurt anyone.	Next, I'll make it
+	  so that WvUserSvc et al use these classes for safety and to
+	  actually fix bug 10563.
+
+2005-02-18 22:34  pzion
+
+	* uniconf/t/uniretrygen.t.cc: r4_1: wvstreams unittest: backported
+	  fix for UniRetryGen unittest from carambola BUGZID:10663
+
+2005-02-17 20:52  mrwise
+
+	* crypto/tests/ssltest.cc, include/wvargs.h, include/wvhttppool.h,
+	  include/wvlogrotator.h, include/wvstrutils.h,
+	  ipstreams/t/wvunixdgsocket.t.cc, linuxstreams/tests/pamtest.cc,
+	  streams/wvistreamlist.cc, streams/wvlogrotator.cc,
+	  streams/wvpam.cc, streams/t/wvfdstream.t.cc,
+	  streams/t/wvlogrotator.t.cc, streams/tests/pamtest.cc,
+	  uniconf/uniconfkey.cc, uniconf/unisubtreegen.cc,
+	  uniconf/unitempgen.cc, uniconf/unitransactiongen.cc,
+	  uniconf/t/uniconfkey.t.cc, uniconf/t/uniconfroot.t.cc,
+	  uniconf/t/uniinigen.t.cc, uniconf/t/unitempgen.t.cc,
+	  uniconf/t/unitempgenvsdaemon.t.cc,
+	  uniconf/t/unitransactiongen.t.cc, uniconf/t/uniunwrapgen.t.cc,
+	  uniconf/tests/.cvsignore, urlget/wvhttpstream.cc,
+	  urlget/t/wvhttppool.t.cc, utils/strutils.cc, utils/wvargs.cc,
+	  utils/t/strutils.t.cc, utils/tests/wvargstest.cc: HEAD: Merged
+	  from carambola
+
+2005-02-17 18:51  mcote
+
+	* Doxyfile, Makefile, wvtestmain.cc, debian/control, debian/rules,
+	  include/iwvstream.h, include/unicallbackgen.h,
+	  include/wvfileutils.h, include/wvipfirewall.h,
+	  include/wvlinklist.h, include/wvstrutils.h,
+	  include/wvtest_filecountprefix.h, include/wvx509.h,
+	  ipstreams/wvhttp.cc, streams/fileutils.cc, streams/wvlog.cc,
+	  streams/wvpam.cc, streams/wvprotostream.cc,
+	  streams/wvstreamsdaemon.cc, streams/t/fileutils.t.cc,
+	  streams/t/wvdailyevent.t.cc, streams/t/wvfdstream.t.cc,
+	  uniconf/uniinigen.cc, uniconf/unipermgen.cc,
+	  uniconf/unireplicategen.cc, uniconf/uniretrygen.cc,
+	  uniconf/wvconfemu.cc, uniconf/t/unicallbackgen.t.cc,
+	  uniconf/t/uniclientgen.t.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/uniinigen.t.cc, uniconf/t/unipermgen.t.cc,
+	  uniconf/t/unireadonlygen.t.cc, uniconf/t/unireplicategen.t.cc,
+	  uniconf/t/uniretrygen.t.cc, uniconf/t/unitempgenvsdaemon.t.cc,
+	  uniconf/t/unitransactiongen.t.cc, uniconf/t/wvconfemu.t.cc,
+	  urlget/t/wvhttppool.t.cc, utils/strutils.cc, utils/wvdiriter.cc,
+	  utils/wvqdbmhash.cc, utils/wvtclstring.cc,
+	  utils/wvtest_filecountprefix.cc, utils/t/strutils.t.cc,
+	  utils/t/wvondiskhash.t.cc, utils/t/wvtclstring.t.cc: idb2:
+	  Painful merge from head.  Two unit tests relating to incremental
+	  backups are still failing, but I think everything else is
+	  working.
+
+2005-02-17 01:41  wlach
+
+	* configure.ac, debian/control: HEAD: WvStreams now depends on xplc
+	  0.3.11 (when linking against xplc dynamically outside the niti
+	  tree). Update debian file to reflect this.
+
+2005-02-16 01:18  mrwise
+
+	* uniconf/: unisubtreegen.cc, t/unitempgenvsdaemon.t.cc: carambola:
+	  fixed an assertion crash related to unisubtree gen creating slash
+	  trailed keys.  BUGZID:10567
+
+2005-02-15 22:41  jklink
+
+	* streams/t/wvlogrotator.t.cc: BUGZID: 10661
+
+	  Carambola : Commenting out a few failing tests in
+	  wvlogrotator.t.cc.  Bug 10661 assigned to mrwise.
+
+2005-02-15 19:39  mrwise
+
+	* crypto/tests/ssltest.cc, ipstreams/t/wvtcp.t.cc,
+	  ipstreams/t/wvunixdgsocket.t.cc, uniconf/unitransactiongen.cc,
+	  uniconf/t/unitransactiongen.t.cc, urlget/t/wvhttppool.t.cc:
+	  carambola: Merged from r4_1+ns3
+
+2005-02-15 06:30  wlach
+
+	* debian/: control, rules: HEAD: Don't include FAM support in
+	  Debian packages of WvStreams, since it's (1) deprecated and (2)
+	  not even available in Ubuntu Hoary.
+
+2005-02-15 03:01  mrwise
+
+	* crypto/tests/ssltest.cc, ipstreams/t/wvtcp.t.cc,
+	  ipstreams/t/wvunixdgsocket.t.cc, uniconf/unitransactiongen.cc,
+	  uniconf/t/unitransactiongen.t.cc: r4_1+ns3: Merged from r4_1_1
+
+2005-02-15 00:57  mrwise
+
+	* crypto/tests/ssltest.cc, ipstreams/t/wvtcp.t.cc,
+	  ipstreams/t/wvunixdgsocket.t.cc, uniconf/unitransactiongen.cc,
+	  uniconf/t/unitransactiongen.t.cc: r4_1_1: Merged from r4_1
+
+2005-02-14 22:33  mrwise
+
+	* uniconf/: unitransactiongen.cc, t/unitransactiongen.t.cc: r4_1:
+	  fixed memory leak in UniTransactionGen by removing the use of a
+	  union since debugging the memory leak with the union was proving
+	  excruciating.  BUGZID:10134
+
+2005-02-12 01:42  mrwise
+
+	* uniconf/: unitransactiongen.cc, t/unitransactiongen.t.cc: HEAD:
+	  crap, checked my changes into the wrong branch.  BUGZID:10134
+
+2005-02-12 01:34  mrwise
+
+	* uniconf/: unitransactiongen.cc, t/unitransactiongen.t.cc: HEAD:
+	  got rid of the use of a "union" in unitransactiongen because
+	  debugging the resulting memory errors was too freaking insane.
+	  (unit tests all pass) BUGZID:10134
+
+2005-02-11 19:46  sfllaw
+
+	* uniconf/uniconfkey.cc: carambola: Undo revert of UniConfKey
+	  slash-collapsing behaviour, now that 10589 is fixed.	This should
+	  also fix the unit test failures in 10632.
+
+	  BUGZID: 10589
+
+2005-02-11 19:45  sfllaw
+
+	* uniconf/t/unitransactiongen.t.cc: carambola: UniTransactionGen's
+	  UnitTest was broken by trailing slashes, not the generator
+	  itself.
+
+	  BUGZID: 10589
+
+2005-02-11 19:33  mrwise
+
+	* include/wvlogrotator.h, streams/wvlogrotator.cc,
+	  streams/t/wvlogrotator.t.cc: carambola: changed apache to rotate
+	  it's logs on a daily basis, expiring old logs at a default of 7
+	  days, also added configuration through the www page in webconfig
+	  to change the number of days before expiring logs.  Created
+	  general WvLogRotator class from WvLogFile and added basic unit
+	  tests for the new class.  BUGZID:10367
+
+2005-02-10 22:29  andrew
+
+	* streams/: wvistreamlist.cc, t/wvfdstream.t.cc: carambola:
+	  Checking in what is almost beyond any doubt the correct fix for
+	  BUGZID:10147. Also re-enabling AuthRateLimiting because of it.
+
+2005-02-10 21:24  sfllaw
+
+	* uniconf/uniconfkey.cc: carambola: Revert change to UniConfKey
+	  that gives trailing slashes a special meaning, until I can figure
+	  out why it break UniTransactionGen.
+
+	  BUGZID: 10589
+
+2005-02-10 21:22  sfllaw
+
+	* uniconf/t/unitempgenvsdaemon.t.cc: carambola: Commented out test
+	  that triggers the cache:subtree:unix bug.
+
+	  BUGZID: 10567
+
+2005-02-10 20:57  sfllaw
+
+	* utils/t/strutils.t.cc, uniconf/uniconfkey.cc,
+	  uniconf/unitempgen.cc, uniconf/t/uniconfkey.t.cc,
+	  uniconf/t/uniconfroot.t.cc, uniconf/t/uniinigen.t.cc,
+	  uniconf/t/unimountgen.t.cc, uniconf/t/unitempgen.t.cc,
+	  uniconf/t/uniunwrapgen.t.cc, uniconf/tests/.cvsignore,
+	  urlget/wvhttpstream.cc, utils/strutils.cc, include/wvhttppool.h,
+	  include/wvstrutils.h, linuxstreams/tests/pamtest.cc,
+	  streams/wvpam.cc, streams/tests/pamtest.cc: carambola: Merged
+	  changes from wvstreams_4_0.
+
+2005-02-10 20:57  sfllaw
+
+	* utils/t/strcrypt.t.cc, utils/t/strutils.t.cc,
+	  urlget/wvhttpstream.cc, urlget/t/wvhttppool.t.cc,
+	  utils/strutils.cc, utils/wvstring.cc,
+	  linuxstreams/wvipfirewall.cc, redhat/wvstreams.spec,
+	  streams/wvistreamlist.cc, streams/wvlog.cc, streams/wvlogfile.cc,
+	  streams/wvpam.cc, streams/t/wvfdstream.t.cc,
+	  uniconf/unicachegen.cc, uniconf/uniclientgen.cc,
+	  uniconf/unifiltergen.cc, uniconf/unihashtree.cc,
+	  uniconf/uniinigen.cc, uniconf/wvconfemu.cc,
+	  uniconf/daemon/uniconfd.cc, uniconf/daemon/uniconfpamconn.cc,
+	  uniconf/t/unicachegen.t.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/uniinigen.t.cc, uniconf/t/unipermgen.t.cc,
+	  uniconf/t/unireadonlygen.t.cc, uniconf/t/uniretrygen.t.cc,
+	  uniconf/t/unitempgenvsdaemon.t.cc, uniconf/tests/uni.cc,
+	  debian/libuniconf4.0.install, debian/rules,
+	  debian/uniconfd.default, debian/uniconfd.init,
+	  debian/uniconfd.install, include/uniclientgen.h,
+	  include/uniconfgen.h, include/uniconfpamconn.h,
+	  include/uniconftree.h, include/unidefgen.h,
+	  include/unifiltergen.h, include/unihashtree.h,
+	  include/unilistgen.h, include/unimountgen.h,
+	  include/uninullgen.h, include/unipermgen.h,
+	  include/unireadonlygen.h, include/unireplicategen.h,
+	  include/uniretrygen.h, include/unisecuregen.h,
+	  include/unislowgen.h, include/unitempgen.h,
+	  include/uniunwrapgen.h, include/uniwvconfgen.h,
+	  include/wvipfirewall.h, include/wvistreamlist.h, include/wvpam.h,
+	  include/wvslp.h, include/wvstrutils.h, include/wvx509.h,
+	  ipstreams/wvresolver.cc, ipstreams/wvslp.cc, Makefile,
+	  suppressions.wv, debian/changelog, debian/dirs: wvstreams_4_0:
+	  Merged changes from r4_1 and r4_1+ns3.
+
+2005-02-10 18:00  pzion
+
+	* include/unicallbackgen.h, uniconf/t/unicallbackgen.t.cc: HEAD:
+	  added set callbacks to UniCallbackGen
+
+2005-02-10 05:45  apenwarr
+
+	* crypto/wvsslstream.cc: wvstreams-win32: BUGZID:10560: extremely
+	  suspicious fix to WvSSLStream to make emakela's weird "win32
+	  error #998" go away.	Don't SSL_read() more than once in a row
+	  without doing select() first.  This causes WvSSLStream::uread()
+	  to sometimes return less data than requested, but that's harmless
+	  since it could have happened before anyway.  Unfortunately, I
+	  don't know *why* this causes error #998, but I probably don't
+	  want to go digging around in openssl code to find out.
+
+2005-02-10 04:45  apenwarr
+
+	* crypto/wvsslstream.cc, include/wverror.h, utils/wverror.cc:
+	  wvstreams-win32: BUGZID:10560: added a new
+	  WvErrorBase::strerror(), which is better than the win32 stupid
+	  strerror() because it can map winsock errors and, even if that
+	  doesn't work, includes the error code number in "Unknown error"
+	  messages.  Changed WvSSLStream to use this and to mark errors
+	  caused by SSL_read() as such.  This correctly tags the weird
+	  "error 998" from bug 10560 as one from SSL_read().
+
+2005-02-10 02:56  apenwarr
+
+	* crypto/tests/ssltest.cc:
+	  r4_1: ssltest.cc had been changed to stupidly create two
+	  simultaneous connections and not terminate correctly.  Crazy.
+	  Change it back.
+
+2005-02-10 02:33  apenwarr
+
+	* utils/wverror.cc: wvstreams-win32: BUGZID:10560: apparently
+	  strerror() doesn't know about all possible win32 error codes.  Ha
+	  ha.  Anyway, if it returns "Unknown error", WvError will now
+	  convert it to "Unknown win32 error #xxx" (where xxx is the error
+	  number).
+
+2005-02-10 01:34  pzion
+
+	* uniconf/t/unicallbackgen.t.cc: HEAD: added UniCallbackGen
+
+2005-02-09 23:08  hub
+
+	* uniconf/: wvconfemu.cc, t/wvconfemu.t.cc: Fix crasher in iterator
+	  for WvConfEmu. Bonus: unit test for that case. BUGZID:9664
+
+2005-02-09 20:58  ppatters
+
+	* include/wvargs.h, utils/wvargs.cc: carambola: Add
+	  WvArgs::remove_all_options()
+
+2005-02-09 00:53  pphaneuf
+
+	* wvtestmain.cc, include/wvx509.h, streams/t/wvfdstream.t.cc,
+	  uniconf/t/uniclientgen.t.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/uniinigen.t.cc, uniconf/t/unireadonlygen.t.cc,
+	  uniconf/t/unireplicategen.t.cc, uniconf/t/uniretrygen.t.cc,
+	  uniconf/t/unitransactiongen.t.cc, urlget/t/wvhttppool.t.cc,
+	  utils/strutils.cc, utils/t/strutils.t.cc: Merged from r4_2.
+	  BUGZID:10511
+
+2005-02-09 00:03  jdeboer
+
+	* utils/wvdiriter.cc: Many things happened since the last time:
+
+	  - idbd is now linked against rdynamic - idbd will write a verbose
+	  log to /tmp/disk/idbd.log for debugging purposes.  - idbd will
+	  actually zap the tape when finished a backup -
+	  WvIdbIndex::update() is used in more places now.  - WvIndexFile
+	  now has an update function that will modify the index in place -
+	  During a incremental backup, the index is not copied from the
+	  parent until incremental_magic(), this saves us some time, and
+	  will make things easier in the future. It also sidesteps a lot of
+	  the remaining 'modifying the index while iterating bugs' -
+	  WvTape::get_tapename() is safer now - The backup and indexfile
+	  unit tests are improved. New tests were added.  -
+	  backup/tests/indextest now has a --verboselist mode - WvIndexFile
+	  now checks and enforces a 'no merging with active iterator' rule
+	  Many unit tests were cleaned up to make sure the the iterators
+	  were destoried before the index file.  - WvIndexFile::count() no
+	  longer requires a merge() call - The temporary merge file was
+	  moved from /tmp/ to /var/tmp - WvIndexFile::Iter will now scan
+	  for the next non-deleted entry instead of dieing.  - Style fix
+	  ups (There are more to be done, I know, I'm sorry) - And of
+	  course, a small WvStreams change: WvDirIter will no longer return
+	  /path//file when asked to iterator /path/
+
+	  All this in pursuit of a passable PDR test: BUGZID:10486
+
+2005-02-08 21:37  wlach
+
+	* include/wvargs.h: carambola: Forgot to commit the other piece of
+	  the puzzle for WvArgs additions.  BUGZID:10521
+
+2005-02-08 21:37  wlach
+
+	* utils/: wvargs.cc, tests/wvargstest.cc: carambola: Add ability to
+	  add optional and required _arguments_ (not options) to WvArgs,
+	  which will show up in --usage and --help. Add a "wvargstest"
+	  program to demonstrate use of WvArgs.  BUGZID:10521
+
+2005-02-08 20:01  pphaneuf
+
+	* uniconf/t/uniinigen.t.cc: Make uniinigen.t.cc clean up after
+	  itself.
+
+2005-02-08 00:49  pphaneuf
+
+	* wvtestmain.cc, include/wvx509.h, streams/t/wvfdstream.t.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/uniinigen.t.cc,
+	  uniconf/t/unireadonlygen.t.cc, uniconf/t/uniretrygen.t.cc,
+	  uniconf/t/unitransactiongen.t.cc, urlget/t/wvhttppool.t.cc,
+	  utils/strutils.cc, utils/t/strutils.t.cc: r4_2: merged from
+	  r4_1+ns3.  BUGZID:10477
+
+2005-02-07 20:37  pzion
+
+	* include/wvmagicloopback.h: HEAD: wvstreams: reverted accidental
+	  checkin
+
+2005-02-07 20:36  pzion
+
+	* include/: iwvstream.h, wvmagicloopback.h: HEAD: wvstreams: added
+	  warning that set(read|write|except)callback don't work as
+	  expected
+
+2005-02-07 20:24  ppatters
+
+	* ipstreams/t/wvunixdgsocket.t.cc: r4_1: Use mkstemp instead of
+	  mktemp to shut up the linker (I don't CARE if it's less secure...
+	  but the linker does... grumble)... BUGZID:10497
+
+2005-02-07 20:05  pzion
+
+	* utils/wvtclstring.cc: HEAD: wvsreams: fixed a tricky loop logic
+	  problem in wvtcl_encode
+
+2005-02-07 19:54  pzion
+
+	* utils/: wvtclstring.cc, t/wvtclstring.t.cc: HEAD: wvstreams:
+	  fixed allocation size miscalculations in wvtclstring.cc
+
+2005-02-07 18:41  ppatters
+
+	* ipstreams/t/wvunixdgsocket.t.cc: r4_1: Fix the UnixDGSocket unit
+	  test to use random filename to stop random failures of the
+	  autobuilder.
+
+2005-02-05 03:09  pmccurdy
+
+	* urlget/t/wvhttppool.t.cc: r4_1+ns3: The WvHttpPool pipelining
+	  unit test was fixed by the merge from r4_1, so now we can safely
+	  enable it again.  BUGZID:10279
+
+2005-02-04 04:01  andrew
+
+	* ipstreams/t/wvtcp.t.cc: r4_1: Checking in wvtcp.t.cc unit test,
+	  which breaks with the fdstream patch, and works without it.
+	  BUGZID:10461
+
+2005-02-04 03:15  apenwarr
+
+	* streams/wvfdstream.cc, streams/t/wvfdstream.t.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/uniretrygen.t.cc,
+	  urlget/t/wvhttppool.t.cc:
+	  r4_1+ns3: BUGZID:10357: merged recent changes from r4_1_1,
+	  thereby making SSL work again in ns3 (the brokenness was caused
+	  by the same fdstream change that broke dyndns).
+
+2005-02-04 03:07  apenwarr
+
+	* streams/wvfdstream.cc, streams/t/wvfdstream.t.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/uniretrygen.t.cc,
+	  urlget/t/wvhttppool.t.cc: r4_1_1: merged recent changes from
+	  r4_1.
+
+2005-02-04 03:06  jdeboer
+
+	* utils/t/wvondiskhash.t.cc: HEAD: added debugging info to
+	  wvondiskhash.t.cc to check the sporatic failures on bounce.
+
+2005-02-04 02:52  pmccurdy
+
+	* include/wvx509.h: r4_1+ns3: NS3 was totally broken in SSL mode,
+	  and nobody really noticed because the unit tests weren't checking
+	  it.  Now the UserSync test will try to connect in SSL mode.  To
+	  do this, the WvRcmdListener now takes a reference to a WvX509Mgr
+	  pointer, instead of grabbing a copy from its WvWeaver pointer,
+	  but that's a good thing anyway.  BUGZID:10357
+
+2005-02-03 22:20  andrew
+
+	* streams/t/wvfdstream.t.cc: r4_1: Comment out unit test for
+	  wvfdstream thing. BUGZID:10463
+
+2005-02-03 22:00  andrew
+
+	* streams/wvfdstream.cc: r4_1: Reverting patch to wvfdstream.
+	  BUGZID:10461
+
+2005-02-03 21:26  sfllaw
+
+	* urlget/t/wvhttppool.t.cc: r4_1: Use www.google.com as a test for
+	  a webserver, but don't run those tests if it can't resolve out
+	  into the real world.
+
+	  BUGZID: 10279
+
+2005-02-03 02:57  wlach
+
+	* uniconf/t/: uniclientgen.t.cc, unireplicategen.t.cc: r4_2:
+	  unireplicategen unit test should now be completely
+	  multiple-instance safe. remove an unnecessary unlink from
+	  uniclientgen unit test.  BUGZID:10441
+
+2005-02-02 22:45  pphaneuf
+
+	* include/wvtest_filecountprefix.h, uniconf/t/uniclientgen.t.cc,
+	  utils/wvqdbmhash.cc, utils/wvtest_filecountprefix.cc,
+	  utils/t/wvondiskhash.t.cc: Merged WvStreams from r4_2. Reenabled
+	  the "deltas" unit test in uniclientgen.t.cc.	BUGZID:10337
+
+2005-02-02 21:28  wlach
+
+	* uniconf/t/uniclientgen.t.cc: r4_2: uniclientgen test no longer
+	  uses a hardcoded pipename, and cleans up its child more robustly
+	  (with thanks to pphaneuf for the latter) BUGZID:10337
+
+2005-02-01 22:38  sfllaw
+
+	* uniconf/t/uniretrygen.t.cc: r4_1: Remove hardcoded filenames from
+	  UniRetryGen's unit test.
+
+	  BUGZID: 10341
+
+2005-02-01 21:43  hub
+
+	* Doxyfile: fix Doxygen configuration to have UniConf class
+	  documented.
+
+2005-02-01 21:37  sfllaw
+
+	* uniconf/t/uniconfd.t.cc: r4_1: Don't rely on hardcoded filenames
+	  for the Uniconfd unit test.
+
+	  BUGZID: 10341
+
+2005-02-01 19:39  pmccurdy
+
+	* uniconf/t/unitempgenvsdaemon.t.cc: r4_1+ns3: Backport wlach's
+	  unitempgenvsdaemon.t.cc multi-process fixes from r4_2.
+
+2005-02-01 19:37  pmccurdy
+
+	* uniconf/t/uniretrygen.t.cc: r4_1+ns3: Disable
+	  non-multi-process-safe UniRetryGen test.  BUGZID:10341
+
+2005-02-01 04:50  pmccurdy
+
+	* uniconf/t/: uniinigen.t.cc, unireadonlygen.t.cc: r4_1+ns3: Make
+	  the UniIniGen unit test use mkstemp instead of a hardcoded
+	  tmp.ini file.  This makes it safe for multiple runs in the same
+	  directory; this didn't cause problems on the autobuilder, but
+	  makes it easier to track down the tests that do cause grief.
+
+2005-02-01 04:42  pmccurdy
+
+	* uniconf/t/uniconfd.t.cc: head: Clean up slightly dubious use of
+	  mkstemp()/WvFile, and fix a >80 char line.
+
+2005-02-01 00:43  mrwise
+
+	* include/wvlinklist.h: HEAD: Avery says the operator= should be a
+	  private member to enforce passing by reference instead of value
+	  when compiling, not linking and I agree.
+
+2005-02-01 00:29  apenwarr
+
+	* streams/wvfdstream.cc, streams/t/wvfdstream.t.cc,
+	  urlget/t/wvhttppool.t.cc:
+	  r4_1+ns3: merged recent changes from r4_1.
+
+2005-02-01 00:24  apenwarr
+
+	* streams/wvfdstream.cc, streams/t/wvfdstream.t.cc,
+	  urlget/t/wvhttppool.t.cc:
+	  r4_1_1: merged recent changes from r4_1.
+
+2005-01-31 21:32  jdeboer
+
+	* utils/wvqdbmhash.cc: r4_2: Fixed wvqdbmhash.cc to compile in
+	  stable.
+
+2005-01-31 20:56  pmccurdy
+
+	* uniconf/t/uniconfd.t.cc: r4_1+ns3: Disable
+	  non-multiple-instance-safe UniConfDaemon unit tests.
+	  BUGZID:10341
+
+2005-01-31 19:50  pphaneuf
+
+	* uniconf/t/uniclientgen.t.cc: Commented out the "deltas" unit test
+	  in uniclientgen.t.cc, as it caused repeated failures of the
+	  autobuilder.	BUGZID:10337
+
+2005-01-31 17:11  jdeboer
+
+	* include/wvtest_filecountprefix.h, utils/wvqdbmhash.cc,
+	  utils/wvtest_filecountprefix.cc, utils/t/wvondiskhash.t.cc: r4_2:
+	  Pointed the temporary qdbm hashes at /var/tmp instead of /tmp.
+	  Also gave them a more explicit name
+	  /var/tmp/qdbm-annoymous-XXXXXX instead of the /tmp/fileXXXX. (Now
+	  people will know who to blame.) Replaced tmpnam() calls with
+	  mkstemp() calls.  BUGZID:10211
+
+2005-01-28 16:41  sfllaw
+
+	* urlget/t/wvhttppool.t.cc: r4_1: WvHttpPool test no longer relies
+	  on Google to be up.  Also, the pipelining test now cycles through
+	  a bunch of ports until it can find a free one.
+
+	  I'm not sure what to do about the race-conditions where the
+	  number of connexions doesn't match what we expect them to be.
+
+	  BUGZID: 10279
+
+2005-01-28 09:13  pphaneuf
+
+	* streams/fileutils.cc, uniconf/uniinigen.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/uniinigen.t.cc,
+	  uniconf/t/unitempgenvsdaemon.t.cc: Merged from r4_2.
+	  BUGZID:10302
+
+2005-01-28 03:33  wlach
+
+	* uniconf/t/: uniconfd.t.cc, unitempgenvsdaemon.t.cc: r4_2: Use
+	  mkstemp in unitempgenvsdaemon.t.cc, too. And unlink files in
+	  uniconfd.t.
+
+2005-01-28 03:30  pzion
+
+	* utils/wvtclstring.cc: HEAD: wvstreams: sped up wvtclstring decode
+	  routines by a factor of nearly three by minimizing temporary
+	  string allocations
+
+2005-01-28 02:54  wlach
+
+	* uniconf/t/uniconfd.t.cc: r4_2: Cleanup uniconfd.t to not use
+	  hardcoded tempfiles/pipenames anywhere.  Also cleanup coding
+	  style, and make it run faster by actually waiting for things to
+	  startup intelligently instead of mindlessly sleep(1)ing.
+	  BUGZID:10291
+
+2005-01-27 23:34  pmccurdy
+
+	* urlget/t/wvhttppool.t.cc: r4_1+ns3: I'm sick of the WvHttpPool
+	  unit test killing the autobuilder.  Disabling the troublesome
+	  pipelining test.  BUGZID:10279
+
+2005-01-27 22:37  pzion
+
+	* utils/wvtclstring.cc: HEAD: wvtclstring: join with splitchars[0]
+	  in wvtcl_encode, not just a space
+
+2005-01-27 19:12  pzion
+
+	* Makefile, streams/t/wvdailyevent.t.cc, utils/wvtclstring.cc:
+	  HEAD: doubled speed of wvtcl_encode() by avoiding all but one
+	  WvString allocation; make test was not using local libraries,
+	  fixed; wvdailyevent unit test was trying to pull in STL crap,
+	  fixed
+
+2005-01-27 00:40  dcoombs
+
+	* ipstreams/wvhttp.cc: HEAD: Fixing BUGZID:10215.
+	  WvStreamClone::isok() never actually checks cloned->isok()
+	  anymore, relying on closecallbacks to tell us when we're done.
+	  But there was a couple of places in WvHTTPStream where we were
+	  setting the 'cloned' pointer directly instead of calling
+	  setclone(), which is what sets the closecallback in the first
+	  place.
+
+	  Short version of the story: softupdate works again now.
+
+2005-01-25 22:17  mrwise
+
+	* include/wvfileutils.h, include/wvstrutils.h,
+	  streams/fileutils.cc, streams/wvlog.cc, streams/wvpam.cc,
+	  streams/wvprotostream.cc, streams/wvstreamsdaemon.cc,
+	  streams/t/fileutils.t.cc, uniconf/unipermgen.cc,
+	  uniconf/unireplicategen.cc, uniconf/uniretrygen.cc,
+	  uniconf/t/unipermgen.t.cc, uniconf/t/uniretrygen.t.cc,
+	  utils/strutils.cc, utils/wvdiriter.cc, utils/wvqdbmhash.cc,
+	  utils/t/strutils.t.cc, utils/t/wvondiskhash.t.cc: HEAD: merged
+	  from r4_2
+
+2005-01-25 21:53  mrwise
+
+	* uniconf/: uniinigen.cc, t/uniinigen.t.cc: r4_2: fixed the inigen
+	  so that it properly creates its temp files with no permissions
+	  and gives the file 'create_mode' default 0666 permissions when it
+	  copies to the ini file.  Also added a unit test for this.
+	  BUGZID:10064
+
+2005-01-25 19:40  andrew
+
+	* streams/fileutils.cc: r4_2: Fixing wvstreams wvchmod() call so
+	  that it will work for non-root users if the target file/dir has 0
+	  permissions. BUGZID:10194
+
+2005-01-25 16:04  mrwise
+
+	* include/wvipfirewall.h: HEAD:Converted WvFirewallSvc to configure
+	  WvIPFirewall through uniconf, removing all other references to
+	  WvIPFirewall.  Services now configure their firewall settings
+	  through their appropriate /svc/(svcname)/firewall section.  When
+	  any of these /firewall sections change the service will blow
+	  itself away and reconfigure.	To read how to configure firewall
+	  settings, read WvFirewallsvc on the wikiMuch like the old
+	  WvIPFirewall, but better!
+
+	  BUGZID:10025
+
+2005-01-24 22:43  andrew
+
+	* streams/: wvfdstream.cc, t/wvfdstream.t.cc: r4_1: Fix to
+	  WvFDStream to make it so that we can undo_force_select() on it.
+	  BUGZID:10147
+
+2005-01-24 02:27  apenwarr
+
+	* Win32WvStreams/: libuniconf/libuniconf.vcproj,
+	  libwvstreams/libwvstreams.vcproj, libwvutils/libwvutils.vcproj:
+	  wvstreams-win32: BUGZID:10059: rename ssleay32.dll and
+	  libeay32.dll to ssleayxx.dll and libeayxx.dll, respectively, to
+	  avoid conflicts with other people's pre-installed libraries in
+	  \\windows\\system.  Sigh.
+
+2005-01-23 00:47  pmccurdy
+
+	* utils/: strutils.cc, t/strutils.t.cc: r4_1+ns3: Make secondstoa()
+	  return "0 seconds" instead of "0 second".  Fix some trivial
+	  signedness issues.
+
+2005-01-22 15:57  sfllaw
+
+	* streams/t/wvfdstream.t.cc: r4_1+ns3: ACTUALLY merge from r4_1_1.
+	  This was done by hand because I made the horrible error of
+	  merging into HEAD, and then moving the lastmerge tags.  *sigh*
+	  That'll teach me good.
+
+2005-01-22 00:14  sfllaw
+
+	* streams/t/wvfdstream.t.cc, uniconf/uniinigen.cc: HEAD: Revert
+	  merge from r4_1_1 that was intended for r4_1+ns3.
+
+2005-01-21 23:14  jdeboer
+
+	* utils/: wvqdbmhash.cc, t/wvondiskhash.t.cc: r4_2: Modified the
+	  WvQdbmHash::opendb() method to make all annoymous hashes
+	  nonpersistant. This will cause the database to clean up after
+	  itself on close.  However, it is should be noted that annoymous
+	  databases are dangerous as they are created in the relatively
+	  small /tmp on a Weaver.
+
+	  Also wrote unit tests for WvQdbmHash and WvTapeBackup to look for
+	  leftover annoymous databases.
+
+	  BUGZID:10144
+
+2005-01-21 21:09  wlach
+
+	* uniconf/t/unipermgen.t.cc: r4_2: Add some stuff to the unipermgen
+	  unit tests to make sure group permission is granted correctly.
+	  BUGZID:9290
+
+2005-01-21 19:28  ppatters
+
+	* streams/wvlog.cc, streams/wvprotostream.cc,
+	  streams/wvstreamsdaemon.cc, uniconf/unireplicategen.cc,
+	  utils/wvdiriter.cc: r4_2: Change a bunch of parts of WvStreams to
+	  use isempty() instead of count().
+
+2005-01-21 06:31  sfllaw
+
+	* streams/t/wvfdstream.t.cc: r4_1+ns3: Merging from r4_1_1.  This
+	  includes changes from r4_1 and eit40rollback.
+
+2005-01-21 06:20  wlach
+
+	* streams/wvpam.cc, uniconf/unipermgen.cc: r4_2: La, la, la. It
+	  turns out that reading the uniconf tree as a privileged user
+	  (root) was broken in no less than three ways: (1) wvpam didn't
+	  set the username after authentication (2) perm.ini set ownership
+	  permissions by owner-{read,write,execute} instead of
+	  user-{read,write,execute} (unipermgen only understands the
+	  latter) (3) unipermgen didn't get the default generator fix for
+	  groups that I gave users way back in December. End result:
+	  mangling the uniconf tree via the uniconf daemon in r4_2 is now
+	  aweome, r4_1 still works ok (by coincidence, but hey).
+	  BUGZID:9290
+
+2005-01-18 19:56  ppatters
+
+	* utils/strutils.cc: r4_2: beforestr() and afterstr() no longer
+	  cause segfaults when passed WvString::null
+
+2005-01-18 01:51  mrwise
+
+	* include/wvipfirewall.h: HEAD: changed WvIPFirewallSvc to
+	  configure itself based on the /tmp/firewall section in UniConf,
+	  right now WvIPFirewallSvc acts like any other service in this
+	  respect, and doesn't update unless Weaver decides to call
+	  set_firwall on the services.. next to be done is to tell Weaver
+	  to mind it's own business and let this service stand on its own
+	  feet.  Power to the Services! BUGZID:10025
+
+2005-01-18 01:27  andrew
+
+	* streams/t/wvfdstream.t.cc: r4_1: Adding commented out broken
+	  stuff to wvfdstream.t.cc so someone else can try their hand at
+	  fixing it. BUGZID:10147
+
+2005-01-15 22:51  pmccurdy
+
+	* uniconf/t/uniretrygen.t.cc: r4_1+ns3: Change some WVPASS lines to
+	  WVPASSEQ in the UniRetryGen unit tests, to try and get clues
+	  about why it very sporadically fails.
+
+2005-01-15 22:47  pmccurdy
+
+	* uniconf/t/unitransactiongen.t.cc: r4_1+ns3: Commit a
+	  commented-out failing unit test for UniTransactionGen (small
+	  memory leak).  BUGZID:10134
+
+2005-01-14 18:59  mcote
+
+	* uniconf/t/uniretrygen.t.cc: head: Added a unit test for
+	  UniRetryGen to test immediate reconnections.
+
+2005-01-14 16:32  pzion
+
+	* .cvsignore, Makefile, config.guess, config.mk.in, config.sub,
+	  configure.ac, suppressions.wv, vars.mk, wvrules.mk,
+	  wvtestmain.cc, Docs/sgmlmanual/egfiles/Makefile,
+	  Win32WvStreams/libuniconf/libuniconf.vcproj,
+	  Win32WvStreams/libwvstreams/libwvstreams.vcproj,
+	  Win32WvStreams/libwvutils/libwvutils.vcproj,
+	  crypto/wvdiffiehellman.cc, crypto/wvsslstream.cc,
+	  crypto/wvtripledes.cc, debian/changelog, debian/compat,
+	  debian/control, debian/copyright, debian/dirs,
+	  debian/libuniconf4.0-install, debian/libuniconf4.0.install,
+	  debian/rules, debian/uniconf-tools.install,
+	  debian/uniconf-tools.manpages, debian/uniconfd.default,
+	  debian/uniconfd.examples, debian/uniconfd.init,
+	  debian/uniconfd.install, debian/uniconfd.manpages,
+	  debian/uniconfd.postinst, debian/uniconfd.postrm,
+	  debian/uniconfd.prerm, include/if_arp.h, include/unicachegen.h,
+	  include/uniclientgen.h, include/uniconf.h,
+	  include/uniconfdaemon.h, include/uniconfgen.h,
+	  include/uniconfpamconn.h, include/uniconftree.h,
+	  include/unidefgen.h, include/unifiltergen.h,
+	  include/unihashtree.h, include/unilistgen.h,
+	  include/unimountgen.h, include/uninullgen.h,
+	  include/unipermgen.h, include/unireadonlygen.h,
+	  include/unireplicategen.h, include/uniretrygen.h,
+	  include/unisecuregen.h, include/unislowgen.h,
+	  include/unisubtreegen.h, include/unitempgen.h,
+	  include/unitransactiongen.h, include/uniunwrapgen.h,
+	  include/uniwvconfgen.h, include/wvaddr.h, include/wvconfemu.h,
+	  include/wvcont.h, include/wvcrash.h, include/wvdailyevent.h,
+	  include/wvhttppool.h, include/wvipaliaser.h,
+	  include/wvipfirewall.h, include/wvistreamlist.h, include/wvpam.h,
+	  include/wvqtstreamclone.h, include/wvserialize.h,
+	  include/wvslp.h, include/wvstrutils.h, include/wvtcp.h,
+	  include/wvtest.h, include/wvunixdgsocket.h, ipstreams/wvaddr.cc,
+	  ipstreams/wvresolver.cc, ipstreams/wvslp.cc, ipstreams/wvtcp.cc,
+	  ipstreams/wvunixdgsocket.cc, ipstreams/wvunixsocket.cc,
+	  ipstreams/t/.cvsignore, ipstreams/t/wvunixdgsocket.t.cc,
+	  ipstreams/tests/udglistentest.cc, ipstreams/tests/unixdgtest.cc,
+	  ipstreams/tests/vars.mk, linuxstreams/wvinterface.cc,
+	  linuxstreams/wvipaliaser.cc, linuxstreams/wvipfirewall.cc,
+	  linuxstreams/wviproute.cc, linuxstreams/wvpam.cc,
+	  linuxstreams/wvtundev.cc, linuxstreams/tests/pamtest.cc,
+	  oggspeex/tests/oggspeextest.cc, pkgconfig/.cvsignore,
+	  pkgconfig/liboggspeex.pc.in, pkgconfig/liboggvorbis.pc.in,
+	  pkgconfig/libuniconf.pc.in, pkgconfig/libwvbase.pc.in,
+	  pkgconfig/libwvfft.pc.in, pkgconfig/libwvqt.pc.in,
+	  pkgconfig/libwvstreams.pc.in, pkgconfig/libwvutils.pc.in,
+	  pkgconfig/wvxplc.pc.in, qt/wvqtstreamclone.cc,
+	  redhat/libwvstreams.spec, redhat/uniconfd.init,
+	  redhat/wvstreams.spec, streams/wvdailyevent.cc,
+	  streams/wvistreamlist.cc, streams/wvlockfile.cc,
+	  streams/wvlog.cc, streams/wvlogfile.cc, streams/wvmodem.cc,
+	  streams/wvpam.cc, streams/wvpipe.cc, streams/t/wvdailyevent.t.cc,
+	  streams/t/wvencoderstream.t.cc, streams/t/wvfdstream.t.cc,
+	  streams/t/wvmagicloopback.t.cc, streams/tests/dailyeventtest.cc,
+	  uniconf/uniautogen.cc, uniconf/unicachegen.cc,
+	  uniconf/uniclientconn.cc, uniconf/uniclientgen.cc,
+	  uniconf/uniconf.cc, uniconf/uniconfkey.cc,
+	  uniconf/unifiltergen.cc, uniconf/unihashtree.cc,
+	  uniconf/uniinigen.cc, uniconf/unimountgen.cc,
+	  uniconf/uniretrygen.cc, uniconf/unisecuregen.cc,
+	  uniconf/unisubtreegen.cc, uniconf/unitempgen.cc,
+	  uniconf/unitransactiongen.cc, uniconf/wvconfemu.cc,
+	  uniconf/daemon/.cvsignore, uniconf/daemon/rules.mk,
+	  uniconf/daemon/sample.ini, uniconf/daemon/uniconf.conf,
+	  uniconf/daemon/uniconf.ini, uniconf/daemon/uniconfd.8.in,
+	  uniconf/daemon/uniconfd.cc, uniconf/daemon/uniconfd.ini.in,
+	  uniconf/daemon/uniconfdaemonconn.cc,
+	  uniconf/daemon/uniconfpamconn.cc, uniconf/t/unicachegen.t.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/uniconfroot.t.cc,
+	  uniconf/t/unipermgen.t.cc, uniconf/t/uniretrygen.t.cc,
+	  uniconf/t/unitempgenvsdaemon.t.cc,
+	  uniconf/t/unitransactiongen.t.cc, uniconf/tests/.cvsignore,
+	  uniconf/tests/rules.mk, uniconf/tests/uni.8.in,
+	  uniconf/tests/uni.cc, uniconf/tests/unistress.cc,
+	  urlget/wvftpstream.cc, urlget/wvhttpstream.cc,
+	  urlget/t/wvhttppool.t.cc, utils/strcrypt.cc, utils/strutils.cc,
+	  utils/wvcont.cc, utils/wvcrash.cc, utils/wvstring.cc,
+	  utils/wvtask.cc, utils/wvtest.cc, utils/t/strcrypt.t.cc,
+	  utils/t/strutils.t.cc, utils/t/wvcont.t.cc, utils/t/wvhex.t.cc,
+	  utils/t/wvmatrix.t.cc, utils/tests/bdbsillytest.cc,
+	  utils/tests/bdbtest.cc, utils/tests/diritertest.cc,
+	  utils/tests/ondiskhashtest.cc, utils/tests/ondisklisttest.cc,
+	  utils/tests/ondiskspeedtest.cc, utils/tests/qdbmtest.cc:
+	  asterisk: merged from 4.1+ns3; added call everyone feature
+
+2005-01-13 19:44  andrew
+
+	* streams/t/wvfdstream.t.cc: r4_1: Checking undo_force_select() on
+	  WvFDStream, thought it was broken, turns out it's not, checking
+	  in the unit test anyway. BUGZID:9960
+
+2005-01-12 17:12  andrew
+
+	* streams/t/fileutils.t.cc: r4_2: Adding more to fileutils.t.cc.
+	  BUGZID:9836
+
+2005-01-12 17:03  andrew
+
+	* include/wvfileutils.h, streams/fileutils.cc,
+	  streams/t/fileutils.t.cc: r4_2: Adding wvchmod() to wvstreams,
+	  and a unit test for it. BUGZID:9836
+
+2005-01-11 19:29  pphaneuf
+
+	* include/wvstrutils.h, uniconf/uniretrygen.cc,
+	  uniconf/t/uniretrygen.t.cc, utils/strutils.cc,
+	  utils/t/strutils.t.cc: r4_2: merged from r4_1+ns3.  BUGZID:10026
+
+2005-01-10 23:22  mcote
+
+	* Doxyfile, Makefile, suppressions.wv, vars.mk, wvrules.mk,
+	  crypto/wvcrl.cc, crypto/wvx509.cc, crypto/t/wvcrl.t.cc,
+	  crypto/t/wvx509.t.cc, crypto/tests/crltest.cc, include/uniconf.h,
+	  include/wvcrl.h, include/wvpty.h, include/wvregex.h,
+	  include/wvslp.h, include/wvstringlist.h, include/wvstrutils.h,
+	  include/wvvector.h, include/wvx509.h, ipstreams/wvslp.cc,
+	  linuxstreams/wvpty.cc, redhat/wvstreams.spec,
+	  redhat/wvstreams.spec.in, uniconf/uniclientgen.cc,
+	  uniconf/unidefgen.cc, uniconf/unipermgen.cc,
+	  uniconf/unisecuregen.cc, uniconf/t/uniclientgen.t.cc,
+	  uniconf/t/unipermgen.t.cc, uniconf/t/uniretrygen.t.cc,
+	  utils/wvregex.cc, utils/wvstring.cc, utils/wvstringlist.cc,
+	  utils/t/strutils.t.cc, utils/t/wvregex.t.cc,
+	  utils/t/wvstringlist.t.cc, utils/t/wvvector.t.cc: idb2: Merging
+	  HEAD to idb2.
+
+2005-01-08 09:53  pphaneuf
+
+	* Makefile, suppressions.wv, wvrules.mk, include/uniconf.h,
+	  include/wvpty.h, include/wvslp.h, include/wvstringlist.h,
+	  include/wvvector.h, ipstreams/wvslp.cc, linuxstreams/wvpty.cc,
+	  redhat/wvstreams.spec, redhat/wvstreams.spec.in,
+	  uniconf/uniclientgen.cc, uniconf/unidefgen.cc,
+	  uniconf/unipermgen.cc, uniconf/unisecuregen.cc,
+	  uniconf/t/uniclientgen.t.cc, uniconf/t/unipermgen.t.cc,
+	  uniconf/t/uniretrygen.t.cc, utils/wvstring.cc,
+	  utils/t/strutils.t.cc, utils/t/wvvector.t.cc: Merged wvstreams
+	  from r4_2.
+
+2005-01-07 18:50  jrmuizel
+
+	* utils/wvstring.cc: wvstreams-win32: unbreak compilation
+
+2005-01-07 04:50  wlach
+
+	* Makefile, redhat/wvstreams.spec.in: r4_2: More tweaking required
+	  to get wvstreams rpms actually building.
+
+2005-01-07 04:26  wlach
+
+	* redhat/wvstreams.spec.in: r4_2: Tweak versioning of wvstreams rpm
+	  spec.
+
+2005-01-07 04:06  wlach
+
+	* wvrules.mk: r4_2: Tweak regular expression for getting the
+	  package version in wvrules.mk, so packages with versions like
+	  "4.2 (UNSTABLE)" still snapshot properly.
+
+2005-01-07 01:06  ppatters
+
+	* crypto/t/wvx509.t.cc: HEAD: Fix failing autobuilder due to me not
+	  running 'make test' on the full suite yesterday before I checked
+	  in my X509 changes. BUGZID:9968
+
+2005-01-05 22:29  ppatters
+
+	* include/wvcrl.h: HEAD: Fix some spelling mistakes, and get rid of
+	  some artifacts.
+
+2005-01-05 22:18  ppatters
+
+	* crypto/wvcrl.cc, crypto/wvx509.cc, include/wvcrl.h,
+	  include/wvx509.h: HEAD: WvCRLMgr and WvX509Mgr getting more and
+	  more "correct". Validation sort of works now (Still missing good
+	  "signed by" code), better accessors in WvX509Mgr, and signcert
+	  and signcrl now check for proper key Usages.
+
+2005-01-05 19:43  apenwarr
+
+	* Doxyfile: HEAD: doxygen should generate browse information for
+	  source files as well as headers.
+
+2005-01-04 18:21  pzion
+
+	* vars.mk, include/wvregex.h, utils/wvregex.cc,
+	  utils/t/wvregex.t.cc: r4_2: backported WvRegex class from HEAD
+	  for use in IP address extraction in wvmail-local BUGZID:9475
+
+2005-01-04 00:09  pphaneuf
+
+	* include/wvbufstream.h, streams/wvbufstream.cc,
+	  streams/wvstream.cc: wvstreams_inversion: checkpointing what I
+	  have. I'm afraid most of this isn't a good approach, will have to
+	  scrap most of it and try in a different way.
+
+2005-01-02 06:03  build
+
+	* linuxstreams/wvpty.cc: r4_2: (apenwarr) fix gcc-3.x whininess
+	  about the (admittedly rather unnecessary) goto in wvpty.cc.  With
+	  optimization enabled, the data structure in question may not be
+	  initialized until after the goto, which of course doesn't matter
+	  because nobody refers to it.	Luckily, the data structure is
+	  actually a const array, so I'll just insert a "static const" and
+	  the problem magically disappears.
+
+2004-12-31 16:43  pzion
+
+	* include/wvpty.h, linuxstreams/wvpty.cc: r4_2: restored some
+	  elegance to WvPty code
+
+2004-12-30 22:45  pzion
+
+	* linuxstreams/wvpty.cc, include/wvpty.h: r4_2: WvStreams: fixed
+	  WvPty bug where creation would fail if the master was availible
+	  but the slave was still in use by another process.  This is a
+	  situation that can arise with the telnetd out of Debian unstable
+	  as was found on bounce BUGZID:9900
+
+2004-12-30 21:17  pphaneuf
+
+	* include/wvvector.h, utils/t/wvvector.t.cc: r4_2: fixed WvVector's
+	  iterator.  BUGZID:9799
+
+2004-12-30 19:30  ppatters
+
+	* crypto/wvcrl.cc, crypto/wvx509.cc, crypto/t/wvcrl.t.cc,
+	  crypto/tests/crltest.cc, include/wvcrl.h, include/wvx509.h: HEAD:
+	  WvX509 now has a cousing name WvCRL, and has been updated in such
+	  a way that WvCA should now be possible. I still hate OpenSSL.
+
+2004-12-30 17:05  pzion
+
+	* include/wvregex.h, utils/wvregex.cc: HEAD: WvStreams: Made
+	  WvRegex static const members enums so they would work with gcc
+	  3.3
+
+2004-12-29 21:58  pzion
+
+	* vars.mk: HEAD: WvStreams: added wvgrep example program, a clone
+	  of GNU grep that supports most of its options in just over 200
+	  lines of code.
+
+2004-12-29 19:31  pzion
+
+	* include/wvregex.h, include/wvstringlist.h, include/wvstrutils.h,
+	  utils/wvstringlist.cc, utils/t/wvstringlist.t.cc: HEAD:
+	  WvStreams: added WvStringList::split that splits a string on a
+	  given WvRegex.  One of the best things about Perl/PHP is now part
+	  of WvStreams too.
+
+2004-12-29 18:25  pzion
+
+	* include/wvregex.h, utils/wvregex.cc, utils/t/wvregex.t.cc: HEAD:
+	  WvStreams: added WvRegexp, a class that represents and matches
+	  against regular expressions.	Currently it supports basic and
+	  extended POSIX regexes using the support in libc; it should
+	  probably be extended to support Perl-syntax regexes as well using
+	  libpcre
+
+2004-12-29 00:11  pzion
+
+	* linuxstreams/wvpty.cc: r4_2: Worked around BUGZID:9900
+
+2004-12-22 22:11  pzion
+
+	* include/wvstringlist.h: r4_2: added append method to WvStringList
+	  that accepts a WVSTRING_FORMAT_DECL
+
+2004-12-21 23:57  mcote
+
+	* suppressions.wv, include/uniclientgen.h,
+	  include/uniconfpamconn.h, include/uniconftree.h,
+	  include/unifilesystemgen.h, include/unihashtree.h,
+	  include/uniinigen.h, include/unitempgen.h,
+	  include/unitransactiongen.h, include/wvhttppool.h,
+	  include/wvistreamlist.h, include/wvpam.h,
+	  ipstreams/wvresolver.cc, redhat/wvstreams.spec,
+	  streams/wvistreamlist.cc, streams/wvpam.cc,
+	  uniconf/uniclientgen.cc, uniconf/unifilesystemgen.cc,
+	  uniconf/unihashtree.cc, uniconf/uniinigen.cc,
+	  uniconf/unitempgen.cc, uniconf/unitransactiongen.cc,
+	  uniconf/wvconfemu.cc, uniconf/daemon/uniconfpamconn.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/unimountgen.t.cc,
+	  uniconf/t/unitempgenvsdaemon.t.cc,
+	  uniconf/t/unitransactiongen.t.cc, uniconf/t/wvconfemu.t.cc,
+	  urlget/wvhttppool.cc, urlget/wvhttpstream.cc: idb2: Merged from
+	  HEAD.
+
+2004-12-21 01:51  wlach
+
+	* wvrules.mk: r4_2: You can now build rpms of passwd-uniconf. Minor
+	  modifications to the snapshotting system required to make this
+	  work (nothing crazy).  BUGZID:9798
+
+2004-12-19 02:29  pmccurdy
+
+	* include/wvstrutils.h, utils/strutils.cc, utils/t/strutils.t.cc:
+	  r4_1+ns3: Introducing secondstoa(), the world's least
+	  translatable function.  Given a number of seconds, produces human
+	  readable strings like "5 seconds" or "1 day, 2 hours, and 1
+	  minute".  BUGZID:9581
+
+2004-12-18 01:03  pphaneuf
+
+	* Makefile, suppressions.wv, include/uniconftree.h,
+	  include/unihashtree.h, include/unitransactiongen.h,
+	  uniconf/unihashtree.cc, uniconf/unitransactiongen.cc,
+	  uniconf/t/unitransactiongen.t.cc, utils/wvstring.cc,
+	  utils/t/strutils.t.cc: r4_2: merged from r4_1+ns3.  BUGZID:9592
+
+2004-12-17 22:25  hub
+
+	* uniconf/: uniretrygen.cc, t/uniretrygen.t.cc: r4_1+ns3: merge
+	  from wvstreams_4_0
+
+2004-12-17 20:49  hub
+
+	* uniconf/: uniretrygen.cc, t/uniretrygen.t.cc: wvstreams_4_0:
+	  exists() for "/" should be true anyway. BUGZID: 9769
+
+2004-12-17 19:36  sfllaw
+
+	* urlget/wvhttpstream.cc, include/wvhttppool.h: wvstreams_4_0: This
+	  has been fixed with a new state machine that takes into account
+	  the strange HEAD messages that thttpd sends.	Also takes into
+	  account the rude disconnexions it gives.
+
+	  BUGZID: 9412
+
+2004-12-17 18:33  tschmelcher
+
+	* include/unifilesystemgen.h, uniconf/unifilesystemgen.cc:
+	  HEAD: Commit an unfinished-but-perhaps-one-day-useful UniConf
+	  generator, the UniFileSystemGen.
+
+2004-12-17 13:04  sfllaw
+
+	* uniconf/: t/uniconfkey.t.cc, t/uniconfroot.t.cc,
+	  t/uniinigen.t.cc, t/unimountgen.t.cc, t/unitempgen.t.cc,
+	  t/uniunwrapgen.t.cc, uniconfkey.cc, unitempgen.cc: wvstreams_4_0:
+	  Trailing slashes now mean something in UniConf.  Rather, keys
+	  with trailing slashes (that are not "/") cannot be set.  When you
+	  get a key with a trailing slash, you will always get your default
+	  value.
+
+	  This way, a key like WvString("/foo/bar/%s", user) means
+	  something different if user is an empty string.
+
+	  BUGZID: 9736
+
+2004-12-17 09:33  sfllaw
+
+	* utils/t/strutils.t.cc, include/wvstrutils.h, utils/strutils.cc:
+	  wvstreams_4_0: Added the ability for spacecat to collapse
+	  separators into just one separator.
+
+2004-12-15 18:52  ppatters
+
+	* include/wvslp.h, ipstreams/wvslp.cc: r4_2: Make WvSlp know about
+	  attributes, at least from a client perspective.
+
+2004-12-15 03:09  pmccurdy
+
+	* Makefile, include/uniconftree.h, include/unihashtree.h,
+	  include/unitransactiongen.h, uniconf/unihashtree.cc,
+	  uniconf/unitransactiongen.cc, uniconf/t/unitransactiongen.t.cc:
+	  r4_1+ns3: Merged from r4_1.
+
+2004-12-14 23:59  sfllaw
+
+	* include/uniconf.h: r4_2: Make sure Console Blank Interval's
+	  callback is deleted on exit.
+
+2004-12-14 00:18  pphaneuf
+
+	* Makefile: r4_1: merged from r3_80.  BUGZID:9592
+
+2004-12-13 22:47  pphaneuf
+
+	* Makefile: r3_80: export the WVSTREAMS environment variable to
+	  sub-makes.
+
+2004-12-10 22:24  wlach
+
+	* uniconf/t/unipermgen.t.cc: r4_2: Test more stuff related to my
+	  unipermgen/unisecuregen fixes.  BUGZID:9290
+
+2004-12-10 22:20  tschmelcher
+
+	* include/uniconftree.h, include/unihashtree.h,
+	  include/uniinigen.h, include/unitempgen.h,
+	  include/unitransactiongen.h, uniconf/unihashtree.cc,
+	  uniconf/uniinigen.cc, uniconf/unitempgen.cc,
+	  uniconf/unitransactiongen.cc, uniconf/t/unitransactiongen.t.cc:
+	  HEAD: Changed the UniTempGen and UniIniGen to obey the new
+	  post-4.2 UniConf deletion callback semantics (at the moment, they
+	  appear to be the only classes in need of changes) and checked in
+	  all of the stuff for the UniTransactionGen from 4.1, but with an
+	  altered unit test to account for the now-different behaviour of
+	  HEAD's UniTempGen. Also, changed the UniIniGen so that it creates
+	  its own root and prevents it from being deleted, because its
+	  design assumes that it exists and its code can segfault if it
+	  doesn't.
+
+2004-12-10 21:55  tschmelcher
+
+	* include/uniconftree.h, include/unihashtree.h,
+	  include/unitransactiongen.h, uniconf/unihashtree.cc,
+	  uniconf/unitransactiongen.cc, uniconf/t/unitransactiongen.t.cc:
+	  r4_1: Modified the UniTransactionGen to assume and obey the new
+	  post-4.2 UniConf deletion callback semantics. To help do this,
+	  added a new method to UniConfTree that this change and
+	  forthcoming HEAD changes use (which can't possibly break anything
+	  because no one else is using it). BUGZID: 9497
+
+2004-12-10 20:51  pzion
+
+	* uniconf/: uniclientgen.cc, t/uniclientgen.t.cc: r4_2: fixed
+	  UniClientGen->refresh() so that it actually does something, and
+	  added unittest to make sure that it works
+
+2004-12-10 07:10  wlach
+
+	* uniconf/: unidefgen.cc, unipermgen.cc, unisecuregen.cc,
+	  t/unipermgen.t.cc: r4_2: UniPermGen/UniSecureGen now plays nicely
+	  with the default generator. Also fix a bug in UniSecureGen's
+	  iterator which had gone unnoticed until now.	Update unit tests
+	  to match. Of course, I can't test this out properly since vserver
+	  is busted, but I may as well instigate some creative anarchy
+	  while we're still early on in the r4_2 release process (the
+	  wvstreams unit tests still pass, so nothing is _obviously_
+	  broken).  BUGZID:9290
+
+2004-12-10 00:06  apenwarr
+
+	* Makefile, suppressions.wv, utils/wvstring.cc,
+	  utils/t/strutils.t.cc:
+	  r4_1+ns3: merged recent changes from r4_1, and updated
+	  r4_1_lastmerge.
+
+2004-12-09 13:25  sfllaw
+
+	* utils/: wvstring.cc, t/strutils.t.cc: r4_1: When a WvString is
+	  assigned to itself through an implicit const char* conversion, we
+	  no longer free the data before we can get a copy of it.  A unit
+	  test to catch this has been included.
+
+	  BUGZID: 9518
+
+2004-12-09 13:08  sfllaw
+
+	* utils/: t/strutils.t.cc, wvstring.cc: r4_1: When a WvString is
+	  assigned to itself through an implicit const char* conversion, we
+	  no longer free the data before we can get a copy of it.  A unit
+	  test to catch this has been included.
+
+	  BUGZID: 9518
+
+2004-12-09 13:05  sfllaw
+
+	* suppressions.wv: r4_1: WvInterface has a static WvInterfaceDict,
+	  so let's tell Valgrind that this isn't an error.
+
+2004-12-09 11:40  sfllaw
+
+	* Makefile: r4_1: runtests in WvStreams should quote the TESTNAME.
+
+2004-12-09 10:33  sfllaw
+
+	* redhat/wvstreams.spec: r4_2: WvStreams' RPM specfile is now
+	  autogenerated.  Removing it from CVS.
+
+2004-12-09 03:42  pmccurdy
+
+	* include/unitransactiongen.h, uniconf/unitransactiongen.cc,
+	  uniconf/t/unitransactiongen.t.cc: r4_2: Merged from r4_1+ns3
+
+2004-12-09 00:35  pmccurdy
+
+	* include/unitransactiongen.h, uniconf/unitransactiongen.cc,
+	  uniconf/t/unitransactiongen.t.cc: r4_1+ns3: Merged from r4_1
+	  again.
+
+2004-12-08 19:14  tschmelcher
+
+	* include/unitransactiongen.h, uniconf/unitransactiongen.cc,
+	  uniconf/t/unitransactiongen.t.cc:
+	  r4_1: Fix a bug in the UniTransactionGen's callback wrapping.
+	  BUGZID: 9497
+
+2004-12-08 02:07  apenwarr
+
+	* include/unitransactiongen.h, uniconf/unitransactiongen.cc,
+	  uniconf/t/unitransactiongen.t.cc:
+	  eit40rollback: merged even more recent changes from r4_1.  I
+	  wouldn't have bothered except that this includes the webmail
+	  ghost_folders.patch.
+
+2004-12-08 00:07  tschmelcher
+
+	* include/unitransactiongen.h, uniconf/unitransactiongen.cc:
+	  r4_1: Quickly fix a build break before anyone notices. BUGZID:
+	  9497
+
+2004-12-07 23:54  tschmelcher
+
+	* include/unitransactiongen.h, uniconf/unitransactiongen.cc,
+	  uniconf/t/unitransactiongen.t.cc:
+	  r4_1: Created the UniTransactionGen and an accompanying unit
+	  test. BUGZID: 9497
+
+2004-12-07 23:28  apenwarr
+
+	* Makefile, config.guess, config.mk.in, config.sub, configure.ac,
+	  vars.mk, wvrules.mk, Win32WvStreams/libuniconf/libuniconf.vcproj,
+	  Win32WvStreams/libwvstreams/libwvstreams.vcproj,
+	  Win32WvStreams/libwvutils/libwvutils.vcproj,
+	  crypto/wvdiffiehellman.cc, crypto/wvsslstream.cc,
+	  crypto/wvtripledes.cc, debian/changelog, debian/control,
+	  debian/dirs, debian/libuniconf4.0.install, debian/rules,
+	  debian/uniconf-tools.install, debian/uniconf-tools.manpages,
+	  debian/uniconfd.default, debian/uniconfd.init,
+	  debian/uniconfd.install, debian/uniconfd.manpages,
+	  include/if_arp.h, include/unicachegen.h, include/uniclientgen.h,
+	  include/uniconfdaemon.h, include/uniconfgen.h,
+	  include/uniconfpamconn.h, include/unidefgen.h,
+	  include/unifiltergen.h, include/unilistgen.h,
+	  include/unimountgen.h, include/uninullgen.h,
+	  include/unipermgen.h, include/unireadonlygen.h,
+	  include/unireplicategen.h, include/uniretrygen.h,
+	  include/unisecuregen.h, include/unislowgen.h,
+	  include/unisubtreegen.h, include/unitempgen.h,
+	  include/uniunwrapgen.h, include/uniwvconfgen.h, include/wvaddr.h,
+	  include/wvdailyevent.h, include/wvhttppool.h,
+	  include/wvipaliaser.h, include/wvipfirewall.h,
+	  include/wvistreamlist.h, include/wvpam.h,
+	  include/wvqtstreamclone.h, include/wvserialize.h,
+	  include/wvslp.h, include/wvstrutils.h, include/wvtcp.h,
+	  include/wvunixdgsocket.h, ipstreams/wvaddr.cc,
+	  ipstreams/wvresolver.cc, ipstreams/wvslp.cc, ipstreams/wvtcp.cc,
+	  ipstreams/wvunixdgsocket.cc, ipstreams/wvunixsocket.cc,
+	  ipstreams/t/.cvsignore, ipstreams/t/wvunixdgsocket.t.cc,
+	  ipstreams/tests/udglistentest.cc, ipstreams/tests/unixdgtest.cc,
+	  ipstreams/tests/vars.mk, linuxstreams/wvinterface.cc,
+	  linuxstreams/wvipaliaser.cc, linuxstreams/wvipfirewall.cc,
+	  linuxstreams/wviproute.cc, linuxstreams/wvpam.cc,
+	  linuxstreams/wvtundev.cc, linuxstreams/tests/pamtest.cc,
+	  qt/wvqtstreamclone.cc, redhat/uniconfd.init,
+	  redhat/wvstreams.spec, streams/wvdailyevent.cc,
+	  streams/wvistreamlist.cc, streams/wvlockfile.cc,
+	  streams/wvlog.cc, streams/wvlogfile.cc, streams/wvmodem.cc,
+	  streams/wvpam.cc, streams/wvpipe.cc,
+	  streams/t/wvmagicloopback.t.cc, streams/tests/dailyeventtest.cc,
+	  uniconf/uniautogen.cc, uniconf/unicachegen.cc,
+	  uniconf/uniclientconn.cc, uniconf/uniclientgen.cc,
+	  uniconf/unifiltergen.cc, uniconf/uniinigen.cc,
+	  uniconf/unimountgen.cc, uniconf/unisecuregen.cc,
+	  uniconf/unisubtreegen.cc, uniconf/wvconfemu.cc,
+	  uniconf/daemon/uniconf.conf, uniconf/daemon/uniconfd.cc,
+	  uniconf/daemon/uniconfpamconn.cc, uniconf/t/unicachegen.t.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/uniconfroot.t.cc,
+	  uniconf/t/unipermgen.t.cc, uniconf/t/uniretrygen.t.cc,
+	  uniconf/t/unitempgenvsdaemon.t.cc, uniconf/tests/rules.mk,
+	  uniconf/tests/uni.8.in, uniconf/tests/uni.cc,
+	  urlget/wvftpstream.cc, urlget/wvhttppool.cc,
+	  urlget/wvhttpstream.cc, utils/strcrypt.cc, utils/strutils.cc,
+	  utils/wvcrash.cc, utils/wvtask.cc, utils/t/strcrypt.t.cc,
+	  utils/t/strutils.t.cc, utils/t/wvhex.t.cc, utils/t/wvmatrix.t.cc,
+	  utils/tests/diritertest.cc, utils/tests/ondiskspeedtest.cc:
+	  eit40rollback: merged changes from r4_1 *except* ExchangeItServer
+	  fixes, which I'll do separately.  I'm pretty sure this involves
+	  upgrading this whole branch from r3_80 to r4_1, because the
+	  changes are immense (but there were no conflicts).
+	  ExchangeItServer is verified to still work.
+
+2004-12-07 22:01  pphaneuf
+
+	* suppressions.wv: Added a specific use of zlib's deflate function
+	  to the valgrind suppressions.  BUGZID:9344
+
+2004-12-07 01:55  pphaneuf
+
+	* urlget/wvhttppool.cc: wvstreams_inversion: we don't need no
+	  stinkin' returns!
+
+2004-12-07 01:08  pphaneuf
+
+	* uniconf/t/unitempgenvsdaemon.t.cc: Let's not leave hysterical
+	  cruft laying about...
+
+2004-12-07 00:44  pphaneuf
+
+	* streams/t/wvstream.t.cc: wvstreams_inversion: fix up the
+	  wvstream.t.cc unit test so it compiles.
+
+2004-12-06 20:28  pzion
+
+	* uniconf/t/uniretrygen.t.cc: r4_2: UniRetryGen unit test should no
+	  longer fail intermittently BUGZID:9422
+
+2004-12-05 02:05  sfllaw
+
+	* urlget/wvhttppool.cc, urlget/wvhttpstream.cc,
+	  ipstreams/wvresolver.cc, redhat/wvstreams.spec,
+	  streams/wvistreamlist.cc, streams/wvpam.cc,
+	  uniconf/uniclientgen.cc, uniconf/uniinigen.cc,
+	  uniconf/wvconfemu.cc, uniconf/daemon/uniconfpamconn.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/unitempgenvsdaemon.t.cc,
+	  include/uniclientgen.h, include/uniconfpamconn.h,
+	  include/wvhttppool.h, include/wvistreamlist.h, include/wvpam.h:
+	  HEAD: Merge from r4_2.
+
+2004-12-04 08:50  sfllaw
+
+	* urlget/wvhttppool.cc, urlget/wvhttpstream.cc,
+	  include/uniclientgen.h, include/uniconfpamconn.h,
+	  include/wvhttppool.h, include/wvistreamlist.h, include/wvpam.h,
+	  ipstreams/wvresolver.cc, redhat/wvstreams.spec,
+	  streams/wvistreamlist.cc, streams/wvpam.cc,
+	  uniconf/uniclientgen.cc, uniconf/uniinigen.cc,
+	  uniconf/wvconfemu.cc, uniconf/daemon/uniconfpamconn.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/unitempgenvsdaemon.t.cc: r4_2:
+	  Merging r4_1 and r4_1+ns3 into r4_2.
+
+	  This is because r4_1 never got merged before r4_1+ns3 was
+	  branched.  Remember kids, merge r4_1 into r4_1+ns3 into r4_2.
+
+2004-12-04 04:39  sfllaw
+
+	* urlget/wvhttppool.cc, urlget/wvhttpstream.cc,
+	  include/wvhttppool.h: r4_1+ns3: Merging from r4_1.
+
+2004-12-04 02:04  sfllaw
+
+	* urlget/wvhttppool.cc, include/wvhttppool.h: r4_1: Remove silly
+	  log_urls() code from WvHttpPool.
+
+2004-12-04 02:04  sfllaw
+
+	* urlget/wvhttpstream.cc: r4_1: Merging from r3_80.
+
+2004-12-03 21:46  mtsai
+
+	* include/wvbufstream.h, include/wvmagicloopback.h,
+	  streams/wvbufstream.cc, streams/wvdailyevent.cc,
+	  streams/wvencoderstream.cc, streams/wvmagicloopback.cc,
+	  streams/wvsyncstream.cc: wvstreams_inversion: Modify pre_select
+	  to return void as opposed to bool.
+
+2004-12-03 21:18  sfllaw
+
+	* urlget/wvhttpstream.cc: r3_76: Fix the VirusScanner and
+	  WvHttpStream problems in this branch as well.
+
+	  BUGZID: 9397
+
+2004-12-03 20:27  mcote
+
+	* urlget/wvhttpstream.cc: r3_80: Fixed the horrid virus updater
+	  crash (actually a bug in WvHttpPool).  BUGZID:7659
+
+2004-12-03 03:47  pphaneuf
+
+	* uniconf/t/: unimountgen.t.cc, wvconfemu.t.cc: Fixed a few leaks
+	  in the unit tests, thanks to valgrind.  BUGZID:2584
+
+2004-12-03 00:57  pphaneuf
+
+	* include/wvwatcher.h, ipstreams/wvresolver.cc,
+	  streams/wvwatcher.cc: wvstreams_inversion: fixed WvFileWatcher's
+	  pre_select, as well as a small bug I introduced in WvResolver.
+
+2004-12-03 00:44  pphaneuf
+
+	* urlget/: wvftpstream.cc, wvhttpstream.cc: wvstreams_inversion:
+	  Fixed WvFtpStream's and WvHttpStream's pre_select methods.
+
+2004-12-03 00:43  pphaneuf
+
+	* include/wvresolver.h, ipstreams/wvresolver.cc:
+	  wvstreams_inversion: reverted the change to WvResolver. It's not
+	  even a WvStream!
+
+2004-12-02 23:22  pphaneuf
+
+	* include/wvbufstream.h, include/wvdailyevent.h,
+	  include/wvhttppool.h, include/wvmagicloopback.h,
+	  include/wvsyncstream.h, include/wvwatcher.h,
+	  streams/wvbufstream.cc, streams/wvdailyevent.cc,
+	  streams/wvencoderstream.cc, streams/wvmagicloopback.cc,
+	  streams/wvsyncstream.cc, streams/wvwatcher.cc,
+	  urlget/wvftpstream.cc, urlget/wvhttppool.cc,
+	  urlget/wvhttpstream.cc: wvstreams_inversion: fixed the pre_select
+	  prototypes.
+
+2004-12-02 23:10  pphaneuf
+
+	* include/wvtimestream.h, streams/wvtimestream.cc:
+	  wvstreams_inversion: fixed WvTimeStream's pre_select.
+
+2004-12-02 22:24  r2levesq
+
+	* Makefile, config.guess, config.mk.in, config.sub, configure.ac,
+	  vars.mk, wvrules.mk, Docs/sgmlmanual/egfiles/wvfileex.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex2.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex6.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamfunex.cc,
+	  Win32WvStreams/test3/MySocket.cpp,
+	  Win32WvStreams/test3/test3Dlg.cpp, crypto/wvdiffiehellman.cc,
+	  crypto/wvsslstream.cc, crypto/wvtripledes.cc, debian/changelog,
+	  debian/dirs, debian/libuniconf4.0.install, debian/rules,
+	  debian/uniconfd.default, debian/uniconfd.init,
+	  debian/uniconfd.install, include/if_arp.h,
+	  include/uniclientgen.h, include/uniconfgen.h,
+	  include/unidefgen.h, include/unifiltergen.h,
+	  include/unilistgen.h, include/unimountgen.h,
+	  include/uninullgen.h, include/unipermgen.h,
+	  include/unireadonlygen.h, include/unireplicategen.h,
+	  include/uniretrygen.h, include/unisecuregen.h,
+	  include/unislowgen.h, include/unitempgen.h,
+	  include/uniunwrapgen.h, include/uniwvconfgen.h, include/wvaddr.h,
+	  include/wvdaemon.h, include/wvipfirewall.h,
+	  include/wvserialize.h, include/wvslp.h, include/wvstream.h,
+	  include/wvstrutils.h, include/wvtcp.h, ipstreams/wvaddr.cc,
+	  ipstreams/wvslp.cc, ipstreams/wvtcp.cc,
+	  ipstreams/wvunixsocket.cc, ipstreams/tests/vars.mk,
+	  linuxstreams/wvinterface.cc, linuxstreams/wvipfirewall.cc,
+	  linuxstreams/wviproute.cc, linuxstreams/wvpam.cc,
+	  linuxstreams/wvtundev.cc, redhat/wvstreams.spec.in,
+	  streams/wvdaemon.cc, streams/wvlockfile.cc, streams/wvlog.cc,
+	  streams/wvlogfile.cc, streams/wvmodem.cc, streams/wvpam.cc,
+	  streams/wvpipe.cc, streams/t/wvstream.t.cc,
+	  uniconf/unicachegen.cc, uniconf/uniclientconn.cc,
+	  uniconf/uniclientgen.cc, uniconf/unifiltergen.cc,
+	  uniconf/uniretrygen.cc, uniconf/daemon/uniconfd.cc,
+	  uniconf/t/unicachegen.t.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/unipermgen.t.cc, uniconf/t/unireplicategen.t.cc,
+	  uniconf/t/uniretrygen.t.cc, uniconf/t/unitempgenvsdaemon.t.cc,
+	  uniconf/tests/conftest.cc, uniconf/tests/uni.cc,
+	  urlget/wvftpstream.cc, urlget/wvhttpstream.cc,
+	  urlget/t/wvhttppool.t.cc, utils/strcrypt.cc, utils/strutils.cc,
+	  utils/wvtask.cc, utils/t/strcrypt.t.cc, utils/t/strutils.t.cc,
+	  utils/t/wvhex.t.cc, utils/t/wvmatrix.t.cc,
+	  utils/tests/ondiskspeedtest.cc: BUGZID:9278
+
+	  idb2:merged HEAD into idb2
+
+2004-12-02 10:14  apenwarr
+
+	* utils/wvbase64.cc: wvstreams-win32: fix wvbase64.cc warnings to
+	  more clearly imply that the character numbers it prints out are
+	  numbers, not strings.
+
+2004-12-02 10:06  apenwarr
+
+	* streams/: t/wvstream.t.cc, wvstream.cc: wvstreams-win32: WvStream
+	  should go !isok() before calling closecallback.  Added a unit
+	  test to reflect this.  It was slightly messing up error handling
+	  in the Outlook ExchangeIt client.
+
+2004-12-02 07:21  andrew
+
+	* uniconf/wvconfemu.cc: r4_1: Make WvConfEmu not return blank key
+	  entries when a section is deleted, or a first item added.
+	  BUGZID:9340
+
+2004-12-02 06:57  apenwarr
+
+	* crypto/wvsslstream.cc: wvstreams-win32: fix lying log messages in
+	  wvsslstream.cc, and add an assertion for unexpected crazy
+	  behaviour from SSL_write().
+
+2004-12-02 06:08  mtsai
+
+	* Makefile, config.guess, config.mk.in, config.sub, configure.ac,
+	  vars.mk, wvrules.mk, Docs/sgmlmanual/egfiles/wvfileex.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex2.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex6.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamfunex.cc,
+	  Win32WvStreams/test3/MySocket.cpp,
+	  Win32WvStreams/test3/test3Dlg.cpp, crypto/wvdiffiehellman.cc,
+	  crypto/wvsslstream.cc, crypto/wvtripledes.cc, debian/changelog,
+	  debian/dirs, debian/libuniconf4.0.install, debian/rules,
+	  debian/uniconfd.default, debian/uniconfd.init,
+	  debian/uniconfd.install, include/if_arp.h,
+	  include/uniclientgen.h, include/uniconfgen.h,
+	  include/unidefgen.h, include/unifiltergen.h,
+	  include/unilistgen.h, include/unimountgen.h,
+	  include/uninullgen.h, include/unipermgen.h,
+	  include/unireadonlygen.h, include/unireplicategen.h,
+	  include/uniretrygen.h, include/unisecuregen.h,
+	  include/unislowgen.h, include/unitempgen.h,
+	  include/uniunwrapgen.h, include/uniwvconfgen.h, include/wvaddr.h,
+	  include/wvdaemon.h, include/wvipfirewall.h,
+	  include/wvserialize.h, include/wvslp.h, include/wvstream.h,
+	  include/wvstrutils.h, include/wvtcp.h, ipstreams/wvaddr.cc,
+	  ipstreams/wvslp.cc, ipstreams/wvtcp.cc,
+	  ipstreams/wvunixsocket.cc, ipstreams/tests/vars.mk,
+	  linuxstreams/wvinterface.cc, linuxstreams/wvipfirewall.cc,
+	  linuxstreams/wviproute.cc, linuxstreams/wvpam.cc,
+	  linuxstreams/wvtundev.cc, redhat/wvstreams.spec.in,
+	  streams/wvdaemon.cc, streams/wvlockfile.cc, streams/wvlog.cc,
+	  streams/wvlogfile.cc, streams/wvmodem.cc, streams/wvpam.cc,
+	  streams/wvpipe.cc, streams/t/wvstream.t.cc,
+	  uniconf/unicachegen.cc, uniconf/uniclientconn.cc,
+	  uniconf/uniclientgen.cc, uniconf/unifiltergen.cc,
+	  uniconf/uniretrygen.cc, uniconf/daemon/uniconfd.cc,
+	  uniconf/t/unicachegen.t.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/unipermgen.t.cc, uniconf/t/unireplicategen.t.cc,
+	  uniconf/t/uniretrygen.t.cc, uniconf/t/unitempgenvsdaemon.t.cc,
+	  uniconf/tests/conftest.cc, uniconf/tests/uni.cc,
+	  urlget/wvftpstream.cc, urlget/wvhttpstream.cc,
+	  urlget/t/wvhttppool.t.cc, utils/strcrypt.cc, utils/strutils.cc,
+	  utils/wvtask.cc, utils/t/strcrypt.t.cc, utils/t/strutils.t.cc,
+	  utils/t/wvhex.t.cc, utils/t/wvmatrix.t.cc,
+	  utils/tests/ondiskspeedtest.cc: mtsai_mysql4: Merging HEAD into
+	  mtsai_mysql4.
+
+2004-12-02 04:33  pphaneuf
+
+	* Makefile, crypto/wvsslstream.cc, include/iwvstream.h,
+	  include/wvdsp.h, include/wvencoderstream.h, include/wvfdstream.h,
+	  include/wvfile.h, include/wvhttp.h, include/wvhttppool.h,
+	  include/wvistreamlist.h, include/wvlog.h, include/wvresolver.h,
+	  include/wvsslstream.h, include/wvstream.h,
+	  include/wvstreamclone.h, include/wvtcp.h,
+	  include/wvunixdgsocket.h, ipstreams/wvhttp.cc,
+	  ipstreams/wvresolver.cc, ipstreams/wvtcp.cc,
+	  ipstreams/wvunixdgsocket.cc, linuxstreams/wvdsp.cc,
+	  streams/wvfdstream.cc, streams/wvfile.cc,
+	  streams/wvistreamlist.cc, streams/wvlog.cc, streams/wvstream.cc,
+	  streams/wvstreamclone.cc, urlget/wvhttppool.cc:
+	  wvstreams_inversion: this is broken and does not compile, on
+	  purpose.  Checking it in so that other people can look at it and
+	  have a go at it. It's not compiling because I'm having the
+	  compiler do work for me, and it's doing a lot of it... :-)
+
+2004-12-02 02:06  apenwarr
+
+	* include/iwvstream.h, include/uniconfgen.h, include/wvbuf.h,
+	  include/wvmoniker.h, include/wvscatterhash.h,
+	  include/wvtypedencoder.h, utils/t/strutils.t.cc,
+	  utils/t/wvlinklist.t.cc, utils/tests/listtest.cc:
+	  wvstreams-win32: fix problems compiling wvstreams in Linux (maybe
+	  only gcc-2.95) now that we have wvstdstring.	Stupid delete
+	  detector...
+
+2004-12-01 23:47  jklink
+
+	* uniconf/uniclientgen.cc, include/uniclientgen.h: BUGZID: 8051
+
+	  r4_1 : added commit() command for clientgen
+
+2004-12-01 23:46  jklink
+
+	* uniconf/t/unitempgenvsdaemon.t.cc: BUGZID: 8051
+
+	  r4_1 : adding commit commit() command to unittest for
+	  uniclientdaemon
+
+2004-12-01 00:42  r2levesq
+
+	* Makefile, Makefile-win32, config.mk.in, configure-mingw32,
+	  configure.ac, vars.mk, wvrules-win32.mk, wvrules.mk,
+	  wvtestmain.cc, Win32WvStreams/.cvsignore,
+	  Win32WvStreams/Win32WvStreams.sln,
+	  Win32WvStreams/libuniconf/.cvsignore,
+	  Win32WvStreams/libuniconf/libuniconf.vcproj,
+	  Win32WvStreams/libuniconf/unipstoregen.cc,
+	  Win32WvStreams/libuniconf/uniregistrygen.cc,
+	  Win32WvStreams/libwvstreams/.cvsignore,
+	  Win32WvStreams/libwvstreams/libwvstreams.vcproj,
+	  Win32WvStreams/libwvstreams/streams.cc,
+	  Win32WvStreams/libwvstreams/streams.h,
+	  Win32WvStreams/libwvstreams/wvwinstreamclone.cc,
+	  Win32WvStreams/libwvutils/.cvsignore,
+	  Win32WvStreams/libwvutils/libwvutils.vcproj,
+	  Win32WvStreams/libwvutils/winstreams.cc,
+	  Win32WvStreams/libwvutils/wvwin32task.cc,
+	  Win32WvStreams/uni/.cvsignore, Win32WvStreams/uni/uni.vcproj,
+	  Win32WvStreams/uniconfd/.cvsignore,
+	  Win32WvStreams/uniconfd/uniconfd.vcproj,
+	  crypto/wvdiffiehellman.cc, crypto/wvdigest.cc, crypto/wvrsa.cc,
+	  crypto/wvsslstream.cc, crypto/wvx509.cc, crypto/t/wvdigest.t.cc,
+	  crypto/t/wvsslstream.t.cc, crypto/t/wvx509.t.cc,
+	  include/uniconf.h, include/uniconfdaemon.h,
+	  include/unimountgen.h, include/wvdailyevent.h,
+	  include/wvencoder.h, include/wvencoderstream.h,
+	  include/wverror.h, include/wvfdstream.h, include/wvfile.h,
+	  include/wvfileutils.h, include/wvipaliaser.h,
+	  include/wvlinkerhack.h, include/wvlog.h, include/wvloopback2.h,
+	  include/wvpam.h, include/wvpty.h, include/wvserialize.h,
+	  include/wvsocketpair.h, include/wvsslstream.h,
+	  include/wvstdstring.h, include/wvstream.h, include/wvstring.h,
+	  include/wvstrutils.h, include/wvunixdgsocket.h,
+	  include/wvwin32-sanitize.h, include/wvwin32task.h,
+	  include/wvx509.h, include/wvxplc.h, ipstreams/wvipraw.cc,
+	  ipstreams/wvtcp.cc, ipstreams/wvudp.cc,
+	  ipstreams/wvunixdgsocket.cc, ipstreams/wvunixsocket.cc,
+	  ipstreams/t/.cvsignore, ipstreams/t/wvtcp.t.cc,
+	  ipstreams/t/wvunixdgsocket.t.cc, ipstreams/tests/tcptest.cc,
+	  ipstreams/tests/udglistentest.cc, ipstreams/tests/unixdgtest.cc,
+	  ipstreams/tests/wvstreams.cc, linuxstreams/wvipaliaser.cc,
+	  linuxstreams/wvpam.cc, linuxstreams/wvpty.cc,
+	  linuxstreams/tests/pamtest.cc, streams/wvconstream.cc,
+	  streams/wvdailyevent.cc, streams/wvencoderstream.cc,
+	  streams/wvfdstream.cc, streams/wvfile.cc, streams/wvlog.cc,
+	  streams/wvlogfile.cc, streams/wvloopback.cc,
+	  streams/wvloopback2.cc, streams/wvsocketpair.cc,
+	  streams/wvstream.cc, streams/wvstreamclone.cc,
+	  streams/t/.cvsignore, streams/t/wvdailyevent.t.cc,
+	  streams/t/wvencoderstream.t.cc, streams/t/wvfdstream.t.cc,
+	  streams/t/wvfile.t.cc, streams/t/wvgzipstream.t.cc,
+	  streams/t/wvlog.t.cc, streams/t/wvloopback.t.cc,
+	  streams/t/wvloopback2.t.cc, streams/t/wvmagicloopback.t.cc,
+	  streams/t/wvstream.t.cc, streams/t/wvstreamclone.t.cc,
+	  streams/tests/dailyeventtest.cc, streams/tests/logtest.cc,
+	  streams/tests/simpletest.cc, uniconf/uniautogen.cc,
+	  uniconf/unicachegen.cc, uniconf/uniclientconn.cc,
+	  uniconf/uniclientgen.cc, uniconf/uniconf.cc,
+	  uniconf/uniconfroot.cc, uniconf/unidefgen.cc,
+	  uniconf/unigenhack.cc, uniconf/unigenhack_s.cc,
+	  uniconf/uniinigen.cc, uniconf/unilistgen.cc,
+	  uniconf/unimountgen.cc, uniconf/unimounttreegen.cc,
+	  uniconf/uninullgen.cc, uniconf/unipermgen.cc,
+	  uniconf/unireadonlygen.cc, uniconf/unireplicategen.cc,
+	  uniconf/uniretrygen.cc, uniconf/unisecuregen.cc,
+	  uniconf/unisubtreegen.cc, uniconf/uniunwrapgen.cc,
+	  uniconf/t/.cvsignore, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/uniconfroot.t.cc, uniconf/t/unipermgen.t.cc,
+	  uniconf/tests/uni.cc, urlget/wvftpstream.cc,
+	  urlget/wvhttpstream.cc, utils/strutils.cc, utils/wvcrash.cc,
+	  utils/wvdiriter.cc, utils/wvencoder.cc, utils/wverror.cc,
+	  utils/wvlinklist.cc, utils/wvstring.cc, utils/wvtest.cc,
+	  utils/t/.cvsignore, utils/t/basicfd.t.cc, utils/t/strcrypt.t.cc,
+	  utils/t/strutils.t.cc, utils/t/wvbase64.t.cc,
+	  utils/t/wverror.t.cc, utils/t/wvstringlist.t.cc,
+	  utils/t/wvtimeutils.t.cc, utils/tests/diritertest.cc: BUGZID:8984
+
+	  idb2:merged HEAD into idb2
+
+2004-12-01 00:10  apenwarr
+
+	* Win32WvStreams/libuniconf/unipstoregen.cc: wvstreams-win32:
+	  BUGZID:9176: UniPStoreGen was giving the wrong data length in
+	  set(), so passwords longer than 9 characters didn't work.  Ha ha.
+
+2004-12-01 00:06  dirocco
+
+	* redhat/wvstreams.spec: r4_1: Make the wvstreams.spec file build
+	  from the xplc installed on the system.
+
+2004-11-30 22:54  pphaneuf
+
+	* uniconf/uniinigen.cc: r4_1: merged from r3_80.  BUGZID:9291
+
+2004-11-30 22:20  apenwarr
+
+	* streams/wvlogfile.cc: wvstreams-win32: BUGZID:9215: WvLogFile
+	  wasn't producing a good timestamp format because %Z looks dumb in
+	  windows, and %T doesn't exist.
+
+2004-11-30 22:00  pphaneuf
+
+	* include/wvistreamlist.h, streams/wvistreamlist.cc: r4_1: added a
+	  guard to prevent re-entrance in WvIStreamList's pre_select and
+	  post_select. It is left disabled, though, to avoid increasing the
+	  number of crashes. Those who need it to find bugs in their code
+	  should uncomment them and use them.  BUGZID:9232
+
+2004-11-30 02:23  ppatters
+
+	* streams/wvpam.cc: r4_1: WvPam wouldn't compile when WITH_PAM was
+	  false because I'm an idiot.
+
+2004-11-29 22:10  andrew
+
+	* uniconf/uniinigen.cc: r3_80: UniIniGen needs to set exact
+	  permissions, not umasked ones. BUGZID:9239
+
+2004-11-29 21:06  ppatters
+
+	* include/uniconfpamconn.h, include/wvpam.h,
+	  ipstreams/wvresolver.cc, streams/wvpam.cc,
+	  uniconf/daemon/uniconfpamconn.cc: r4_1: WvPamStream is dead, long
+	  live WvPam...
+
+2004-11-29 20:50  pphaneuf
+
+	* uniconf/t/unitempgenvsdaemon.t.cc: r4_1: fixed a typo and made an
+	  internal unit test function static.
+
+2004-11-29 20:29  pphaneuf
+
+	* uniconf/t/uniconfd.t.cc: r4_1: fixed a bug in the UniConf unit
+	  tests. When you want to create a file, using the O_CREAT flag
+	  helps so much. :-)
+
+2004-11-29 06:41  pzion
+
+	* Makefile, config.guess, config.mk.in, config.sub, configure.ac,
+	  vars.mk, wvrules.mk, Docs/sgmlmanual/egfiles/wvfileex.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex2.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex6.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamfunex.cc,
+	  Win32WvStreams/test3/MySocket.cpp,
+	  Win32WvStreams/test3/test3Dlg.cpp, crypto/wvdiffiehellman.cc,
+	  crypto/wvsslstream.cc, crypto/wvtripledes.cc, debian/changelog,
+	  debian/dirs, debian/libuniconf4.0.install, debian/rules,
+	  debian/uniconfd.default, debian/uniconfd.init,
+	  debian/uniconfd.install, include/if_arp.h,
+	  include/uniclientgen.h, include/uniconfgen.h,
+	  include/unidefgen.h, include/unifiltergen.h,
+	  include/unilistgen.h, include/unimountgen.h,
+	  include/uninullgen.h, include/unipermgen.h,
+	  include/unireadonlygen.h, include/unireplicategen.h,
+	  include/uniretrygen.h, include/unisecuregen.h,
+	  include/unislowgen.h, include/unitempgen.h,
+	  include/uniunwrapgen.h, include/uniwvconfgen.h, include/wvaddr.h,
+	  include/wvdaemon.h, include/wvipfirewall.h,
+	  include/wvserialize.h, include/wvslp.h, include/wvstream.h,
+	  include/wvstrutils.h, include/wvtcp.h, ipstreams/wvaddr.cc,
+	  ipstreams/wvslp.cc, ipstreams/wvtcp.cc,
+	  ipstreams/wvunixsocket.cc, ipstreams/tests/vars.mk,
+	  linuxstreams/wvinterface.cc, linuxstreams/wvipfirewall.cc,
+	  linuxstreams/wviproute.cc, linuxstreams/wvpam.cc,
+	  linuxstreams/wvtundev.cc, redhat/wvstreams.spec.in,
+	  streams/wvdaemon.cc, streams/wvlockfile.cc, streams/wvlog.cc,
+	  streams/wvlogfile.cc, streams/wvmodem.cc, streams/wvpam.cc,
+	  streams/wvpipe.cc, streams/t/wvstream.t.cc,
+	  uniconf/unicachegen.cc, uniconf/uniclientconn.cc,
+	  uniconf/uniclientgen.cc, uniconf/unifiltergen.cc,
+	  uniconf/uniretrygen.cc, uniconf/daemon/uniconfd.cc,
+	  uniconf/t/unicachegen.t.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/unipermgen.t.cc, uniconf/t/unireplicategen.t.cc,
+	  uniconf/t/uniretrygen.t.cc, uniconf/t/unitempgenvsdaemon.t.cc,
+	  uniconf/tests/conftest.cc, uniconf/tests/uni.cc,
+	  urlget/wvftpstream.cc, urlget/wvhttpstream.cc,
+	  urlget/t/wvhttppool.t.cc, utils/strcrypt.cc, utils/strutils.cc,
+	  utils/wvtask.cc, utils/t/strcrypt.t.cc, utils/t/strutils.t.cc,
+	  utils/t/wvhex.t.cc, utils/t/wvmatrix.t.cc,
+	  utils/tests/ondiskspeedtest.cc: HEAD: merged from r4_2
+
+2004-11-28 20:59  pzion
+
+	* Makefile, debian/changelog, debian/dirs,
+	  debian/libuniconf4.0.install, debian/rules,
+	  debian/uniconfd.default, debian/uniconfd.init,
+	  debian/uniconfd.install, include/uniclientgen.h,
+	  include/uniconfgen.h, include/unidefgen.h,
+	  include/unifiltergen.h, include/unilistgen.h,
+	  include/unimountgen.h, include/uninullgen.h,
+	  include/unipermgen.h, include/unireadonlygen.h,
+	  include/unireplicategen.h, include/uniretrygen.h,
+	  include/unisecuregen.h, include/unislowgen.h,
+	  include/unitempgen.h, include/uniunwrapgen.h,
+	  include/uniwvconfgen.h, include/wvipfirewall.h,
+	  linuxstreams/wvipfirewall.cc, streams/wvlog.cc,
+	  uniconf/unicachegen.cc, uniconf/uniclientgen.cc,
+	  uniconf/unifiltergen.cc, uniconf/daemon/uniconfd.cc,
+	  uniconf/t/unicachegen.t.cc, uniconf/t/unipermgen.t.cc,
+	  uniconf/t/unitempgenvsdaemon.t.cc, uniconf/tests/uni.cc,
+	  urlget/wvhttpstream.cc: r4_2: merged from r4_1
+
+2004-11-27 03:42  sfllaw
+
+	* debian/changelog, debian/dirs, debian/libuniconf4.0.install,
+	  debian/rules, debian/uniconfd.default, debian/uniconfd.init,
+	  debian/uniconfd.install, Makefile: r4_1: Moved /etc/uniconf.conf
+	  to the libuniconf4.0 package.
+
+	  As well, fixed up the uniconfd startup script so that it comes up
+	  properly.  We also offer an /etc/default/uniconfd so that you can
+	  edit which mounts come up by default.
+
+	  BUGZID: 8921
+
+2004-11-27 03:17  sfllaw
+
+	* debian/changelog: r4_1: Merge from wvstreams_4_0.
+
+2004-11-27 01:24  mksyunz
+
+	* Makefile, config.guess, config.mk.in, config.sub, configure.ac,
+	  vars.mk, wvrules.mk, Docs/sgmlmanual/egfiles/wvfileex.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex2.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex6.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamfunex.cc,
+	  Win32WvStreams/test3/MySocket.cpp,
+	  Win32WvStreams/test3/test3Dlg.cpp, crypto/wvdiffiehellman.cc,
+	  crypto/wvsslstream.cc, crypto/wvtripledes.cc, include/if_arp.h,
+	  include/uniconfdaemon.h, include/unimountgen.h,
+	  include/uniretrygen.h, include/wvaddr.h, include/wvdaemon.h,
+	  include/wvdailyevent.h, include/wvipaliaser.h, include/wvpam.h,
+	  include/wvserialize.h, include/wvslp.h, include/wvstream.h,
+	  include/wvstrutils.h, include/wvtcp.h, include/wvunixdgsocket.h,
+	  ipstreams/wvaddr.cc, ipstreams/wvslp.cc, ipstreams/wvtcp.cc,
+	  ipstreams/wvunixdgsocket.cc, ipstreams/wvunixsocket.cc,
+	  ipstreams/t/.cvsignore, ipstreams/t/wvunixdgsocket.t.cc,
+	  ipstreams/tests/udglistentest.cc, ipstreams/tests/unixdgtest.cc,
+	  ipstreams/tests/vars.mk, linuxstreams/wvinterface.cc,
+	  linuxstreams/wvipaliaser.cc, linuxstreams/wviproute.cc,
+	  linuxstreams/wvpam.cc, linuxstreams/wvtundev.cc,
+	  linuxstreams/tests/pamtest.cc, redhat/wvstreams.spec.in,
+	  streams/wvdaemon.cc, streams/wvdailyevent.cc,
+	  streams/wvlockfile.cc, streams/wvlogfile.cc, streams/wvmodem.cc,
+	  streams/wvpam.cc, streams/wvpipe.cc,
+	  streams/t/wvmagicloopback.t.cc, streams/t/wvstream.t.cc,
+	  streams/tests/dailyeventtest.cc, uniconf/unicachegen.cc,
+	  uniconf/uniclientconn.cc, uniconf/unimountgen.cc,
+	  uniconf/uniretrygen.cc, uniconf/unisecuregen.cc,
+	  uniconf/daemon/uniconfd.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/uniconfroot.t.cc, uniconf/t/unipermgen.t.cc,
+	  uniconf/t/unireplicategen.t.cc, uniconf/t/uniretrygen.t.cc,
+	  uniconf/tests/conftest.cc, uniconf/tests/uni.cc,
+	  urlget/wvftpstream.cc, urlget/wvhttppool.cc,
+	  urlget/wvhttpstream.cc, urlget/t/wvhttppool.t.cc,
+	  utils/strcrypt.cc, utils/strutils.cc, utils/wvcrash.cc,
+	  utils/wvtask.cc, utils/t/strcrypt.t.cc, utils/t/strutils.t.cc,
+	  utils/t/wvhex.t.cc, utils/t/wvmatrix.t.cc,
+	  utils/tests/diritertest.cc, utils/tests/ondiskspeedtest.cc:
+	  mksyunz_samba3: I'm now officially in sync with r4_2.
+
+2004-11-27 00:54  apenwarr
+
+	* crypto/wvsslstream.cc, utils/wvtest.cc: wvstreams-win32:
+	  wvsslstream shouldn't ever ask its substream to wait for writable
+	  if it's not ssl_connected and SSL itself doesn't need writable.
+	  Fixed an inverted test in wvtest.cc, so now the full pathname of
+	  files with backslash separators doesn't get printed, just like
+	  files with forward slash separators.
+
+2004-11-26 20:32  jklink
+
+	* uniconf/tests/uni.cc:
+	  r4_1 : Someone threw some commas in odd places causing this test
+	  to bark back when compiling.
+
+2004-11-26 20:29  jklink
+
+	* uniconf/: unifiltergen.cc, unicachegen.cc, uniclientgen.cc:
+	  BUGZID: 7599
+
+	  r4_1 : The other portion of the checkin for the fixes for the
+	  cachegen and clientgen problems.
+
+2004-11-26 20:28  jklink
+
+	* include/: uniclientgen.h, uniconfgen.h, unidefgen.h,
+	  unifiltergen.h, unilistgen.h, unimountgen.h, uninullgen.h,
+	  unipermgen.h, unireadonlygen.h, unireplicategen.h, uniretrygen.h,
+	  unisecuregen.h, unislowgen.h, unitempgen.h, uniunwrapgen.h,
+	  uniwvconfgen.h: BUGZID: 7599
+
+	  r4_1 : UniClientGen & cachegen is now properly fixed.  No weird
+	  latencies and notifications are dealt with immediately
+
+2004-11-26 20:26  jklink
+
+	* uniconf/t/unitempgenvsdaemon.t.cc: BUGZID: 8051
+
+	  r4_1 : Isolated the tempgen/uniclient gen problem so I've removed
+	  unnecessary mounts from the unittest
+
+2004-11-25 22:44  mcote
+
+	* urlget/wvhttpstream.cc: r4_1: Removing debug messages from
+	  WvHttpStream, as BUGZID:7659 appears to be fixed.
+
+2004-11-25 19:26  jklink
+
+	* uniconf/unicachegen.cc, include/unicachegen.h: BUGZID: 8051
+
+	  r4_1 : Putting back the patches that wlach removed.  By removing
+	  these patches uniconf tempgens over a deamon went straight to
+	  grass.  There is now a unittest to cover this problem (see
+	  unitempgenvsdaemon.t.cc)
+
+2004-11-25 19:23  jklink
+
+	* uniconf/t/unitempgenvsdaemon.t.cc: BUGZID: 8051
+
+	  r4_1 : Added unit test for the borked tempgen.  The fix for the
+	  tempgen was removed so I'm putting it back in along with a
+	  unittest to make sure that 'fixes' to this do not break this
+	  code.
+
+2004-11-25 19:23  hub
+
+	* Makefile, Makefile-win32, config.mk.in, configure-mingw32,
+	  configure.ac, vars.mk, wvrules-win32.mk, wvrules.mk,
+	  wvtestmain.cc, Win32WvStreams/.cvsignore,
+	  Win32WvStreams/Win32WvStreams.sln,
+	  Win32WvStreams/libuniconf/.cvsignore,
+	  Win32WvStreams/libuniconf/libuniconf.vcproj,
+	  Win32WvStreams/libuniconf/unipstoregen.cc,
+	  Win32WvStreams/libuniconf/uniregistrygen.cc,
+	  Win32WvStreams/libwvstreams/.cvsignore,
+	  Win32WvStreams/libwvstreams/libwvstreams.vcproj,
+	  Win32WvStreams/libwvstreams/streams.cc,
+	  Win32WvStreams/libwvstreams/streams.h,
+	  Win32WvStreams/libwvstreams/wvwinstreamclone.cc,
+	  Win32WvStreams/libwvutils/.cvsignore,
+	  Win32WvStreams/libwvutils/libwvutils.vcproj,
+	  Win32WvStreams/libwvutils/winstreams.cc,
+	  Win32WvStreams/libwvutils/wvwin32task.cc,
+	  Win32WvStreams/uni/.cvsignore, Win32WvStreams/uni/uni.vcproj,
+	  Win32WvStreams/uniconfd/.cvsignore,
+	  Win32WvStreams/uniconfd/uniconfd.vcproj,
+	  crypto/wvdiffiehellman.cc, crypto/wvrsa.cc,
+	  crypto/wvsslstream.cc, crypto/wvx509.cc,
+	  crypto/t/wvsslstream.t.cc, crypto/t/wvx509.t.cc,
+	  include/uniconf.h, include/wvencoder.h,
+	  include/wvencoderstream.h, include/wverror.h,
+	  include/wvfdstream.h, include/wvfile.h, include/wvfileutils.h,
+	  include/wvlinkerhack.h, include/wvlog.h, include/wvloopback2.h,
+	  include/wvserialize.h, include/wvsocketpair.h,
+	  include/wvsslstream.h, include/wvstdstring.h, include/wvstream.h,
+	  include/wvstring.h, include/wvstrutils.h,
+	  include/wvwin32-sanitize.h, include/wvwin32task.h,
+	  include/wvxplc.h, ipstreams/wvipraw.cc, ipstreams/wvtcp.cc,
+	  ipstreams/wvudp.cc, ipstreams/wvunixsocket.cc,
+	  ipstreams/t/wvtcp.t.cc, ipstreams/tests/tcptest.cc,
+	  ipstreams/tests/wvstreams.cc, streams/wvconstream.cc,
+	  streams/wvencoderstream.cc, streams/wvfdstream.cc,
+	  streams/wvfile.cc, streams/wvlog.cc, streams/wvlogfile.cc,
+	  streams/wvloopback.cc, streams/wvloopback2.cc,
+	  streams/wvsocketpair.cc, streams/wvstream.cc,
+	  streams/wvstreamclone.cc, streams/t/.cvsignore,
+	  streams/t/wvdailyevent.t.cc, streams/t/wvencoderstream.t.cc,
+	  streams/t/wvfdstream.t.cc, streams/t/wvfile.t.cc,
+	  streams/t/wvgzipstream.t.cc, streams/t/wvlog.t.cc,
+	  streams/t/wvloopback.t.cc, streams/t/wvloopback2.t.cc,
+	  streams/t/wvstream.t.cc, streams/t/wvstreamclone.t.cc,
+	  streams/tests/logtest.cc, streams/tests/simpletest.cc,
+	  uniconf/uniautogen.cc, uniconf/unicachegen.cc,
+	  uniconf/uniclientgen.cc, uniconf/uniconf.cc,
+	  uniconf/uniconfroot.cc, uniconf/unidefgen.cc,
+	  uniconf/unigenhack.cc, uniconf/unigenhack_s.cc,
+	  uniconf/uniinigen.cc, uniconf/unilistgen.cc,
+	  uniconf/unimounttreegen.cc, uniconf/uninullgen.cc,
+	  uniconf/unipermgen.cc, uniconf/unireadonlygen.cc,
+	  uniconf/unireplicategen.cc, uniconf/uniretrygen.cc,
+	  uniconf/unisecuregen.cc, uniconf/unisubtreegen.cc,
+	  uniconf/uniunwrapgen.cc, uniconf/t/.cvsignore,
+	  uniconf/t/uniconfd.t.cc, urlget/wvftpstream.cc,
+	  urlget/wvhttppool.cc, urlget/wvhttpstream.cc, utils/strutils.cc,
+	  utils/wvcrash.cc, utils/wvdiriter.cc, utils/wvencoder.cc,
+	  utils/wverror.cc, utils/wvlinklist.cc, utils/wvstring.cc,
+	  utils/wvtest.cc, utils/t/.cvsignore, utils/t/basicfd.t.cc,
+	  utils/t/strcrypt.t.cc, utils/t/strutils.t.cc,
+	  utils/t/wvbase64.t.cc, utils/t/wverror.t.cc,
+	  utils/t/wvstringlist.t.cc, utils/t/wvtimeutils.t.cc,
+	  utils/tests/diritertest.cc: wvprint_crazy: merge HEAD to
+	  wvprint_crazy
+
+2004-11-25 17:09  pzion
+
+	* uniconf/t/unireplicategen.t.cc: r4_2: fixed intermittent failures
+	  in unireplicategen unit test
+
+2004-11-24 08:03  sfllaw
+
+	* urlget/t/wvhttppool.t.cc, include/wvstream.h,
+	  streams/t/wvstream.t.cc, uniconf/uniclientconn.cc,
+	  uniconf/tests/conftest.cc, Docs/sgmlmanual/egfiles/wvfileex.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex2.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamex6.cc,
+	  Docs/sgmlmanual/egfiles/wvstreamfunex.cc,
+	  Win32WvStreams/test3/MySocket.cpp,
+	  Win32WvStreams/test3/test3Dlg.cpp: r4_2: Revert
+	  WvStream::getline() to its old API, where it takes a time_t as
+	  its first parameter.	This reverses the crazy API breakage and
+	  makes life better for everyone.  (I mean, the autocasting from
+	  int to char was just bad news.)
+
+	  Still, some people will use getline incorrectly, so I've put some
+	  guard declarations in WvStreams to catch errant bools and chars.
+
+	  BUGZID: 9101
+
+2004-11-24 01:17  adewhurst
+
+	* include/wvipfirewall.h, linuxstreams/wvipfirewall.cc: r4_1: Add a
+	  SecretWeaverOption to let FastForward masquerade the source IP of
+	  a forwarded connection BUGZID: 9092
+
+2004-11-24 00:28  wlach
+
+	* uniconf/t/unipermgen.t.cc: r4_1: Test executable + notification
+	  permissions much more thoroughly in unipermgen/unisecuregen.
+	  BUGZID:9100
+
+2004-11-23 01:21  mtsai
+
+	* Makefile, Makefile-win32, config.mk.in, configure-mingw32,
+	  configure.ac, vars.mk, wvrules-win32.mk, wvrules.mk,
+	  wvtestmain.cc, Win32WvStreams/.cvsignore,
+	  Win32WvStreams/Win32WvStreams.sln,
+	  Win32WvStreams/libuniconf/.cvsignore,
+	  Win32WvStreams/libuniconf/libuniconf.vcproj,
+	  Win32WvStreams/libuniconf/unipstoregen.cc,
+	  Win32WvStreams/libuniconf/uniregistrygen.cc,
+	  Win32WvStreams/libwvstreams/.cvsignore,
+	  Win32WvStreams/libwvstreams/libwvstreams.vcproj,
+	  Win32WvStreams/libwvstreams/streams.cc,
+	  Win32WvStreams/libwvstreams/streams.h,
+	  Win32WvStreams/libwvstreams/wvwinstreamclone.cc,
+	  Win32WvStreams/libwvutils/.cvsignore,
+	  Win32WvStreams/libwvutils/libwvutils.vcproj,
+	  Win32WvStreams/libwvutils/winstreams.cc,
+	  Win32WvStreams/libwvutils/wvwin32task.cc,
+	  Win32WvStreams/uni/.cvsignore, Win32WvStreams/uni/uni.vcproj,
+	  Win32WvStreams/uniconfd/.cvsignore,
+	  Win32WvStreams/uniconfd/uniconfd.vcproj,
+	  crypto/wvdiffiehellman.cc, crypto/wvrsa.cc,
+	  crypto/wvsslstream.cc, crypto/wvx509.cc,
+	  crypto/t/wvsslstream.t.cc, crypto/t/wvx509.t.cc,
+	  include/uniconf.h, include/wvencoder.h,
+	  include/wvencoderstream.h, include/wverror.h,
+	  include/wvfdstream.h, include/wvfile.h, include/wvfileutils.h,
+	  include/wvlinkerhack.h, include/wvlog.h, include/wvloopback2.h,
+	  include/wvserialize.h, include/wvsocketpair.h,
+	  include/wvsslstream.h, include/wvstdstring.h, include/wvstream.h,
+	  include/wvstring.h, include/wvstrutils.h,
+	  include/wvwin32-sanitize.h, include/wvwin32task.h,
+	  include/wvxplc.h, ipstreams/wvipraw.cc, ipstreams/wvtcp.cc,
+	  ipstreams/wvudp.cc, ipstreams/wvunixsocket.cc,
+	  ipstreams/t/wvtcp.t.cc, ipstreams/tests/tcptest.cc,
+	  ipstreams/tests/wvstreams.cc, streams/wvconstream.cc,
+	  streams/wvencoderstream.cc, streams/wvfdstream.cc,
+	  streams/wvfile.cc, streams/wvlog.cc, streams/wvlogfile.cc,
+	  streams/wvloopback.cc, streams/wvloopback2.cc,
+	  streams/wvsocketpair.cc, streams/wvstream.cc,
+	  streams/wvstreamclone.cc, streams/t/.cvsignore,
+	  streams/t/wvdailyevent.t.cc, streams/t/wvencoderstream.t.cc,
+	  streams/t/wvfdstream.t.cc, streams/t/wvfile.t.cc,
+	  streams/t/wvgzipstream.t.cc, streams/t/wvlog.t.cc,
+	  streams/t/wvloopback.t.cc, streams/t/wvloopback2.t.cc,
+	  streams/t/wvstream.t.cc, streams/t/wvstreamclone.t.cc,
+	  streams/tests/logtest.cc, streams/tests/simpletest.cc,
+	  uniconf/uniautogen.cc, uniconf/unicachegen.cc,
+	  uniconf/uniclientgen.cc, uniconf/uniconf.cc,
+	  uniconf/uniconfroot.cc, uniconf/unidefgen.cc,
+	  uniconf/unigenhack.cc, uniconf/unigenhack_s.cc,
+	  uniconf/uniinigen.cc, uniconf/unilistgen.cc,
+	  uniconf/unimounttreegen.cc, uniconf/uninullgen.cc,
+	  uniconf/unipermgen.cc, uniconf/unireadonlygen.cc,
+	  uniconf/unireplicategen.cc, uniconf/uniretrygen.cc,
+	  uniconf/unisecuregen.cc, uniconf/unisubtreegen.cc,
+	  uniconf/uniunwrapgen.cc, uniconf/t/.cvsignore,
+	  uniconf/t/uniconfd.t.cc, urlget/wvftpstream.cc,
+	  urlget/wvhttppool.cc, urlget/wvhttpstream.cc, utils/strutils.cc,
+	  utils/wvcrash.cc, utils/wvdiriter.cc, utils/wvencoder.cc,
+	  utils/wverror.cc, utils/wvlinklist.cc, utils/wvstring.cc,
+	  utils/wvtest.cc, utils/t/.cvsignore, utils/t/basicfd.t.cc,
+	  utils/t/strcrypt.t.cc, utils/t/strutils.t.cc,
+	  utils/t/wvbase64.t.cc, utils/t/wverror.t.cc,
+	  utils/t/wvstringlist.t.cc, utils/t/wvtimeutils.t.cc,
+	  utils/tests/diritertest.cc: mtsai_mysql4: Merge from HEAD.
+
+2004-11-22 22:40  adewhurst
+
+	* Makefile, config.guess, config.mk.in, config.sub, configure.ac,
+	  vars.mk, wvrules.mk, crypto/wvdiffiehellman.cc,
+	  crypto/wvsslstream.cc, crypto/wvtripledes.cc, include/if_arp.h,
+	  include/uniretrygen.h, include/wvaddr.h, include/wvdaemon.h,
+	  include/wvserialize.h, include/wvslp.h, include/wvstrutils.h,
+	  include/wvtcp.h, ipstreams/wvaddr.cc, ipstreams/wvslp.cc,
+	  ipstreams/wvtcp.cc, ipstreams/wvunixsocket.cc,
+	  ipstreams/tests/vars.mk, linuxstreams/wvinterface.cc,
+	  linuxstreams/wviproute.cc, linuxstreams/wvpam.cc,
+	  linuxstreams/wvtundev.cc, redhat/wvstreams.spec.in,
+	  streams/wvdaemon.cc, streams/wvlockfile.cc, streams/wvlogfile.cc,
+	  streams/wvmodem.cc, streams/wvpam.cc, streams/wvpipe.cc,
+	  uniconf/unicachegen.cc, uniconf/uniretrygen.cc,
+	  uniconf/daemon/uniconfd.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/uniretrygen.t.cc, urlget/wvftpstream.cc,
+	  urlget/wvhttpstream.cc, utils/strcrypt.cc, utils/strutils.cc,
+	  utils/wvcrash.cc, utils/wvtask.cc, utils/t/strcrypt.t.cc,
+	  utils/t/strutils.t.cc, utils/t/wvhex.t.cc, utils/t/wvmatrix.t.cc,
+	  utils/tests/diritertest.cc, utils/tests/ondiskspeedtest.cc:
+	  adewhurst: Merge from r4_2 into my branch
+
+2004-11-22 22:15  ppatters
+
+	* streams/wvlog.cc: r4_1: Under the right circumstances (#defined
+	  WvLogReceivers with #defined log() macros), WvLog could end up
+	  asking for an appname of a pointer to a log that was NULL, thus
+	  causing a crash. We check for that now.
+
+2004-11-22 21:10  pzion
+
+	* config.guess, config.mk.in, config.sub, configure.ac, vars.mk,
+	  wvrules.mk, crypto/wvdiffiehellman.cc, crypto/wvsslstream.cc,
+	  crypto/wvtripledes.cc, include/if_arp.h, include/wvaddr.h,
+	  include/wvserialize.h, include/wvslp.h, include/wvstrutils.h,
+	  include/wvtcp.h, ipstreams/wvaddr.cc, ipstreams/wvslp.cc,
+	  ipstreams/wvtcp.cc, ipstreams/wvunixsocket.cc,
+	  ipstreams/tests/vars.mk, linuxstreams/wvinterface.cc,
+	  linuxstreams/wviproute.cc, linuxstreams/wvpam.cc,
+	  linuxstreams/wvtundev.cc, streams/wvlockfile.cc,
+	  streams/wvlogfile.cc, streams/wvmodem.cc, streams/wvpam.cc,
+	  streams/wvpipe.cc, uniconf/daemon/uniconfd.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/uniretrygen.t.cc,
+	  urlget/wvftpstream.cc, urlget/wvhttpstream.cc, utils/strcrypt.cc,
+	  utils/strutils.cc, utils/wvcrash.cc, utils/wvtask.cc,
+	  utils/t/strcrypt.t.cc, utils/t/strutils.t.cc, utils/t/wvhex.t.cc,
+	  utils/t/wvmatrix.t.cc, utils/tests/diritertest.cc,
+	  utils/tests/ondiskspeedtest.cc: r4_2: Merged from 4.1
+
+2004-11-22 20:46  ppatters
+
+	* uniconf/daemon/uniconfd.cc: r4_1: Fix the "UniConf opening a unix
+	  domain socket with the user's umask" problem by adding the super
+	  hacky -m option. We'll solve the more general problem later.
+
+2004-11-22 20:11  wlach
+
+	* include/unicachegen.h, uniconf/unicachegen.cc,
+	  uniconf/t/unicachegen.t.cc: r4_1: Don't do a superfluous get from
+	  the inner generator when using unicachegen (basically the same as
+	  pzion's fix last weekend in r4_2, but we need it _now_ in r4_1
+	  for varpacks). Add a unit test for unicachegen, to be sure that
+	  nothing was broken (nothing was).  BUGZID:8985
+
+2004-11-22 16:34  ppatters
+
+	* include/wvslp.h, ipstreams/wvslp.cc, uniconf/daemon/uniconfd.cc:
+	  r4_1: Make WvSlp much more C++ ish.. and actually behave properly
+	  in the absence of the OpenSLP Libraries.
+
+2004-11-22 10:11  mcote
+
+	* urlget/wvhttpstream.cc: r4_1: Added some error handling to
+	  WvHttpStream for cases in which read() ends up calling close().
+	  Outside chance it'll fix BUGZID:7659.
+
+2004-11-21 00:02  pzion
+
+	* include/uniretrygen.h, uniconf/uniretrygen.cc,
+	  uniconf/t/uniretrygen.t.cc: r4_2: added ReconnectCallback to
+	  UniRetryGen that gives notification when the retry generator
+	  reconnects to the underlying generator
+
+2004-11-20 23:44  pzion
+
+	* uniconf/unicachegen.cc: r4_2: UniCacheGen was unconditionally
+	  calling inner->get() inside its own get function, thereby
+	  effectively not caching anything at all.  Genius, pure and
+	  simple.
+
+2004-11-20 11:04  dirocco
+
+	* Makefile, redhat/wvstreams.spec.in: r4_2: Updated spec file so
+	  that wvstreams can build in RH9
+
+2004-11-20 04:51  adewhurst
+
+	* include/wvaddr.h, ipstreams/wvaddr.cc: r4_2: Merge ipsec_tunnel
+	  from my branch into r4_2. Remove freeswan.  BUGZID: 6684
+
+2004-11-20 04:42  sfllaw
+
+	* Makefile: r4_2: Due to a typo, we never actually cleaned and
+	  patched XPLC in WvStreams' make dist target.
+
+2004-11-20 01:56  adewhurst
+
+	* Makefile, crypto/wvdigest.cc, crypto/wvx509.cc,
+	  crypto/t/wvdigest.t.cc, include/uniconfdaemon.h,
+	  include/unimountgen.h, include/wvdailyevent.h,
+	  include/wvipaliaser.h, include/wvpam.h, include/wvstrutils.h,
+	  include/wvunixdgsocket.h, include/wvx509.h,
+	  ipstreams/wvunixdgsocket.cc, ipstreams/t/.cvsignore,
+	  ipstreams/t/wvunixdgsocket.t.cc,
+	  ipstreams/tests/udglistentest.cc, ipstreams/tests/unixdgtest.cc,
+	  linuxstreams/wvipaliaser.cc, linuxstreams/wvpam.cc,
+	  linuxstreams/tests/pamtest.cc, streams/wvdailyevent.cc,
+	  streams/t/wvmagicloopback.t.cc, streams/tests/dailyeventtest.cc,
+	  uniconf/uniclientconn.cc, uniconf/unimountgen.cc,
+	  uniconf/unisecuregen.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/uniconfroot.t.cc, uniconf/t/unipermgen.t.cc,
+	  uniconf/tests/uni.cc, urlget/wvhttppool.cc,
+	  urlget/wvhttpstream.cc, utils/strutils.cc: adewhurst: Merge from
+	  r4_2 to my branch and recompile kernel
+
+2004-11-19 21:12  ppatters
+
+	* utils/: strutils.cc, t/strutils.t.cc: r4_1: Feeding NULL to
+	  strlwr and strupr used to segfault... now it doesn't, and there's
+	  a unit test to prevent this from happening again.
+
+2004-11-19 04:54  pzion
+
+	* include/wvdaemon.h, streams/wvdaemon.cc: r4_2: added -s (syslog)
+	  parameter for WvDaemon to allow syslog logging with forking into
+	  background
+
+2004-11-19 02:56  mcote
+
+	* urlget/wvhttpstream.cc: r4_1: Increasing backtrace to depth of 25
+	  instead of 10.  Maybe someday we'll get to the bottom of
+	  BUGZID:7659
+
+2004-11-19 00:24  r2levesq
+
+	* streams/wvlogfile.cc:
+	  r4_1: forgot to ForkTwiceSoTheStupidThingWorksRight while
+	  expiring log files. The result was a bunch of defunct weaver
+	  processes. This is fixed now.
+
+2004-11-18 21:46  pphaneuf
+
+	* Win32WvStreams/: .cvsignore, libuniconf/.cvsignore,
+	  libwvstreams/.cvsignore, libwvutils/.cvsignore, uni/.cvsignore,
+	  uniconfd/.cvsignore: Merged from Avery's wvstreams-win32 branch
+	  again. He only had some updated .cvsignore files...
+
+2004-11-18 21:42  pphaneuf
+
+	* Makefile, Makefile-win32, config.mk.in, configure-mingw32,
+	  configure.ac, vars.mk, wvrules-win32.mk, wvrules.mk,
+	  wvtestmain.cc, Win32WvStreams/Win32WvStreams.sln,
+	  Win32WvStreams/libuniconf/libuniconf.vcproj,
+	  Win32WvStreams/libuniconf/unipstoregen.cc,
+	  Win32WvStreams/libuniconf/uniregistrygen.cc,
+	  Win32WvStreams/libwvstreams/libwvstreams.vcproj,
+	  Win32WvStreams/libwvstreams/streams.cc,
+	  Win32WvStreams/libwvstreams/streams.h,
+	  Win32WvStreams/libwvstreams/wvwinstreamclone.cc,
+	  Win32WvStreams/libwvutils/libwvutils.vcproj,
+	  Win32WvStreams/libwvutils/winstreams.cc,
+	  Win32WvStreams/libwvutils/wvwin32task.cc,
+	  Win32WvStreams/uni/uni.vcproj,
+	  Win32WvStreams/uniconfd/uniconfd.vcproj,
+	  crypto/wvdiffiehellman.cc, crypto/wvrsa.cc,
+	  crypto/wvsslstream.cc, crypto/wvx509.cc,
+	  crypto/t/wvsslstream.t.cc, crypto/t/wvx509.t.cc,
+	  include/uniconf.h, include/wvencoder.h,
+	  include/wvencoderstream.h, include/wverror.h,
+	  include/wvfdstream.h, include/wvfile.h, include/wvfileutils.h,
+	  include/wvlinkerhack.h, include/wvlog.h, include/wvloopback2.h,
+	  include/wvserialize.h, include/wvsocketpair.h,
+	  include/wvsslstream.h, include/wvstdstring.h, include/wvstream.h,
+	  include/wvstring.h, include/wvstrutils.h,
+	  include/wvwin32-sanitize.h, include/wvwin32task.h,
+	  include/wvxplc.h, ipstreams/wvipraw.cc, ipstreams/wvtcp.cc,
+	  ipstreams/wvudp.cc, ipstreams/wvunixsocket.cc,
+	  ipstreams/t/wvtcp.t.cc, ipstreams/tests/tcptest.cc,
+	  ipstreams/tests/wvstreams.cc, streams/wvconstream.cc,
+	  streams/wvencoderstream.cc, streams/wvfdstream.cc,
+	  streams/wvfile.cc, streams/wvlog.cc, streams/wvlogfile.cc,
+	  streams/wvloopback.cc, streams/wvloopback2.cc,
+	  streams/wvsocketpair.cc, streams/wvstream.cc,
+	  streams/wvstreamclone.cc, streams/t/.cvsignore,
+	  streams/t/wvdailyevent.t.cc, streams/t/wvencoderstream.t.cc,
+	  streams/t/wvfdstream.t.cc, streams/t/wvfile.t.cc,
+	  streams/t/wvgzipstream.t.cc, streams/t/wvlog.t.cc,
+	  streams/t/wvloopback.t.cc, streams/t/wvloopback2.t.cc,
+	  streams/t/wvstream.t.cc, streams/t/wvstreamclone.t.cc,
+	  streams/tests/logtest.cc, streams/tests/simpletest.cc,
+	  uniconf/uniautogen.cc, uniconf/unicachegen.cc,
+	  uniconf/uniclientgen.cc, uniconf/uniconf.cc,
+	  uniconf/uniconfroot.cc, uniconf/unidefgen.cc,
+	  uniconf/unigenhack.cc, uniconf/unigenhack_s.cc,
+	  uniconf/uniinigen.cc, uniconf/unilistgen.cc,
+	  uniconf/unimounttreegen.cc, uniconf/uninullgen.cc,
+	  uniconf/unipermgen.cc, uniconf/unireadonlygen.cc,
+	  uniconf/unireplicategen.cc, uniconf/uniretrygen.cc,
+	  uniconf/unisecuregen.cc, uniconf/unisubtreegen.cc,
+	  uniconf/uniunwrapgen.cc, uniconf/t/.cvsignore,
+	  uniconf/t/uniconfd.t.cc, urlget/wvftpstream.cc,
+	  urlget/wvhttppool.cc, urlget/wvhttpstream.cc, utils/strutils.cc,
+	  utils/wvcrash.cc, utils/wvdiriter.cc, utils/wvencoder.cc,
+	  utils/wverror.cc, utils/wvlinklist.cc, utils/wvstring.cc,
+	  utils/wvtest.cc, utils/t/.cvsignore, utils/t/basicfd.t.cc,
+	  utils/t/strcrypt.t.cc, utils/t/strutils.t.cc,
+	  utils/t/wvbase64.t.cc, utils/t/wverror.t.cc,
+	  utils/t/wvstringlist.t.cc, utils/t/wvtimeutils.t.cc,
+	  utils/tests/diritertest.cc: Merged Avery's wvstreams-win32
+	  branch, and fixed a few bugs left and right, mostly found because
+	  of some change in behavior Avery made in the branch.	Looks good
+	  now.
+
+2004-11-18 15:12  hub
+
+	* Makefile, Win32WvStreams/libuniconf/libuniconf.vcproj,
+	  Win32WvStreams/libwvstreams/libwvstreams.vcproj,
+	  Win32WvStreams/libwvutils/libwvutils.vcproj, crypto/wvdigest.cc,
+	  crypto/wvx509.cc, crypto/t/wvdigest.t.cc,
+	  include/uniconfdaemon.h, include/unimountgen.h,
+	  include/wvdailyevent.h, include/wvhttppool.h,
+	  include/wvipaliaser.h, include/wvpam.h, include/wvpty.h,
+	  include/wvstrutils.h, include/wvunixdgsocket.h, include/wvx509.h,
+	  ipstreams/wvunixdgsocket.cc, ipstreams/t/.cvsignore,
+	  ipstreams/t/wvunixdgsocket.t.cc,
+	  ipstreams/tests/udglistentest.cc, ipstreams/tests/unixdgtest.cc,
+	  linuxstreams/wvipaliaser.cc, linuxstreams/wvpam.cc,
+	  linuxstreams/wvpty.cc, linuxstreams/tests/pamtest.cc,
+	  streams/wvdailyevent.cc, streams/t/wvmagicloopback.t.cc,
+	  streams/tests/dailyeventtest.cc, uniconf/uniclientconn.cc,
+	  uniconf/unimountgen.cc, uniconf/unisecuregen.cc,
+	  uniconf/t/uniconfd.t.cc, uniconf/t/uniconfroot.t.cc,
+	  uniconf/t/unipermgen.t.cc, uniconf/tests/uni.cc,
+	  urlget/wvhttppool.cc, urlget/wvhttpstream.cc, utils/strcrypt.cc,
+	  utils/strutils.cc, utils/t/strutils.t.cc,
+	  utils/t/wvstringlist.t.cc: wvprint_crazy: merge wvprint_crazy
+	  with r4_2
+
+2004-11-18 14:31  sfllaw
+
+	* linuxstreams/tests/pamtest.cc, streams/tests/pamtest.cc:
+	  wvstreams_4_0: Move pamtest.cc to streams/tests.
+
+2004-11-18 14:31  sfllaw
+
+	* debian/changelog: wvstreams_4_0: Updated debian/changelog.
+
+2004-11-18 14:13  sfllaw
+
+	* streams/wvpam.cc: wvstreams_4_0: Unbroke the Solaris build.
+
+2004-11-18 13:47  sfllaw
+
+	* uniconf/tests/.cvsignore: r4_1: Ignore uni's manpage.
+
+2004-11-18 01:50  mtsai
+
+	* Makefile, include/uniconfdaemon.h, include/unimountgen.h,
+	  include/wvdailyevent.h, include/wvipaliaser.h, include/wvpam.h,
+	  include/wvstrutils.h, include/wvunixdgsocket.h,
+	  ipstreams/wvunixdgsocket.cc, ipstreams/t/.cvsignore,
+	  ipstreams/t/wvunixdgsocket.t.cc,
+	  ipstreams/tests/udglistentest.cc, ipstreams/tests/unixdgtest.cc,
+	  linuxstreams/wvipaliaser.cc, linuxstreams/wvpam.cc,
+	  linuxstreams/tests/pamtest.cc, streams/wvdailyevent.cc,
+	  streams/t/wvmagicloopback.t.cc, streams/tests/dailyeventtest.cc,
+	  uniconf/uniclientconn.cc, uniconf/unimountgen.cc,
+	  uniconf/unisecuregen.cc, uniconf/t/uniconfd.t.cc,
+	  uniconf/t/uniconfroot.t.cc, uniconf/t/unipermgen.t.cc,
+	  uniconf/tests/uni.cc, urlget/wvhttppool.cc,
+	  urlget/wvhttpstream.cc, utils/strutils.cc: mtsai_mysql4: Merge
+	  from Head.
+
 2004-11-17 20:18  sfllaw
 
 	* debian/changelog: wvstreams_4_0: Update Debian changelog.
