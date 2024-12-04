@@ -1,3 +1,25 @@
+wvstreams (4.6.1-18) unstable; urgency=medium
+
+  * QA upload.
+
+  * Added d/gbp.conf to describe branch layout.
+  * Updated vcs in d/control to Salsa.
+  * Updated d/gbp.conf to enforce the use of pristine-tar.
+  * Updated Standards-Version from 3.9.8 to 4.7.0.
+  * Use wrap-and-sort -at for debian control files.
+  * Trim trailing whitespace.
+  * Set field Upstream-Name in debian/copyright.
+  * Set upstream metadata fields: Repository-Browse.
+  * Fix day-of-week for changelog entries 4.0.2-2, 3.80+20040623-1.
+  * Corrected d/watch to work with current upstream.
+  * Marked libwvstreams4.6-doc as Multi-Arch: foreign.
+  * Adjusted d/rules to use CXXFLAGS too.
+  * Removed unused autotools-dev build dependency.
+  * Updated lintian overrides to match current format.
+  * Added 1100-getcontex-assert.patch to ensure program work with -DNDEBUG.
+
+ -- Petter Reinholdtsen <pere@debian.org>  Wed, 04 Dec 2024 08:24:44 +0100
+
 wvstreams (4.6.1-17.1) unstable; urgency=medium
 
   * Non-maintainer upload.
