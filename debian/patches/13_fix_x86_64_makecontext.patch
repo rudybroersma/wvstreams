@@ -1,0 +1,89 @@
+Description: Fix segmentation fault on 64-bit architectures in WvTaskMan
+ POSIX makecontext(3) arguments are typed as 'int' (32-bit). Passing a 64-bit
+ pointer directly to makecontext() causes truncation of the upper 32 bits on
+ x86_64/amd64 when glibc reads arguments via va_arg(ap, int), causing call_func
+ to dereference an invalid sign-extended or truncated address and trigger a
+ segmentation fault.
+ .
+ This patch splits 64-bit pointers into two 32-bit words (uint32_t p1, p2)
+ when calling makecontext(), declares context_return volatile to prevent
+ compiler optimization across stack switches, and ensures task references
+ current_task in do_task().
+Author: Rudy Broersma <rudy@tozz.nl>
+Bug: https://github.com/void-linux/void-packages/issues/50811
+Last-Update: 2026-11-22
+Index: wvstreams/include/wvtask.h
+===================================================================
+--- wvstreams.orig/include/wvtask.h
++++ wvstreams/include/wvtask.h
+@@ -1,3 +1,4 @@
++#include <stdint.h>
+ /* -*- Mode: C++ -*-
+  * Worldvisions Weaver Software:
+  *   Copyright (C) 1997-2002 Net Integration Technologies, Inc.
+@@ -91,7 +92,11 @@ class WvTaskMan
+     static void stackmaster();
+     static void _stackmaster();
+     static void do_task();
++    #if defined(__LP64__) || defined(_LP64) || defined(__x86_64__)
++    static void call_func(uint32_t p1, uint32_t p2);
++#else
+     static void call_func(WvTask *task);
++#endif
+ 
+     static char *stacktop;
+     static ucontext_t stackmaster_task;
+Index: wvstreams/utils/wvtask.cc
+===================================================================
+--- wvstreams.orig/utils/wvtask.cc
++++ wvstreams/utils/wvtask.cc
+@@ -65,7 +65,7 @@ ucontext_t WvTaskMan::stackmaster_task,
+ WvTask *WvTaskMan::current_task, *WvTaskMan::stack_target;
+ char *WvTaskMan::stacktop;
+ 
+-static int context_return;
++static volatile int context_return;
+ 
+ // asserting wrapper for getcontext(3).
+ static int assert_getcontext(ucontext_t *__ucp)
+@@ -465,8 +465,15 @@ void WvTaskMan::_stackmaster()
+ }
+ 
+ 
++#if defined(__LP64__) || defined(_LP64) || defined(__x86_64__)
++void WvTaskMan::call_func(uint32_t p1, uint32_t p2)
++{
++    uintptr_t ptr = ((uintptr_t)p1) | (((uintptr_t)p2) << 32);
++    WvTask *task = (WvTask *)ptr;
++#else
+ void WvTaskMan::call_func(WvTask *task)
+ {
++#endif
+     Dprintf("WvTaskMan: calling task #%d (%s)\n",
+ 	    task->tid, (const char *)task->name);
+     task->func(task->userdata);
+@@ -505,6 +512,7 @@ void WvTaskMan::do_task()
+ 	valgrind_fix(stacktop);
+ 	for (;;)
+ 	{
++	    task = current_task;
+ 	    assert(magic_number == -WVTASK_MAGIC);
+ 	    assert(task);
+ 	    assert(task->magic_number == WVTASK_MAGIC);
+@@ -527,8 +535,16 @@ void WvTaskMan::do_task()
+                     task->func_call.uc_link = &task->func_return;
+                     Dprintf("WvTaskMan: makecontext #%d (%s)\n",
+                             task->tid, (const char *)task->name);
++#if defined(__LP64__) || defined(_LP64) || defined(__x86_64__)
++                    uintptr_t ptr = (uintptr_t)task;
++                    uint32_t p1 = (uint32_t)(ptr & 0xffffffff);
++                    uint32_t p2 = (uint32_t)(ptr >> 32);
++                    makecontext(&task->func_call,
++                            (void (*)(void))call_func, 2, p1, p2);
++#else
+                     makecontext(&task->func_call,
+                             (void (*)(void))call_func, 1, task);
++#endif
+ 
+                     context_return = 0;
+                     assert_getcontext(&task->func_return);

@@ -1,5 +1,5 @@
 Source: wvstreams
-Maintainer: Debian QA Group <packages@qa.debian.org>
+Maintainer: Rudy Broersma <rudy@tozz.nl>
 Section: libs
 Priority: optional
 Build-Depends: autoconf,

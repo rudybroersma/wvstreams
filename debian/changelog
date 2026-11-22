@@ -1,3 +1,11 @@
+wvstreams (4.6.1-20) unstable; urgency=medium
+
+  * New maintainer.
+  * debian/patches/13_fix_x86_64_makecontext.patch: Fix 64-bit
+    makecontext pointer truncation causing segmentation fault.
+
+ -- Rudy Broersma <rudy@tozz.nl>  Sun, 22 Nov 2026 21:07:58 +0100
+
 wvstreams (4.6.1-19) unstable; urgency=medium
 
   * QA upload.
